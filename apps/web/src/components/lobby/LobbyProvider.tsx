@@ -4,15 +4,18 @@ import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { api } from '@/lib/lobby/api';
 import { DEFAULT_SKIN, skinStyle } from '@/lib/lobby/theme';
+import { reefStyle, useReefSite, type ReefSite } from '@/lib/reef';
 import type { Balance, Skin, VipState } from '@/lib/lobby/types';
 
-interface Ctx { skin: Skin; balance: Balance | null; vip: VipState | null; refresh: () => void }
-const LobbyCtx = createContext<Ctx>({ skin: DEFAULT_SKIN, balance: null, vip: null, refresh: () => {} });
+interface Ctx { skin: Skin; site: ReefSite | null | undefined; balance: Balance | null; vip: VipState | null; refresh: () => void }
+const LobbyCtx = createContext<Ctx>({ skin: DEFAULT_SKIN, site: undefined, balance: null, vip: null, refresh: () => {} });
 export const useLobby = () => useContext(LobbyCtx);
 
 /** Inyecta el tema del operador como variables CSS y comparte saldo y progreso VIP. */
 export function LobbyProvider({ children }: { children: ReactNode }) {
-  const { brand } = useTheme();
+  const { brand, operator, status: themeStatus } = useTheme();
+  // La plantilla se pide cuando la marca ya resolvió el operador (por dominio); sin id, por host.
+  const themeOperatorId = themeStatus === "loading" ? null : operator.id;
   const { status } = useAuth();
   const [apiSkin, setApiSkin] = useState<Partial<Skin> | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
@@ -43,6 +46,22 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
     };
   }, [brand, apiSkin]);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  const value = useMemo(() => ({ skin, balance, vip, refresh }), [skin, balance, vip, refresh]);
-  return <LobbyCtx.Provider value={value}><div className="nf-root" style={skinStyle(skin.colors)}>{children}</div></LobbyCtx.Provider>;
+  const reef = useReefSite(themeOperatorId);
+  // Reef publicado: marca, colores y banners de la plantilla del operador.
+  const finalSkin = useMemo<Skin>(() => (reef ? {
+    name: reef.config.brand.siteName, logoUrl: reef.config.brand.logoUrl ?? skin.logoUrl, colors: reef.config.colors,
+    banners: reef.config.banners.length ? reef.config.banners.map((b) => ({ title: b.title, subtitle: b.subtitle, href: b.href, imageUrl: b.imageUrl, cta: b.cta })) : skin.banners,
+  } : skin), [reef, skin]);
+  const value = useMemo(() => ({ skin: finalSkin, site: reef, balance, vip, refresh }), [finalSkin, reef, balance, vip, refresh]);
+  const layout = reef?.config.layout;
+  // Mientras se resuelve la plantilla no se pinta el lobby (evita el "flash" de otro diseño).
+  return (
+    <LobbyCtx.Provider value={value}>
+      <div className="nf-root" data-template={reef?.config.template ?? 'abyss'} data-nav={layout?.nav ?? 'sidebar'} data-cards={layout?.cards ?? 'portrait'}
+        style={{ ...skinStyle(finalSkin.colors), ...reefStyle(reef?.config), ...(reef === undefined ? { visibility: 'hidden' as const } : {}) }}>
+        {reef?.preview && <div className="sticky top-0 z-[60] bg-amber-400 px-3 py-1 text-center text-xs font-bold text-black">Vista previa del borrador de Reef · no visible para jugadores</div>}
+        {children}
+      </div>
+    </LobbyCtx.Provider>
+  );
 }

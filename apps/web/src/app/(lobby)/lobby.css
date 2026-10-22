@@ -2,6 +2,7 @@
 /* En la capa components: las utilidades de Tailwind (pl-9, rounded-none…) siempre pueden ajustar estas clases. */
 @layer components {
   .nf-root {
+    font-family: var(--nf-font-body, inherit);
     --nf-surface-2: color-mix(in srgb, var(--nf-surface) 78%, white 6%);
     --nf-surface-3: color-mix(in srgb, var(--nf-surface) 64%, white 10%);
     --nf-border: color-mix(in srgb, var(--nf-text) 9%, transparent);
@@ -15,7 +16,7 @@
     color: var(--nf-text);
     min-height: 100vh;
   }
-  .nf-display { font-family: var(--font-display), Georgia, serif; letter-spacing: .04em; }
+  .nf-display { font-family: var(--nf-font-display, var(--font-display)), Georgia, serif; letter-spacing: .04em; }
 
   /* ── Estructura ── */
   .nf-side {
@@ -37,7 +38,7 @@
   /* ── Superficies ── */
   .nf-panel { background: var(--nf-surface); border: 1px solid var(--nf-border); border-radius: .75rem; padding: .75rem; }
   .nf-panel-2 { background: var(--nf-surface-2); border: 1px solid var(--nf-border); border-radius: .75rem; }
-  .nf-card { position: relative; background: var(--nf-surface); border-radius: .75rem; overflow: hidden; border: 1px solid var(--nf-border); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .nf-card { position: relative; background: var(--nf-surface); border-radius: var(--nf-radius, .75rem); overflow: hidden; border: 1px solid var(--nf-border); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
   .nf-card:hover, .nf-card:focus-within { transform: translateY(-4px); border-color: color-mix(in srgb, var(--nf-primary) 70%, transparent); box-shadow: 0 10px 26px rgb(0 0 0 / .45), 0 0 0 1px color-mix(in srgb, var(--nf-primary) 35%, transparent); }
   .nf-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .nf-row { display: flex; gap: .75rem; overflow-x: auto; padding: .25rem 0 .5rem; scroll-snap-type: x proximity; list-style: none; margin: 0; padding-left: 0; scrollbar-width: none; }
@@ -158,3 +159,19 @@
     .nf-card:hover, .nf-card:focus-within { transform: none; }
   }
 }
+
+/* Reef: variantes de plantilla (cartas cuadradas, menú superior y mosaico de accesos). */
+@layer components {
+  .nf-topnav { display: flex; gap: .25rem; overflow-x: auto; scrollbar-width: none; border-top: 1px solid var(--nf-border); }
+  .nf-topnav::-webkit-scrollbar { display: none; }
+  .nf-topnav .nf-nav { padding: .6rem .8rem; border-radius: 0; border-bottom: 2px solid transparent; }
+  .nf-topnav .nf-nav-on { border-bottom-color: var(--nf-primary); background: transparent; }
+  .nf-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .75rem; }
+  .nf-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; min-height: 6.5rem; padding: 1rem; border-radius: var(--nf-radius, .75rem); font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--nf-text); background: linear-gradient(145deg, color-mix(in srgb, var(--nf-secondary) 38%, var(--nf-surface)), var(--nf-surface)); border: 1px solid color-mix(in srgb, var(--nf-primary) 35%, transparent); transition: transform .18s ease, border-color .18s ease; }
+  .nf-tile:hover, .nf-tile:focus-visible { transform: translateY(-3px); border-color: var(--nf-primary); }
+  .nf-tile svg { width: 2rem; height: 2rem; color: var(--nf-primary); }
+  .nf-chip { display: inline-flex; align-items: center; padding: .55rem 1rem; border-radius: 999px; background: var(--nf-surface); border: 1px solid var(--nf-border); font-weight: 700; font-size: .85rem; white-space: nowrap; }
+  .nf-chip:hover, .nf-chip:focus-visible { border-color: var(--nf-primary); }
+}
+/* Fuera de capa: tiene que ganarle a la utilidad aspect-[3/4] de la carta. */
+.nf-root[data-cards="square"] .nf-card img { aspect-ratio: 1 / 1; }

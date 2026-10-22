@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AccountMenu, WalletChip } from './AccountMenu';
-import { BottomNav, SideNav } from './CategoryNav';
+import { BottomNav, SideNav, TopNav } from './CategoryNav';
 import { LobbyProvider, useLobby } from './LobbyProvider';
 import { SearchBox } from './SearchBox';
 import { VipProgressBar } from './VipProgressBar';
@@ -64,7 +64,8 @@ function useModal(open: boolean, close: () => void, ref: React.RefObject<HTMLEle
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  const { vip } = useLobby();
+  const { vip, site } = useLobby();
+  const topbar = site?.config.layout.nav === 'topbar';
   const path = usePathname();
   const [collapsed, toggleCollapsed] = useCollapsed();
   const [drawer, setDrawer] = useState(false);
@@ -82,7 +83,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen">
       <a href="#nf-main" className="nf-skip">Saltar al contenido</a>
 
-      <aside data-collapsed={collapsed} className="nf-side sticky top-0 hidden h-screen shrink-0 flex-col lg:flex" aria-label="Menú lateral">
+      {!topbar && <aside data-collapsed={collapsed} className="nf-side sticky top-0 hidden h-screen shrink-0 flex-col lg:flex" aria-label="Menú lateral">
         <div className={`flex h-16 items-center border-b border-[var(--nf-border)] px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
           {!collapsed && <Link href="/lobby" aria-label="Ir al inicio"><Logo variant="full" className="h-9 w-auto" /></Link>}
           <button type="button" onClick={toggleCollapsed} className="nf-square-btn" aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'} aria-expanded={!collapsed}>
@@ -93,12 +94,12 @@ function Shell({ children }: { children: ReactNode }) {
           <SideNav collapsed={collapsed} />
         </div>
         {!collapsed && vip && <div className="border-t border-[var(--nf-border)] p-3"><VipProgressBar vip={vip} /></div>}
-      </aside>
+      </aside>}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="nf-top sticky top-0 z-30">
           <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-3 sm:px-5">
-            <Link href="/lobby" className="flex shrink-0 items-center lg:hidden" aria-label="Ir al inicio">
+            <Link href="/lobby" className={`flex shrink-0 items-center ${topbar ? '' : 'lg:hidden'}`} aria-label="Ir al inicio">
               <Logo variant="mark" className="h-9 w-9 sm:hidden" />
               <Logo variant="full" className="hidden h-9 w-auto sm:block" />
             </Link>
@@ -111,6 +112,7 @@ function Shell({ children }: { children: ReactNode }) {
               <AccountMenu />
             </div>
           </div>
+          {topbar && <TopNav />}
         </header>
         <main id="nf-main" tabIndex={-1} className="mx-auto w-full max-w-[1240px] flex-1 space-y-8 px-3 pb-28 pt-5 outline-none sm:px-5 lg:pb-10">
           {children}

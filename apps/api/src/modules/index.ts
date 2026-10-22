@@ -16,6 +16,7 @@ import { inboxModule } from './inbox';
 import { tideModule } from './tide';
 import { pearlModule } from './pearl';
 import { crewModule } from './crew';
+import { reefModule } from './reef';
 
 export { captureRawBody } from './hub';
 export type { ModuleDeps, NymfoModule } from './shared/module';
@@ -34,6 +35,7 @@ export const ALL_MODULES: NymfoModule[] = [
   tideModule,
   pearlModule,
   crewModule,
+  reefModule,
 ];
 
 export type RegisterModulesDeps = Omit<ModuleDeps, 'services' | 'catalog' | 'betGuard' | 'segments'> & {

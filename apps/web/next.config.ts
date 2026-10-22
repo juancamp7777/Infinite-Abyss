@@ -27,7 +27,7 @@ const baseCsp = (frameAncestors: string) =>
     "base-uri 'self'",
     "object-src 'none'",
     "form-action 'self'",
-    "img-src 'self' data: blob:" + (apiOrigin ? ` ${apiOrigin}` : ""),
+    "img-src 'self' data: blob: https:" + (apiOrigin ? ` ${apiOrigin}` : ""),
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,

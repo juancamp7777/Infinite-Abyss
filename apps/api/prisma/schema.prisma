@@ -1798,3 +1798,40 @@ model CrewResponseClock {
 
   @@map("crew_response_clocks")
 }
+
+// ───────────────────────── Reef: plantillas white-label ─────────────────────────
+
+model ReefSiteDraft {
+  operatorId String   @id
+  config     Json
+  updatedBy  String
+  updatedAt  DateTime @updatedAt
+
+  @@map("reef_site_drafts")
+}
+
+model ReefSiteVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  operatorId  String
+  version     Int
+  status      String
+  config      Json
+  publishedBy String
+  publishedAt DateTime @default(now())
+
+  @@unique([operatorId, version])
+  @@index([operatorId, status])
+  @@map("reef_site_versions")
+}
+
+model ReefAsset {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  mime       String
+  size       Int
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId])
+  @@map("reef_assets")
+}

@@ -4,6 +4,28 @@ Infinite Abyss es **una sola plataforma** para operar un negocio de iGaming comp
 
 Este documento fija qué entra, de dónde sale cada pieza, qué se mejora y en qué orden se construye. Lo concreto del dominio sigue viviendo en [architecture.md](architecture.md), [modules.md](modules.md), [integration.md](integration.md) y [contracts.md](contracts.md).
 
+## 0. Nombres comerciales
+
+Cada pieza del all-in-one se vende con nombre propio (ninguno hereda el de los proyectos de origen):
+
+| Producto | Qué es |
+|---|---|
+| **Infinite Abyss** | La suite completa: el sistema operativo del operador |
+| **Abyss Casino** | Casino del jugador estilo Stake (lobby, apuestas en vivo, wallet) |
+| **Abyss Originals** | Juegos propios provably fair |
+| **Trench** | Hub y agregador de proveedores (Pragmatic, Evolution, API-Matic, API-Slots…) |
+| **Sonar** | CRM e inbox omnicanal (webchat, WhatsApp, Telegram) |
+| **Tide** | Constructor visual de flujos y bots (tipo n8n) |
+| **Pearl** | Caja asistida: depósitos y retiros con comprobante y aprobación humana |
+| **Undertow** | Retención: segmentos, lifecycle, campañas y cashback |
+| **Crew** | Workforce: turnos, nómina, tareas y caja del equipo |
+| **Ascend** | Gamificación de staff y jugadores (XP, ligas, retos) |
+| **Leviathan** | Concursos de fichas con escrow y reparto |
+| **Anchor** | Billing B2B: planes, % GGR, wallet prepaga, webhooks |
+| **Reef** | Plantillas white-label configurables por operador |
+| **Depth** | Observabilidad y analítica de negocio |
+| **Abyss Command** | Backoffice: el centro de mando del operador |
+
 ## 1. Principios
 
 1. **Un solo ledger.** Todo movimiento de dinero (depósitos, apuestas, bonos, cashback, premios de concursos, nómina) pasa por el ledger de doble partida en `bigint` de la base. Nada mueve saldo por fuera ni "edita" un saldo.
@@ -61,13 +83,13 @@ flowchart LR
   WF --> CORE
 ```
 
-### 3.1 Casino (experiencia estilo Stake)
+### 3.1 Abyss Casino (experiencia estilo Stake)
 
 - **Estructura y UX al nivel de Stake** (barra lateral con categorías, lobby con carruseles, originals destacados, apuestas en vivo de otros jugadores, panel de fairness, chat de sala, VIP visible, cajero cripto y fiat), con **marca y arte propios**: no se usa el nombre, logo ni recursos de Stake.
 - **Originals propios** de Studios (dice, plinko, roulette, crash en vivo, mines, blackjack, 3 slots) con provably fair y RTP por operador. Se suman: Limbo, Keno, HiLo, Wheel, Tower y Video Poker.
 - **Proveedores**: todo juego externo entra por el Hub (§3.2). Pragmatic y los demás proveedores contratados se conectan rellenando su adaptador con las credenciales y el contrato que entregue cada uno.
 
-### 3.2 Hub y agregador
+### 3.2 Trench: hub y agregador
 
 Base: módulo `hub` (catálogo por operador, seamless wallet `balance/bet/win/rollback` con HMAC, idempotencia con fingerprint, tombstones, wallet saliente B2B). Mejoras:
 
@@ -78,7 +100,7 @@ Base: módulo `hub` (catálogo por operador, seamless wallet `balance/bet/win/ro
 5. **Conciliación** ledger↔rondas y cuadre diario con alertas (solo reporta, nunca corrige).
 6. **Callbacks de wallet en un proceso propio** (pool y SLO aparte) para que un pico del lobby no tumbe las apuestas.
 
-### 3.3 CRM e inbox omnicanal
+### 3.3 Sonar: CRM e inbox omnicanal
 
 Base: módulo `crm` (perfil 360, segmentos, timeline, tickets). Se porta de Magik/Beast:
 
@@ -89,7 +111,7 @@ Base: módulo `crm` (perfil 360, segmentos, timeline, tickets). Se porta de Magi
 - **Bot IA de soporte y caja** con atajo de FAQs por embeddings antes del LLM, herramientas acotadas (consultar saldo, crear jugador, aplicar bono) y consumo medido. Toda acción con dinero pasa por el ledger y queda auditada.
 - **SLA de respuesta y presencia de agentes**: demoras escaladas, pausas, inactividad e incidentes.
 
-#### Abyss Flows: constructor de flujos propio (tipo n8n)
+#### Tide: constructor de flujos propio (tipo n8n) y Pearl (caja asistida)
 
 Una herramienta visual para que el operador diseñe, sin programar, cómo responden los bots (webchat, caja, soporte) y las automatizaciones. Reemplaza el n8n externo que usan los sistemas actuales ("Obrero principal") y parte del motor `Automation::Flow` de Magik y del bot cajero de RoboBeast.
 
@@ -100,7 +122,7 @@ Una herramienta visual para que el operador diseñe, sin programar, cómo respon
 - **Ejecución robusta**: outbox idempotente, reintentos con backoff, anti-loop, límites por conversación y registro auditable de cada paso.
 - **Plantillas listas**: bienvenida + registro, depósito con comprobante, retiro, recuperación de inactivos y soporte con IA.
 
-### 3.4 Retención, marketing y automatización
+### 3.4 Undertow: retención, marketing y automatización
 
 Base: módulos `marketing` y `promotions`. Se porta:
 
@@ -111,7 +133,7 @@ Base: módulos `marketing` y `promotions`. Se porta:
 - **Cashback por tiers** con presets y jobs asíncronos idempotentes.
 - **Landings con versiones y atribución** (pixel, conversión, ROAS por cohorte).
 
-### 3.5 Workforce: equipo, caja y gamificación de staff
+### 3.5 Crew: equipo, caja y gamificación de staff
 
 Módulo nuevo (`workforce`), portado de Strike IQ y mejorado:
 
@@ -121,11 +143,11 @@ Módulo nuevo (`workforce`), portado de Strike IQ y mejorado:
 - **Academia** (cursos y videos) para cajeros, agentes y afiliados.
 - **Gamificación real del staff** (lo que Strike solo dibujaba): XP por operación atendida, SLA cumplido y calidad (no solo volumen), ligas semanales, insignias e historial persistente, ranking con tendencia y premios pagados por el ledger.
 
-### 3.6 Gamificación del jugador
+### 3.6 Ascend: gamificación del jugador
 
 Base: módulo `gamification` (VIP con puntos y rakeback, misiones, logros, racha, rueda diaria, torneos en tiempo real). Se suman temporadas, retos y curva de XP de Magik, y minijuegos de marca (raspadita, trivia) con backend real.
 
-### 3.7 Concursos de fichas (BetBattle)
+### 3.7 Leviathan: concursos de fichas
 
 Módulo nuevo (`contests`) sobre el ledger:
 
@@ -134,7 +156,7 @@ Módulo nuevo (`contests`) sobre el ledger:
 - **Un puerto de feed deportivo** (cuotas y resultados) con confirmación de dos fuentes + gracia; los casos ambiguos van a revisión humana.
 - Requiere contratar un feed (por ejemplo LSports o Sportradar) y un **dictamen legal por jurisdicción** antes de abrirlo con dinero real.
 
-### 3.8 Billing B2B
+### 3.8 Anchor: billing B2B
 
 Módulo nuevo (`billing`) para cobrar a los operadores que usan la plataforma: planes (CRM, casino externo, casino interno), cobro por línea/agente y % de GGR, wallet prepaga y snapshot de suscripción. Las funcionalidades se habilitan por plan con feature flags.
 
@@ -160,14 +182,14 @@ Cada fase es un PR independiente contra `main`, con CI en verde (typecheck, migr
 | 2b | Backoffice estilo dashboard | Marca y layout pro del backoffice: tarjetas KPI con tendencia, resumen financiero (hoy, histórico, neto), actividad reciente, turnos activos, navegación por secciones | Grand Sovereign, Strike |
 | 3 | Hub: agregadores reales | Adaptadores API-Matic y API-Slots, firma anti-replay, allowlist, free spins, inventario oficial/clone, conciliación de rondas; esqueletos Pragmatic/Evolution documentados para rellenar | Astroclub |
 | 4 | Más originals | Limbo, Keno, HiLo, Wheel, Tower y Video Poker con provably fair y pruebas de RTP | Grand Sovereign |
-| 5 | Inbox omnicanal + webchat | Chats, agentes, funnels, WhatsApp Cloud API, Telegram, widget embebible con wallet y push | Magik, Beast |
-| 6 | Abyss Flows + retención | Constructor de flujos tipo n8n para bots (webchat, caja, soporte) con nodos de IA, OCR y dinero con aprobación humana; motor de reglas, segmentos de valor, lifecycle, campañas masivas, cashback por tiers | Magik, RoboBeast, Strike |
-| 7 | Workforce | Turnos, nómina, tareas, caja, checklists, avisos, academia | Strike, Beast |
-| 8 | Gamificación de staff y jugador | XP/ligas/insignias de staff, temporadas y retos de jugador, minijuegos | Strike, Magik |
-| 9 | Concursos de fichas | Módulo `contests`, escrow, reparto, puerto de feed deportivo (con feed simulado) | BetBattle |
-| 10 | Billing B2B y webhooks salientes | Planes, slots, % GGR, wallet prepaga, webhooks firmados con DLQ | Beast |
+| 5 | Sonar: inbox omnicanal + webchat | Chats, agentes, funnels, WhatsApp Cloud API, Telegram, widget embebible con wallet y push | Magik, Beast |
+| 6 | Tide + Pearl + Undertow | Constructor de flujos tipo n8n para bots (webchat, caja, soporte) con nodos de IA, OCR y dinero con aprobación humana; motor de reglas, segmentos de valor, lifecycle, campañas masivas, cashback por tiers | Magik, RoboBeast, Strike |
+| 7 | Crew (workforce) | Turnos, nómina, tareas, caja, checklists, avisos, academia | Strike, Beast |
+| 8 | Ascend (gamificación) | XP/ligas/insignias de staff, temporadas y retos de jugador, minijuegos | Strike, Magik |
+| 9 | Leviathan (concursos) | Módulo `contests`, escrow, reparto, puerto de feed deportivo (con feed simulado) | BetBattle |
+| 10 | Anchor (billing B2B y webhooks) | Planes, slots, % GGR, wallet prepaga, webhooks firmados con DLQ | Beast |
 | 11 | Landing comercial | Página que vende el all-in-one por capacidades y planes | — |
-| 12 | Producción | Observabilidad (OpenTelemetry, métricas de negocio, SLO del wallet), IaC, backups, runbooks | Astroclub, Magik |
+| 12 | Depth + producción | Observabilidad (OpenTelemetry, métricas de negocio, SLO del wallet), IaC, backups, runbooks | Astroclub, Magik |
 
 ## 6. Pendientes del negocio
 

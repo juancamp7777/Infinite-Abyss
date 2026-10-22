@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
-  BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower,
+  BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower, Workflow,
   Palette, Trophy, Users, X, Zap, type LucideIcon,
 } from "lucide-react";
 import { authClient, BASE_PATH, canAccess, homeFor, NAV, NAV_SECTIONS, ROLE_LABEL, type NavSection } from "@/lib/auth";
@@ -15,7 +15,7 @@ const noop = () => () => {};
 const COLLAPSED_KEY = "abyss.bo.collapsedSections";
 
 const ICON: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tickets": LifeBuoy, "/segments": Layers,
+  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tide": Workflow, "/tickets": LifeBuoy, "/segments": Layers,
   "/campaigns": Megaphone, "/bonuses": Gift, "/tournaments": Trophy, "/jackpots": Zap, "/vip": Crown,
   "/catalog": Gamepad2, "/studios": BarChart3, "/skin": Palette,
 };
@@ -71,7 +71,7 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
         <img src={`${BASE_PATH}/brand/infinite-abyss-mark.svg`} alt="" className="h-9 w-9" />
         <div className="leading-tight">
           <div className="text-sm font-bold text-white">Infinite Abyss</div>
-          <div className="text-[10px] font-semibold uppercase tracking-[.18em] text-brand">Backoffice</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[.18em] text-brand">Abyss Command</div>
         </div>
       </div>
       <nav aria-label="Principal" className="flex-1 space-y-3 overflow-y-auto p-3">
@@ -143,7 +143,7 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
             <Menu aria-hidden className="h-4 w-4" />
           </button>
           <div className="min-w-0 text-sm text-white/50">
-            <span className="hidden sm:inline">Backoffice / </span><span className="font-semibold text-white">{current?.label ?? "Panel"}</span>
+            <span className="hidden sm:inline">Abyss Command / </span><span className="font-semibold text-white">{current?.label ?? "Panel"}</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {session.role === "PLATFORM_ADMIN" ? (

@@ -40,7 +40,7 @@ export default function LoginPage() {
       <h1 className="flex flex-col items-center gap-3 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss" className="h-14 w-auto" />
-        <span className="text-[11px] font-semibold uppercase tracking-[.3em] text-brand">Backoffice</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[.3em] text-brand">Abyss Command</span>
       </h1>
       {MOCK_AUTH && <Notice tone="warn">Modo desarrollo: login simulado (NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH=true). Nunca se activa en producción.</Notice>}
       {notice && <Notice tone="warn">{notice}</Notice>}

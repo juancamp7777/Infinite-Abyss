@@ -30,6 +30,7 @@ export async function buildIntegrationApp(overrides: Parameters<typeof createApp
       MKT_SCHEDULER: 'off',
       STUDIO_CRASH_LIVE: 'false',
       PROMO_TICK_INTERVAL_MS: '0',
+      TIDE_TICK_MS: '0',
       ...(overrides.moduleEnv ?? {}),
     },
   });

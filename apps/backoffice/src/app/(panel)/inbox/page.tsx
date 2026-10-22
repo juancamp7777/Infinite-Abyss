@@ -180,7 +180,7 @@ export default function InboxPage() {
   return (
     <>
       <PageHeader
-        title="Inbox omnicanal"
+        title="Sonar · Inbox omnicanal"
         subtitle="Webchat del casino y de las webs del operador en un solo lugar. Notas internas, asignación y respuestas rápidas."
         actions={<span className={`inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs ${live ? "text-emerald-300" : "text-white/50"}`}>
           <span className={`h-2 w-2 rounded-full ${live ? "animate-pulse bg-emerald-400" : "bg-white/30"}`} /> {live ? "En vivo" : "Conectando…"}

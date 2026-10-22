@@ -3,7 +3,7 @@ import { BASE_PATH } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Infinite Abyss Backoffice", template: "%s · Infinite Abyss Backoffice" },
+  title: { default: "Abyss Command · Infinite Abyss", template: "%s · Abyss Command" },
   description: "Panel de plataforma y operadores de Infinite Abyss",
   robots: { index: false, follow: false },
   icons: { icon: `${BASE_PATH}/brand/infinite-abyss-mark.svg`, apple: `${BASE_PATH}/brand/infinite-abyss-mark.svg` },

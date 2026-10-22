@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ChatWidget } from '@/components/webchat/ChatWidget';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
@@ -115,6 +116,8 @@ function Shell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      <ChatWidget />
 
       <div className="nf-bottom fixed inset-x-0 bottom-0 z-30 lg:hidden">
         <BottomNav menuOpen={drawer} onMenu={() => setDrawer((d) => !d)} onSearch={() => setSearch(true)} />

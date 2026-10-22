@@ -30,7 +30,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
   "font-src 'self' data:",
-  `connect-src ${["'self'", apiOrigin].filter(Boolean).join(" ")}`,
+  `connect-src ${["'self'", apiOrigin, apiOrigin?.replace(/^http/i, "ws")].filter(Boolean).join(" ")}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -1337,3 +1337,64 @@ model BoSkin {
 
   @@map("bo_skins")
 }
+
+// ───────────────────────── Inbox omnicanal (webchat, WhatsApp, Telegram) ─────────────────────────
+
+model InboxConversation {
+  id                 String   @id @db.Uuid
+  operatorId         String
+  channel            String
+  externalId         String
+  playerId           String?
+  contactName        String
+  status             String   @default("open")
+  assigneeId         String?
+  lastMessageAt      DateTime
+  lastMessagePreview String   @default("")
+  unread             Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+
+  @@index([operatorId, status, lastMessageAt])
+  @@index([operatorId, channel, externalId])
+  @@index([operatorId, assigneeId])
+  @@map("inbox_conversations")
+}
+
+model InboxMessage {
+  id             String   @id @db.Uuid
+  conversationId String   @db.Uuid
+  operatorId     String
+  direction      String
+  authorType     String
+  authorId       String?
+  body           String
+  clientMsgId    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([conversationId, clientMsgId])
+  @@index([conversationId, createdAt])
+  @@map("inbox_messages")
+}
+
+model InboxQuickReply {
+  id         String   @id @db.Uuid
+  operatorId String
+  shortcut   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@unique([operatorId, shortcut])
+  @@map("inbox_quick_replies")
+}
+
+model InboxVisitor {
+  id         String   @id @db.Uuid
+  operatorId String
+  tokenHash  String   @unique
+  name       String
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId])
+  @@map("inbox_visitors")
+}

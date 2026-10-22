@@ -52,6 +52,7 @@ export function createOperatorRouter(deps: OperatorRoutesDeps): Router {
     res.json(
       toJsonSafe({
         operator: {
+          id: op.id,
           slug: op.slug,
           name: op.name,
           currencies: op.currencies,

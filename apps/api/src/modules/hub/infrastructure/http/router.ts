@@ -17,6 +17,7 @@ import type { RemoteOperatorRepository } from '../../domain/repositories';
 import { envKey, GAME_CATEGORIES } from '../../domain/types';
 import { WALLET_SCHEMAS, WalletAction } from '../../domain/walletProtocol';
 import type { ProviderAdapterRegistry } from '../adapters/registry';
+import { currencyDecimals } from '../../../../domain/money/currencies';
 import { gameArtSvg } from './assets';
 
 declare module 'http' {
@@ -252,6 +253,38 @@ export function createHubRouter(ctx: HubRouterContext): Router {
       fail(e);
     }
   });
+
+  // ---------------- Callbacks con protocolo propio (agregadores) ----------------
+  // Un único endpoint por proveedor; el adaptador autentica (firma/nonce/IP/api_key) y responde en su formato.
+  const providerCallback = async (req: Request, res: Response) => {
+    const providerId = String(req.params.providerId);
+    const adapter = ctx.adapters.get(providerId);
+    try {
+      if (!adapter?.handleCallback) throw hubError('UNKNOWN_PROVIDER', 'Proveedor sin callback propio');
+      const provider = (await ctx.catalog.listProviders(true)).find((p) => p.id === adapter.id);
+      if (provider && provider.status !== 'active') throw hubError('PROVIDER_DISABLED', 'Proveedor desactivado');
+      const out = await adapter.handleCallback(
+        {
+          method: req.method,
+          path: req.originalUrl.split('?')[0],
+          ...(req.params.variant ? { variant: String(req.params.variant) } : {}),
+          rawBody: rawBodyOf(req, ctx.logger),
+          headers: req.headers,
+          body: req.body,
+          ip: req.ip,
+        },
+        ctx.wallet.facade(adapter, currencyDecimals),
+      );
+      if (out.status >= 500) ctx.logger.warn('hub: callback de proveedor respondió con error', { providerId, status: out.status });
+      res.status(out.status).type('application/json').send(out.body);
+    } catch (e) {
+      const { status, body } = toErrorResponse(e);
+      if (status >= 500) ctx.logger.error('hub: error en callback de proveedor', { providerId, error: e instanceof Error ? e.message : String(e) });
+      res.status(status).json(body);
+    }
+  };
+  r.post('/providers/:providerId/callback', providerCallback);
+  r.post('/providers/:providerId/callback/:variant', providerCallback);
 
   // ---------------- Lado saliente (Infinite Abyss como proveedor) ----------------
   r.get(

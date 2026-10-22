@@ -50,9 +50,14 @@ export function resolveHubUrls(env: NodeJS.ProcessEnv): { webUrl: string; public
 export async function createHub(deps: ModuleDeps, repos?: HubRepositories) {
   const env = deps.env;
   const r = repos ?? (isHubPrismaClient(deps.prisma) ? createPrismaRepositories(deps.prisma) : createInMemoryRepositories());
-  const adapters = buildAdapters(env);
+  const adapters = buildAdapters(env, { logger: deps.logger });
   const catalog = new CatalogService(r.catalog);
   await seedCatalog(catalog, { mock: Boolean(adapters.mock) });
+  // Los agregadores configurados existen en el catálogo (sus juegos llegan con POST /admin/providers/:id/sync).
+  const known = new Set((await catalog.listProviders(true)).map((p) => p.id));
+  for (const a of adapters.aggregators) {
+    if (!known.has(a.id)) await catalog.upsertProvider({ id: a.id, name: a.name, type: 'aggregator', config: {} });
+  }
 
   const remoteWallets = new Map<string, RemoteSeamlessWallet>();
   const remoteFactory = (remote: RemoteOperator, session: HubSession) => {

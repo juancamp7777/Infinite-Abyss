@@ -88,6 +88,21 @@ export class InMemorySessionRepository implements SessionRepository {
     const s = this.byId.get(id);
     if (s) s.expiresAt = expiresAt;
   }
+  private readonly byExternal = new Map<string, string>();
+  async setExternalSessionId(id: string, externalSessionId: string): Promise<void> {
+    const s = this.byId.get(id);
+    if (!s) return;
+    const key = `${s.providerId}\u0000${externalSessionId}`;
+    const owner = this.byExternal.get(key);
+    // Mismo contrato que el índice único de Prisma: el id externo pertenece a una sola sesión del proveedor.
+    if (owner && owner !== id) throw new Error('externalSessionId ya asignado a otra sesión');
+    s.externalSessionId = externalSessionId;
+    this.byExternal.set(key, id);
+  }
+  async findByExternalId(providerId: string, externalSessionId: string): Promise<HubSession | null> {
+    const id = this.byExternal.get(`${providerId}\u0000${externalSessionId}`);
+    return id ? this.findById(id) : null;
+  }
 }
 
 export class InMemoryWalletTxRepository implements WalletTxRepository {

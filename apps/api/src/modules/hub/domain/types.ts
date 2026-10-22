@@ -74,6 +74,8 @@ export interface HubSession {
   walletKind: WalletKind;
   /** Solo walletKind=remote: id del RemoteOperator. */
   remoteOperatorId?: string;
+  /** Id de sesión que asignó el proveedor al lanzar (p. ej. vendor_session_id de API-Matic). */
+  externalSessionId?: string;
   expiresAt: Date;
   createdAt: Date;
 }

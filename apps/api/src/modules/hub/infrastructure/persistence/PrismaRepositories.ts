@@ -92,6 +92,7 @@ const toSession = (r: any): HubSession => ({
   mode: r.mode,
   walletKind: r.walletKind,
   remoteOperatorId: opt(r.remoteOperatorId),
+  externalSessionId: opt(r.externalSessionId),
   expiresAt: r.expiresAt,
   createdAt: r.createdAt,
 });
@@ -204,7 +205,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
 export class PrismaSessionRepository implements SessionRepository {
   constructor(private readonly db: HubPrismaClient) {}
   async create(s: HubSession): Promise<HubSession> {
-    return toSession(await this.db.hubSession.create({ data: { ...s, remoteOperatorId: s.remoteOperatorId ?? null } }));
+    return toSession(await this.db.hubSession.create({ data: { ...s, remoteOperatorId: s.remoteOperatorId ?? null, externalSessionId: s.externalSessionId ?? null } }));
   }
   async findByToken(token: string): Promise<HubSession | null> {
     const r = await this.db.hubSession.findUnique({ where: { token } });
@@ -216,6 +217,13 @@ export class PrismaSessionRepository implements SessionRepository {
   }
   async touch(id: string, expiresAt: Date): Promise<void> {
     await this.db.hubSession.updateMany({ where: { id }, data: { expiresAt } });
+  }
+  async setExternalSessionId(id: string, externalSessionId: string): Promise<void> {
+    await this.db.hubSession.updateMany({ where: { id }, data: { externalSessionId } });
+  }
+  async findByExternalId(providerId: string, externalSessionId: string): Promise<HubSession | null> {
+    const r = await this.db.hubSession.findFirst({ where: { providerId, externalSessionId } });
+    return r ? toSession(r) : null;
   }
 }
 

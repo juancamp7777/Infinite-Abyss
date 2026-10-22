@@ -4,7 +4,7 @@ import type { BetGuardPort } from '../../shared/ports/BetGuardPort';
 import { isWalletError, WalletPort } from '../../shared/ports/WalletPort';
 import { randomUUID } from 'crypto';
 import { hubError } from '../domain/errors';
-import type { ProviderAdapter } from '../domain/ProviderAdapter';
+import type { HubWalletFacade, ProviderAdapter } from '../domain/ProviderAdapter';
 import { DuplicateTransactionError, WalletTxRepository } from '../domain/repositories';
 import type { Game, HubRound, HubSession, HubTransaction, HubTxType } from '../domain/types';
 import type { BalanceRequest, BetRequest, RollbackRequest, WalletOkResponse, WinRequest } from '../domain/walletProtocol';
@@ -53,6 +53,25 @@ export class SeamlessWalletService {
     private readonly betGuard?: BetGuardPort,
     private readonly now: () => Date = () => new Date(),
   ) {}
+
+  /**
+   * Fachada para adaptadores con callback propio: las mismas operaciones (y reglas) del protocolo estándar,
+   * pero direccionadas por la sesión ya resuelta en vez de por el token que viaja en el cuerpo.
+   */
+  facade(adapter: ProviderAdapter, decimals: (currency: string) => number): HubWalletFacade {
+    return {
+      sessionByExternalId: (ext) => this.sessions.findByExternalId(adapter.id, ext),
+      balance: (s) => this.balance(adapter, { sessionToken: s.token }),
+      bet: (s, req) => this.bet(adapter, { ...req, sessionToken: s.token }),
+      win: (s, req) => this.win(adapter, { ...req, sessionToken: s.token }),
+      rollback: (s, req) => this.rollback(adapter, { ...req, sessionToken: s.token }),
+      findTx: async (providerTxId) => {
+        const t = await this.txs.findTx(adapter.id, providerTxId);
+        return t ? { type: t.type, status: t.status } : null;
+      },
+      decimals,
+    };
+  }
 
   async balance(adapter: ProviderAdapter, req: BalanceRequest): Promise<WalletOkResponse> {
     const session = await this.loadSession(adapter.id, req.sessionToken, true, req.playerId);

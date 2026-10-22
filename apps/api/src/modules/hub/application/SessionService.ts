@@ -3,7 +3,7 @@ import type { EventBus } from '../../shared/events/EventBus';
 import type { ModuleLogger } from '../../shared/module';
 import type { WalletPort } from '../../shared/ports/WalletPort';
 import { hubError } from '../domain/errors';
-import type { ProviderAdapter } from '../domain/ProviderAdapter';
+import type { LaunchResult, ProviderAdapter } from '../domain/ProviderAdapter';
 import type { RemoteOperatorRepository, SessionRepository } from '../domain/repositories';
 import type { Game, HubSession, RemoteOperator, SessionMode, WalletKind } from '../domain/types';
 import type { CatalogService } from './CatalogService';
@@ -89,10 +89,14 @@ export class SessionService {
 
     const base = { returnUrl: input.returnUrl, language: input.language, publicApiUrl: this.cfg.publicApiUrl, webUrl: this.cfg.webUrl };
     // Studios (interno) siempre necesita sesión, también en demo; los externos tienen su propio demo.
-    const { url } =
+    const launched =
       input.mode === 'demo' && adapter.id !== 'nymfo-studios'
         ? await adapter.launchDemo({ ...base, game, currency: input.currency })
         : await adapter.launchGame({ ...base, game, session });
+    const { url } = launched;
+    // Agregadores: sus callbacks identifican la sesión con su propio id.
+    const externalSessionId = (launched as LaunchResult).externalSessionId;
+    if (externalSessionId) await this.sessions.setExternalSessionId(session.id, externalSessionId);
 
     if (input.mode === 'real') {
       await this.safePublish(() =>
@@ -154,6 +158,11 @@ export class SessionService {
    * Busca una sesión por token o id. allowExpired permite liquidar (win/rollback) rondas
    * cuya sesión expiró mientras se jugaban.
    */
+  /** Sesión por el id que le asignó el proveedor (sin comprobar expiración: la decide cada operación). */
+  findByExternalId(providerId: string, externalSessionId: string): Promise<HubSession | null> {
+    return this.sessions.findByExternalId(providerId, externalSessionId);
+  }
+
   async findSession(tokenOrId: string, opts: { allowExpired?: boolean } = {}): Promise<HubSession> {
     const s = (await this.sessions.findByToken(tokenOrId)) ?? (isUuid(tokenOrId) ? await this.sessions.findById(tokenOrId) : null);
     if (!s) throw hubError('UNKNOWN_SESSION', 'Sesión desconocida');

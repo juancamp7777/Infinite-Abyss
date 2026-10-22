@@ -522,9 +522,12 @@ model HubSession {
   mode             String // real | demo
   walletKind       String // local | remote | demo
   remoteOperatorId String?
+  /// Id de sesión del proveedor (p. ej. vendor_session_id de API-Matic): sus callbacks llegan con él.
+  externalSessionId String?
   expiresAt        DateTime
   createdAt        DateTime @default(now())
 
+  @@unique([providerId, externalSessionId])
   @@index([operatorId, playerId])
   @@map("hub_sessions")
 }

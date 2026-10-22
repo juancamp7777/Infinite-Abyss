@@ -31,6 +31,10 @@ export interface SessionRepository {
   findById(id: string): Promise<HubSession | null>;
   /** Extiende la expiración (sesión deslizante). */
   touch(id: string, expiresAt: Date): Promise<void>;
+  /** Guarda el id de sesión que asignó el proveedor al lanzar (los agregadores lo usan en sus callbacks). */
+  setExternalSessionId(id: string, externalSessionId: string): Promise<void>;
+  /** Sesión por (proveedor, id de sesión del proveedor). */
+  findByExternalId(providerId: string, externalSessionId: string): Promise<HubSession | null>;
 }
 
 /** Error lanzado al insertar una transacción con (providerId, providerTxId) ya existente. */

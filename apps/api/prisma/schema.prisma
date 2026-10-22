@@ -1586,3 +1586,192 @@ model PearlAiConfig {
 
   @@map("pearl_ai_configs")
 }
+
+// ───────────────────────── Crew: equipo, turnos, caja y nómina ─────────────────────────
+
+model CrewMember {
+  id               String   @id @default(uuid()) @db.Uuid
+  operatorId       String
+  backofficeUserId String?  @db.Uuid
+  name             String
+  role             String
+  team             String?
+  timezone         String   @default("America/Argentina/Buenos_Aires")
+  payType          String   @default("monthly")
+  baseAmount       BigInt   @default(0)
+  currency         String
+  dayOff           Int?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([operatorId, backofficeUserId])
+  @@index([operatorId, active])
+  @@map("crew_members")
+}
+
+model CrewShift {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  memberId   String   @db.Uuid
+  label      String
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, startsAt])
+  @@index([memberId, startsAt])
+  @@map("crew_shifts")
+}
+
+model CrewSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  operatorId  String
+  memberId    String    @db.Uuid
+  openKey     String?   @unique
+  shiftId     String?   @db.Uuid
+  kind        String    @default("normal")
+  status      String    @default("working")
+  startedAt   DateTime
+  endedAt     DateTime?
+  pauses      Json      @default("[]")
+  netMinutes  Int?
+  lateMinutes Int       @default(0)
+  closedBy    String?
+  createdAt   DateTime  @default(now())
+
+  @@index([operatorId, startedAt])
+  @@index([memberId, startedAt])
+  @@map("crew_sessions")
+}
+
+model CrewTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  operatorId  String
+  title       String
+  description String    @default("")
+  assigneeId  String?   @db.Uuid
+  status      String    @default("todo")
+  dueAt       DateTime?
+  createdBy   String
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([operatorId, status])
+  @@index([assigneeId, status])
+  @@map("crew_tasks")
+}
+
+model CrewChecklistItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  title      String
+  shiftLabel String   @default("")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, active])
+  @@map("crew_checklist_items")
+}
+
+model CrewChecklistMark {
+  id       String   @id @default(uuid()) @db.Uuid
+  itemId   String   @db.Uuid
+  memberId String   @db.Uuid
+  day      String
+  markedAt DateTime @default(now())
+
+  @@unique([itemId, memberId, day])
+  @@map("crew_checklist_marks")
+}
+
+model CrewAnnouncement {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  title      String
+  body       String
+  severity   String   @default("info")
+  mandatory  Boolean  @default(false)
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, createdAt])
+  @@map("crew_announcements")
+}
+
+model CrewAnnouncementRead {
+  announcementId String   @db.Uuid
+  memberId       String   @db.Uuid
+  readAt         DateTime @default(now())
+
+  @@id([announcementId, memberId])
+  @@map("crew_announcement_reads")
+}
+
+model CrewCashSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  operatorId      String
+  openKey         String?   @unique
+  box             String
+  currency        String
+  openedBy        String    @db.Uuid
+  openedAt        DateTime  @default(now())
+  openingBalance  BigInt
+  closedBy        String?   @db.Uuid
+  closedAt        DateTime?
+  expectedBalance BigInt?
+  declaredBalance BigInt?
+  difference      BigInt?
+  snapshot        Json?
+  status          String    @default("open")
+  reopenedBy      String?
+  reopenReason    String?
+
+  @@index([operatorId, openedAt])
+  @@map("crew_cash_sessions")
+}
+
+model CrewCashMovement {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @db.Uuid
+  type      String
+  amount    BigInt
+  concept   String
+  createdBy String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("crew_cash_movements")
+}
+
+model CrewPayrollAdjustment {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  memberId   String   @db.Uuid
+  month      String
+  type       String
+  amount     BigInt
+  note       String   @default("")
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, month])
+  @@map("crew_payroll_adjustments")
+}
+
+model CrewPayrollClose {
+  id         String    @id @default(uuid()) @db.Uuid
+  operatorId String
+  memberId   String    @db.Uuid
+  month      String
+  snapshot   Json
+  closedBy   String
+  closedAt   DateTime  @default(now())
+  paidAt     DateTime?
+  paidBy     String?
+
+  @@unique([memberId, month])
+  @@index([operatorId, month])
+  @@map("crew_payroll_closes")
+}

@@ -32,6 +32,7 @@ export async function buildIntegrationApp(overrides: Parameters<typeof createApp
       PROMO_TICK_INTERVAL_MS: '0',
       TIDE_TICK_MS: '0',
       PEARL_TICK_MS: '0',
+      CREW_TICK_MS: '0',
       ...(overrides.moduleEnv ?? {}),
     },
   });

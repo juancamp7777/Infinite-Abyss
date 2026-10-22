@@ -10,6 +10,8 @@ const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "/api-proxy").replace(/\/+$/,
 const apiOrigin = /^https?:\/\//i.test(apiUrl) ? new URL(apiUrl).origin : null;
 const socketOrigin = process.env.NEXT_PUBLIC_SOCKET_URL ? new URL(process.env.NEXT_PUBLIC_SOCKET_URL).origin : null;
 const frameOrigins = list(process.env.NEXT_PUBLIC_GAME_FRAME_ORIGINS);
+/** Sitios que pueden embeber el webchat (/webchat) en un iframe; por defecto, cualquiera. */
+const webchatAncestors = list(process.env.WEBCHAT_FRAME_ANCESTORS);
 
 /** http(s) → ws(s) del mismo host, para connect-src. */
 const wsOf = (origin: string) => origin.replace(/^http/i, "ws");
@@ -52,12 +54,17 @@ const nextConfig: NextConfig = {
     return [
       // Todo salvo los juegos: no se puede embeber.
       {
-        source: "/((?!studio/).*)",
+        source: "/((?!studio/|webchat).*)",
         headers: [
           ...commonHeaders,
           { key: "Content-Security-Policy", value: baseCsp("'none'") },
           { key: "X-Frame-Options", value: "DENY" },
         ],
+      },
+      // Webchat embebible (public/webchat.js) en las webs del operador.
+      {
+        source: "/webchat",
+        headers: [...commonHeaders, { key: "Content-Security-Policy", value: baseCsp(webchatAncestors.length ? webchatAncestors.join(" ") : "*") }],
       },
       // Juegos de Studios (grupo (games)): se cargan en el iframe del lobby, mismo origen.
       {

@@ -1,0 +1,143 @@
+import { Router, type Request } from 'express';
+import { z } from 'zod';
+import type { AuthPort } from '../../shared/ports/AuthPort';
+import type { OperatorCurrencyPort } from '../../shared/ports/OperatorCurrencyPort';
+import { getPrincipal, optionalAuth, requireAuth, requireRole, scopeOperator } from '../../shared/http/auth';
+import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { parse } from '../../shared/http/validate';
+import type { ModuleLogger } from '../../shared/module';
+import type { ContactIdentity, InboxService } from '../application/InboxService';
+import type { Message } from '../domain/types';
+
+export interface InboxRouterDeps {
+  auth: AuthPort;
+  svc: InboxService;
+  operators?: OperatorCurrencyPort;
+  logger?: ModuleLogger;
+  /** Sesiones de visitante por IP y minuto (antiabuso del endpoint público). */
+  sessionsPerMinute?: number;
+}
+
+const opQuery = z.object({ operatorId: z.string().min(1).max(100).optional() });
+const idParams = z.object({ id: z.string().uuid() });
+const body = z.string().max(8000);
+const listQuery = opQuery.extend({
+  status: z.enum(['open', 'pending', 'closed']).optional(),
+  assignee: z.string().min(1).max(100).optional(),
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+
+/** Vista del contacto: sin notas (ya filtradas) ni ids internos de agentes. */
+export const publicMessage = (m: Message) => ({ id: m.id, direction: m.direction, authorType: m.authorType, body: m.body, clientMsgId: m.clientMsgId, createdAt: m.createdAt });
+
+/** Identidad del contacto del webchat: jugador (token) o visitante (cabecera X-Visitor-Token). */
+export async function resolveContact(svc: InboxService, p: Request['principal'] | null | undefined, visitorToken: unknown): Promise<ContactIdentity | null> {
+  if (p?.role === 'PLAYER' && p.operatorId && p.playerId) {
+    return { operatorId: p.operatorId, channel: 'webchat', externalId: `player:${p.playerId}`, playerId: p.playerId, name: `Jugador ${p.playerId.slice(0, 8)}` };
+  }
+  if (typeof visitorToken === 'string' && visitorToken.length >= 20 && visitorToken.length <= 200) {
+    const v = await svc.visitorByToken(visitorToken);
+    if (v) return { operatorId: v.operatorId, channel: 'webchat', externalId: `visitor:${v.id}`, name: v.name };
+  }
+  return null;
+}
+
+/**
+ * Montado en /inbox/v1.
+ * Agentes (backoffice): /admin/conversations…, /admin/quick-replies…
+ * Webchat público: POST /webchat/session, GET /webchat/conversation, POST /webchat/messages.
+ */
+export function buildInboxRouter(d: InboxRouterDeps): Router {
+  const r = Router();
+  const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
+  const op = (req: Request) => scopeOperator(req, parse(opQuery, req.query).operatorId);
+
+  /* ─── Webchat (contacto) ─── */
+  const hits = new Map<string, number[]>();
+  r.post('/webchat/session', asyncHandler(async (req, res) => {
+    const ip = req.ip ?? 'unknown';
+    const now = Date.now();
+    const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
+    if (recent.length >= (d.sessionsPerMinute ?? 10)) throw new HttpError(429, 'RATE_LIMITED', 'Demasiadas sesiones; espera un momento');
+    recent.push(now);
+    hits.set(ip, recent);
+    if (hits.size > 50_000) hits.delete(hits.keys().next().value as string);
+    const b = parse(z.object({ operatorId: z.string().min(1).max(100), name: z.string().max(60).optional() }), req.body);
+    if (d.operators && !(await d.operators.getCurrencyInfo(b.operatorId))) throw new HttpError(404, 'NOT_FOUND', 'Operador no encontrado');
+    sendJson(res, await d.svc.createVisitor(b.operatorId, b.name), 201);
+  }));
+
+  const contact = async (req: Request): Promise<ContactIdentity> => {
+    const c = await resolveContact(d.svc, req.principal, req.get('x-visitor-token'));
+    if (!c) throw new HttpError(401, 'UNAUTHORIZED', 'Inicia sesión o abre una sesión de chat');
+    return c;
+  };
+
+  r.get('/webchat/conversation', optionalAuth(d.auth), asyncHandler(async (req, res) => {
+    const q = parse(z.object({ after: z.coerce.date().optional() }), req.query);
+    const conv = await d.svc.findFor(await contact(req));
+    const messages = conv ? await d.svc.contactMessages(conv, q.after) : [];
+    sendJson(res, { conversation: conv ? { id: conv.id, status: conv.status } : null, messages: messages.map(publicMessage) });
+  }));
+
+  r.post('/webchat/messages', optionalAuth(d.auth), asyncHandler(async (req, res) => {
+    const b = parse(z.object({ body, clientMsgId: z.string().min(1).max(64).optional() }), req.body);
+    const conv = await d.svc.conversationFor(await contact(req));
+    sendJson(res, publicMessage(await d.svc.contactMessage(conv, b.body, b.clientMsgId)), 201);
+  }));
+
+  /* ─── Agentes ─── */
+  r.get('/admin/conversations', ...admin, asyncHandler(async (req, res) => {
+    const q = parse(listQuery, req.query);
+    const operatorId = op(req);
+    const assigneeId = q.assignee === 'me' ? getPrincipal(req).userId : q.assignee === 'unassigned' ? null : q.assignee;
+    sendJson(res, { items: await d.svc.list(operatorId, { status: q.status, assigneeId, q: q.q || undefined, limit: q.limit }), me: getPrincipal(req).userId });
+  }));
+
+  r.get('/admin/conversations/:id', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    sendJson(res, await d.svc.get(op(req), id));
+  }));
+
+  r.post('/admin/conversations/:id/messages', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const b = parse(z.object({ body, kind: z.enum(['reply', 'note']).default('reply') }), req.body);
+    sendJson(res, await d.svc.agentMessage(op(req), id, getPrincipal(req).userId, b.body, b.kind), 201);
+  }));
+
+  r.patch('/admin/conversations/:id', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const b = parse(z.object({ status: z.enum(['open', 'pending', 'closed']).optional(), assigneeId: z.string().min(1).max(100).nullable().optional() }), req.body);
+    // "me" = el agente autenticado.
+    const assigneeId = b.assigneeId === 'me' ? getPrincipal(req).userId : b.assigneeId;
+    sendJson(res, await d.svc.update(op(req), id, { status: b.status, assigneeId }));
+  }));
+
+  r.post('/admin/conversations/:id/read', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    sendJson(res, await d.svc.markRead(op(req), id));
+  }));
+
+  const qr = z.object({ shortcut: z.string().trim().toLowerCase(), body });
+  r.get('/admin/quick-replies', ...admin, asyncHandler(async (req, res) => {
+    sendJson(res, { items: await d.svc.quickReplies(op(req)) });
+  }));
+  r.post('/admin/quick-replies', ...admin, asyncHandler(async (req, res) => {
+    const b = parse(qr, req.body);
+    sendJson(res, await d.svc.saveQuickReply(op(req), b.shortcut, b.body), 201);
+  }));
+  r.put('/admin/quick-replies/:id', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const b = parse(qr, req.body);
+    sendJson(res, await d.svc.saveQuickReply(op(req), b.shortcut, b.body, id));
+  }));
+  r.delete('/admin/quick-replies/:id', ...admin, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    if (!(await d.svc.deleteQuickReply(op(req), id))) throw new HttpError(404, 'NOT_FOUND', 'Respuesta rápida no encontrada');
+    sendJson(res, { ok: true });
+  }));
+
+  r.use(moduleErrorHandler(d.logger));
+  return r;
+}

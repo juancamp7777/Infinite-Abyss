@@ -1,4 +1,4 @@
-import type { Channel, Conversation, ConversationFilter, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
+import type { Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
 
 /** Subconjunto del PrismaClient usado (evita depender de los tipos generados). */
 interface Delegate {
@@ -14,6 +14,7 @@ export interface InboxPrismaLike {
   inboxMessage: Delegate;
   inboxQuickReply: Delegate;
   inboxVisitor: Delegate;
+  inboxChannel: Delegate;
 }
 
 const strip = <T extends Record<string, unknown>>(row: T): T => {
@@ -22,6 +23,7 @@ const strip = <T extends Record<string, unknown>>(row: T): T => {
 };
 const conv = (r: any): Conversation => strip({ ...r }) as Conversation;
 const msg = (r: any): Message => strip({ ...r }) as Message;
+const nullable = (m: Message) => ({ ...m, authorId: m.authorId ?? null, clientMsgId: m.clientMsgId ?? null, externalMessageId: m.externalMessageId ?? null, status: m.status ?? null, error: m.error ?? null });
 
 export class PrismaInboxRepository implements InboxRepository {
   constructor(private readonly db: InboxPrismaLike) {}
@@ -37,7 +39,7 @@ export class PrismaInboxRepository implements InboxRepository {
   }
 
   async saveConversation(c: Conversation) {
-    const data = { ...c, playerId: c.playerId ?? null, assigneeId: c.assigneeId ?? null };
+    const data = { ...c, playerId: c.playerId ?? null, assigneeId: c.assigneeId ?? null, channelId: c.channelId ?? null };
     const { id, ...rest } = data;
     return conv(await this.db.inboxConversation.upsert({ where: { id }, create: data, update: rest }));
   }
@@ -55,7 +57,7 @@ export class PrismaInboxRepository implements InboxRepository {
 
   async addMessage(m: Message) {
     try {
-      return msg(await this.db.inboxMessage.create({ data: { ...m, authorId: m.authorId ?? null, clientMsgId: m.clientMsgId ?? null } }));
+      return msg(await this.db.inboxMessage.create({ data: nullable(m) }));
     } catch (e) {
       if ((e as { code?: string }).code === 'P2002') throw Object.assign(new Error('clientMsgId duplicado'), { code: 'DUPLICATE_CLIENT_MSG' });
       throw e;
@@ -87,6 +89,28 @@ export class PrismaInboxRepository implements InboxRepository {
 
   async deleteQuickReply(operatorId: string, id: string) {
     return (await this.db.inboxQuickReply.deleteMany({ where: { id, operatorId } })).count > 0;
+  }
+
+  async saveMessage(m: Message) {
+    const { id, ...rest } = nullable(m);
+    return msg(await this.db.inboxMessage.upsert({ where: { id }, create: nullable(m), update: rest }));
+  }
+
+  async listChannels(operatorId: string) {
+    return (await this.db.inboxChannel.findMany({ where: { operatorId }, orderBy: { createdAt: 'asc' } })) as InboxChannel[];
+  }
+
+  async findChannel(id: string) {
+    return ((await this.db.inboxChannel.findUnique({ where: { id } })) as InboxChannel | null) ?? null;
+  }
+
+  async saveChannel(c: InboxChannel) {
+    const { id, ...rest } = c;
+    return (await this.db.inboxChannel.upsert({ where: { id }, create: c, update: rest })) as InboxChannel;
+  }
+
+  async deleteChannel(operatorId: string, id: string) {
+    return (await this.db.inboxChannel.deleteMany({ where: { id, operatorId } })).count > 0;
   }
 
   async saveVisitor(v: Visitor) {

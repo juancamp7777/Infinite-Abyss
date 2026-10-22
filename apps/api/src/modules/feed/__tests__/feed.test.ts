@@ -406,7 +406,7 @@ describe('agrupado del socket', () => {
 describe('configuración', () => {
   const prodEnv = {
     NODE_ENV: 'production', DATABASE_URL: 'postgresql://u:p@localhost:5432/db', JWT_ACCESS_SECRET: 'x'.repeat(40),
-    MKT_UNSUBSCRIBE_SECRET: 'm'.repeat(40), PROMO_DROPS_SECRET: 'd'.repeat(40),
+    MKT_UNSUBSCRIBE_SECRET: 'm'.repeat(40), PROMO_DROPS_SECRET: 'd'.repeat(40), INBOX_SECRETS_KEY: 'i'.repeat(40),
   } as NodeJS.ProcessEnv;
 
   it('en producción exige FEED_PSEUDONYM_SECRET de al menos 32 caracteres', () => {

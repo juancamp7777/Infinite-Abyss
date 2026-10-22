@@ -223,6 +223,7 @@ export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Panel", roles: ADMINS, section: "Principal" },
   { href: "/players", label: "Jugadores", roles: ALL, section: "Jugadores" },
   { href: "/inbox", label: "Inbox", roles: ALL, section: "Jugadores" },
+  { href: "/channels", label: "Canales del inbox", roles: ADMINS, section: "Jugadores" },
   { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
   { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS, section: "Marketing" },

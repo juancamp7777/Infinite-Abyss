@@ -1345,6 +1345,7 @@ model InboxConversation {
   operatorId         String
   channel            String
   externalId         String
+  channelId          String?  @db.Uuid
   playerId           String?
   contactName        String
   status             String   @default("open")
@@ -1369,8 +1370,11 @@ model InboxMessage {
   authorType     String
   authorId       String?
   body           String
-  clientMsgId    String?
-  createdAt      DateTime @default(now())
+  clientMsgId       String?
+  externalMessageId String?
+  status            String?
+  error             String?
+  createdAt         DateTime @default(now())
 
   @@unique([conversationId, clientMsgId])
   @@index([conversationId, createdAt])
@@ -1397,4 +1401,20 @@ model InboxVisitor {
 
   @@index([operatorId])
   @@map("inbox_visitors")
+}
+
+model InboxChannel {
+  id            String   @id @db.Uuid
+  operatorId    String
+  type          String
+  name          String
+  enabled       Boolean  @default(true)
+  webhookSecret String
+  configEnc     String
+  publicInfo    Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+
+  @@index([operatorId])
+  @@map("inbox_channels")
 }

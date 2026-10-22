@@ -19,7 +19,8 @@ function Form({ mode }: { mode: "login" | "register" }) {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string; username?: string }>({});
+  const [adult, setAdult] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; username?: string; adult?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -34,6 +35,7 @@ function Form({ mode }: { mode: "login" | "register" }) {
     // Al entrar también vale el usuario (las cuentas creadas por el chat de la caja no tienen correo).
     const id = email.trim();
     if (isRegister ? !EMAIL_RE.test(id) : !(EMAIL_RE.test(id) || /^[A-Za-z0-9_.-]{3,30}$/.test(id))) errs.email = isRegister ? "Ingresa un correo válido." : "Ingresa tu correo o usuario.";
+    if (isRegister && !adult) errs.adult = "Debes ser mayor de 18 años y aceptar los términos.";
     if (isRegister ? password.length < 8 : password.length === 0) {
       errs.password = isRegister ? "La contraseña debe tener al menos 8 caracteres." : "Ingresa tu contraseña.";
     }
@@ -91,6 +93,13 @@ function Form({ mode }: { mode: "login" | "register" }) {
           name="password"
         />
 
+        {isRegister && (
+          <label className="flex items-start gap-2 text-sm text-gray-300">
+            <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-1" name="adult" />
+            <span>Confirmo que tengo <b>18 años o más</b>, que el juego online es legal donde vivo y acepto los términos y la política de juego responsable.</span>
+          </label>
+        )}
+        {errors.adult && <p role="alert" className="-mt-2 text-xs text-red-400">{errors.adult}</p>}
         <button type="submit" disabled={busy} className="bg-gold-gradient text-black font-bold py-3 rounded-xl disabled:opacity-60">
           {busy ? "Procesando…" : isRegister ? "Registrarme" : "Entrar"}
         </button>

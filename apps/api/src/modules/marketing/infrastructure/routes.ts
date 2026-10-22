@@ -175,6 +175,9 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
     sendJson(res, { channels: Object.fromEntries(rows.map((c) => [c.channel, { optIn: c.optIn, source: c.source, at: c.at }])) });
   }));
 
+  /** Clave pública VAPID (pública por diseño) para que el navegador se suscriba. */
+  r.get('/push/public-key', (_req, res) => sendJson(res, { publicKey: rt.vapidPublicKey }));
+
   r.post('/push/subscribe', auth, asyncHandler(async (req, res) => {
     const { operatorId, playerId } = requirePlayer(req);
     const b = parse(pushSchema, req.body);
@@ -197,6 +200,21 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
   const ownedTemplates = async (operatorId: string, ids: string[]) => {
     for (const id of ids) owned(await rt.repos.templates.get(id), operatorId);
   };
+
+  /** Envío directo a un jugador desde el CRM (respeta consentimiento, autoexclusión y frecuencia en marketing). */
+  admin.post('/send', asyncHandler(async (req, res) => {
+    const operatorId = op(req);
+    const b = parse(z.object({ playerId: z.string().min(1).max(100), templateId: z.string().min(1).max(100) }), req.body);
+    const tpl = owned(await rt.repos.templates.get(b.templateId), operatorId);
+    const sendReq = { operatorId, playerId: b.playerId, templateId: tpl.id };
+    sendJson(res, tpl.kind === 'marketing' ? await rt.messaging.sendMarketing(sendReq) : await rt.messaging.sendTransactional(sendReq), 201);
+  }));
+
+  /** Dispositivos con push activo (y si el servidor tiene claves VAPID). */
+  admin.get('/push/stats', asyncHandler(async (req, res) => {
+    const subs = await rt.repos.pushSubs.list({ operatorId: op(req) });
+    sendJson(res, { enabled: !!rt.vapidPublicKey, devices: subs.length, players: new Set(subs.map((s) => s.playerId)).size });
+  }));
 
   // plantillas
   admin.get('/templates', asyncHandler(async (req, res) => sendJson(res, { items: await rt.repos.templates.list({ operatorId: op(req) }) })));

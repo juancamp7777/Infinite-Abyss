@@ -78,7 +78,12 @@ export function isOwnAccount(receiver: string, accounts: Array<{ accountNumber: 
 }
 
 /** Nombres que nunca son el titular que paga: billeteras y bancos (y nuestros propios titulares). */
-const WALLET_NAMES = ['mercado pago', 'mercadopago', 'uala', 'brubank', 'naranja x', 'lemon', 'prex', 'personal pay', 'modo', 'cuenta dni', 'belo', 'astropay', 'quikipay', 'hg cash'];
+const WALLET_NAMES = [
+  // Argentina
+  'mercado pago', 'mercadopago', 'uala', 'brubank', 'naranja x', 'lemon', 'prex', 'personal pay', 'modo', 'cuenta dni', 'belo', 'astropay', 'quikipay', 'hg cash',
+  // Colombia
+  'nequi', 'daviplata', 'movii', 'dale', 'bancolombia', 'bancolombia a la mano', 'transfiya', 'pse', 'rappipay', 'lulo bank', 'nu colombia',
+];
 export function isWalletOrOwnName(name: string, ownHolders: string[]): boolean {
   const n = nameTokens(name).join(' ');
   if (!n) return false;

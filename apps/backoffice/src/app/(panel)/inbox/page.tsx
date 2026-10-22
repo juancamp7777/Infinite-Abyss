@@ -439,6 +439,27 @@ function Details({ c, me, call, onChange }: { c: Conversation; me: string | null
           <p className="text-[11px] text-white/35">Vincula una cuenta existente solo si verificaste la identidad del contacto.</p>
         </div>
       )}
+      {c.playerId && (
+        <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+          <p className="text-xs text-white/45">Identidad (KYC): necesaria para retirar. Verifícala con el documento que envíe el contacto.</p>
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={() => void (async () => {
+              setMsg(null);
+              try {
+                await call(`/api/backoffice/players/${c.playerId}/kyc`, { method: "PUT", body: { status: "VERIFIED", reason: "Verificado por chat en Sonar" } });
+                setMsg("Identidad verificada: el jugador ya puede retirar.");
+              } catch (e) { setMsg(errMsg(e)); }
+            })()}>Verificar identidad</Button>
+            <Button variant="danger" onClick={() => void (async () => {
+              setMsg(null);
+              try {
+                await call(`/api/backoffice/players/${c.playerId}/kyc`, { method: "PUT", body: { status: "REJECTED", reason: "Documentación no válida (chat)" } });
+                setMsg("KYC rechazado.");
+              } catch (e) { setMsg(errMsg(e)); }
+            })()}>Rechazar</Button>
+          </div>
+        </div>
+      )}
       {msg && <p className="mt-2 text-xs text-white/60">{msg}</p>}
     </div>
   );

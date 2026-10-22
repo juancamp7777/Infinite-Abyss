@@ -19,6 +19,8 @@ export type PearlJudge = (ctx: { receipt: Receipt; bankTx: BankTx; settings: Pea
 const sha256 = (v: string | Buffer) => createHash('sha256').update(v).digest('hex');
 const safeEq = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const TERMINAL: ReceiptStatus[] = ['credited', 'rejected', 'duplicate'];
+/** Hora local de los comprobantes por moneda (mercados de arranque: Argentina y Colombia); editable por operador. */
+const UTC_OFFSET_BY_CURRENCY: Record<string, number> = { ARS: -180, COP: -300, CLP: -180, PEN: -300, MXN: -360, USD: 0 };
 
 export interface SubmitReceipt {
   operatorId: string;
@@ -66,7 +68,7 @@ export class PearlService {
     const currency = this.opts.defaultCurrency;
     const unit = 10n ** BigInt(currencyDecimals(currency));
     // Arranque seguro: todo a revisión humana hasta que el operador active el modo automático.
-    return { operatorId, mode: 'review_all', currency, autoMaxAmount: 100_000n * unit, minAmount: 1n * unit, maxAgeHours: 48, waitBankMinutes: 20, utcOffsetMinutes: -180, autoRegisterLeads: true, updatedAt: this.now() };
+    return { operatorId, mode: 'review_all', currency, autoMaxAmount: 100_000n * unit, minAmount: 1n * unit, maxAgeHours: 48, waitBankMinutes: 20, utcOffsetMinutes: UTC_OFFSET_BY_CURRENCY[currency] ?? 0, autoRegisterLeads: true, updatedAt: this.now() };
   }
 
   async updateSettings(operatorId: string, patch: Partial<Omit<PearlSettings, 'operatorId' | 'updatedAt'>>): Promise<PearlSettings> {

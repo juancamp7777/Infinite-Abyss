@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import webpush from 'web-push';
 import type { Server as SocketIOServer } from 'socket.io';
 import type { ModuleLogger } from '../../shared/module';
 import type { Channel, ChannelKind, ChannelMessage, InboxMessage, PushSubscription } from '../domain/types';
@@ -104,20 +105,72 @@ export class WhatsAppHttpChannel implements Channel {
 
 export const endpointId = (endpoint: string): string => createHash('sha256').update(endpoint).digest('hex').slice(0, 40);
 
+export interface VapidKeys {
+  publicKey: string;
+  privateKey: string;
+  /** mailto: o https: de contacto (lo exige el estándar). */
+  subject: string;
+}
+
+/** Envío Web Push (inyectable en pruebas). Devuelve el status HTTP del servicio de push del navegador. */
+export type PushSender = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string, vapid: VapidKeys) => Promise<{ statusCode: number }>;
+
+export const webPushSender: PushSender = async (sub, payload, vapid) => {
+  try {
+    const r = await webpush.sendNotification(sub, payload, { vapidDetails: vapid, TTL: 24 * 3600, urgency: 'normal', timeout: 10_000 });
+    return { statusCode: r.statusCode };
+  } catch (e) {
+    const status = (e as { statusCode?: number }).statusCode;
+    if (typeof status === 'number') return { statusCode: status };
+    throw e;
+  }
+};
+
+/** Claves VAPID del entorno; fuera de producción, efímeras si faltan (las suscripciones no sobreviven al reinicio). */
+export function resolveVapid(env: NodeJS.ProcessEnv, logger?: ModuleLogger): VapidKeys | null {
+  const { MKT_VAPID_PUBLIC_KEY: publicKey, MKT_VAPID_PRIVATE_KEY: privateKey } = env;
+  const subject = env.MKT_VAPID_SUBJECT || 'mailto:soporte@infinite-abyss.local';
+  if (publicKey && privateKey) return { publicKey, privateKey, subject };
+  if (env.NODE_ENV === 'production') {
+    logger?.warn('[marketing:push] sin MKT_VAPID_PUBLIC_KEY/MKT_VAPID_PRIVATE_KEY: los push no se envían');
+    return null;
+  }
+  const k = webpush.generateVAPIDKeys();
+  return { publicKey: k.publicKey, privateKey: k.privateKey, subject };
+}
+
 /**
- * Push web: guarda suscripciones (API en rutas). El envío real requiere el protocolo Web Push con VAPID
- * (MKT_VAPID_PUBLIC_KEY / MKT_VAPID_PRIVATE_KEY / MKT_VAPID_SUBJECT).
- * TODO: firmar JWT VAPID y cifrar el payload (RFC 8291) o añadir la librería `web-push` como dependencia.
- * Mientras tanto el mensaje se registra como encolado y no se entrega.
+ * Push web real (Web Push + VAPID, payload cifrado RFC 8291). Envía a todas las suscripciones del jugador
+ * (móvil, escritorio…); las caducadas (404/410) se borran. Entregado si al menos un dispositivo lo aceptó.
  */
 export class PushChannel implements Channel {
   readonly kind = 'push' as const;
-  constructor(private readonly subs: Store<PushSubscription>, private readonly logger?: ModuleLogger) {}
+  constructor(
+    private readonly subs: Store<PushSubscription>,
+    private readonly vapid: VapidKeys | null,
+    private readonly logger?: ModuleLogger,
+    private readonly sender: PushSender = webPushSender,
+  ) {}
+
   async send(msg: ChannelMessage): Promise<{ providerMessageId: string }> {
+    if (!this.vapid) throw new ChannelError('NOT_CONFIGURED', 'Push sin claves VAPID');
     const subs = await this.subs.list({ operatorId: msg.operatorId, playerId: msg.playerId });
     if (subs.length === 0) throw new ChannelError('NO_ADDRESS', 'El jugador no tiene suscripciones push');
-    this.logger?.warn('[marketing:push] envío Web Push no implementado (TODO VAPID); mensaje no entregado', { sendId: msg.sendId, subs: subs.length });
-    return { providerMessageId: `push-queued-${msg.sendId}` };
+    const url = typeof msg.meta?.url === 'string' && msg.meta.url.startsWith('/') ? msg.meta.url : '/lobby';
+    const payload = JSON.stringify({ title: msg.subject || 'Infinite Abyss', body: msg.text.slice(0, 300), url, tag: msg.sendId });
+    let delivered = 0;
+    for (const s of subs) {
+      try {
+        const r = await this.sender({ endpoint: s.endpoint, keys: s.keys }, payload, this.vapid);
+        if (r.statusCode >= 200 && r.statusCode < 300) delivered++;
+        else if (r.statusCode === 404 || r.statusCode === 410) await this.subs.delete(s.id);
+        else this.logger?.warn('[marketing:push] el servicio de push rechazó el envío', { sendId: msg.sendId, status: r.statusCode });
+      } catch (e) {
+        this.logger?.warn('[marketing:push] envío fallido', { sendId: msg.sendId, error: (e as Error).message });
+      }
+    }
+    if (!delivered) throw new ChannelError('DELIVERY_FAILED', 'Ningún dispositivo aceptó el push');
+    return { providerMessageId: `push-${msg.sendId}-${delivered}` };
   }
 }
 
@@ -150,6 +203,7 @@ export function buildChannels(opts: {
   env: NodeJS.ProcessEnv;
   inbox: Store<InboxMessage>;
   pushSubs: Store<PushSubscription>;
+  vapid?: VapidKeys | null;
   io?: SocketIOServer;
   clock: () => Date;
   logger: ModuleLogger;
@@ -167,7 +221,7 @@ export function buildChannels(opts: {
     email: pick('email', 'MKT_EMAIL', EmailHttpChannel, env.MKT_EMAIL_FROM),
     sms: pick('sms', 'MKT_SMS', SmsHttpChannel, env.MKT_SMS_FROM),
     whatsapp: pick('whatsapp', 'MKT_WHATSAPP', WhatsAppHttpChannel),
-    push: new PushChannel(opts.pushSubs, logger),
+    push: new PushChannel(opts.pushSubs, opts.vapid ?? null, logger),
     inapp: new InAppChannel(opts.inbox, opts.io, opts.clock),
   };
 }

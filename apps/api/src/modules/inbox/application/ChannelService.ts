@@ -112,7 +112,13 @@ export class ChannelService {
     for (const m of a.parse(req.body)) {
       try {
         const conv = await this.inbox.conversationFor({ operatorId: ch.operatorId, channel: ch.type, channelId: ch.id, externalId: `${ch.id}:${m.from}`, name: m.name });
-        await this.inbox.contactMessage(conv, m.body, `${ch.type}:${m.messageId}`.slice(0, 64), { skipRateLimit: true });
+        const clientMsgId = `${ch.type}:${m.messageId}`.slice(0, 64);
+        const image = m.media && a.fetchMedia ? await a.fetchMedia(config, m.media.ref).catch((e: Error) => {
+          this.opts.logger.warn('[inbox] imagen entrante no descargada', { channelId: ch.id, error: e.message });
+          return null;
+        }) : null;
+        if (image) await this.inbox.contactAttachment(conv, image, m.body, clientMsgId, { skipRateLimit: true });
+        else await this.inbox.contactMessage(conv, m.body, clientMsgId, { skipRateLimit: true });
         received += 1;
       } catch (e) {
         // Un mensaje inválido no debe hacer reintentar todo el lote al proveedor.

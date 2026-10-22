@@ -1,4 +1,4 @@
-import type { Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
+import type { Attachment, Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -9,6 +9,7 @@ export class InMemoryInboxRepository implements InboxRepository {
   private readonly replies = new Map<string, QuickReply>();
   private readonly visitors = new Map<string, Visitor>();
   private readonly channels = new Map<string, InboxChannel>();
+  private readonly files = new Map<string, Attachment>();
 
   async findConversation(operatorId: string, id: string) {
     const c = this.convs.get(id);
@@ -69,6 +70,14 @@ export class InMemoryInboxRepository implements InboxRepository {
     if (i < 0) throw new Error('Mensaje inexistente');
     this.msgs[i] = clone(m);
     return clone(m);
+  }
+  async saveAttachment(a: Attachment) {
+    this.files.set(a.id, { ...a, data: Buffer.from(a.data) });
+    return a;
+  }
+  async findAttachment(operatorId: string, id: string) {
+    const a = this.files.get(id);
+    return a && a.operatorId === operatorId ? { ...a, data: Buffer.from(a.data) } : null;
   }
   async listChannels(operatorId: string) {
     return [...this.channels.values()].filter((c) => c.operatorId === operatorId).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map(clone);

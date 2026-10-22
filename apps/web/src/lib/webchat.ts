@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { api, ApiError, socketTarget, tokens } from "./api";
+import { api, API_URL, ApiError, socketTarget, tokens } from "./api";
 import { moduleOperatorId } from "./modules";
 import { useTheme } from "./theme";
 
@@ -15,6 +15,10 @@ export type ChatMessage = {
   createdAt: string;
   /** Solo en cliente: enviando o fallido. */
   state?: "sending" | "failed";
+  /** El mensaje lleva una imagen (comprobante). */
+  hasAttachment?: boolean;
+  /** Solo en cliente: vista previa local de la imagen enviada. */
+  localImage?: string;
 };
 
 type ConversationResponse = { conversation: { id: string; status: string } | null; messages: ChatMessage[] };
@@ -51,7 +55,8 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
   const out = [...list];
   for (const m of incoming) {
     const i = out.findIndex((x) => x.id === m.id || (!!m.clientMsgId && x.clientMsgId === m.clientMsgId));
-    if (i >= 0) out[i] = { ...m, state: undefined };
+    // Se conserva la vista previa local de la imagen al llegar la versión del servidor.
+    if (i >= 0) out[i] = { ...m, localImage: m.localImage ?? out[i].localImage, state: undefined };
     else out.push(m);
   }
   return out.sort((a, b) => (a.state === "sending" ? 1 : 0) - (b.state === "sending" ? 1 : 0) || a.createdAt.localeCompare(b.createdAt));
@@ -190,5 +195,32 @@ export function useWebchat(operatorId: string, opts: { active: boolean; visitorN
     [deliver, messages],
   );
 
-  return { messages, loading, error, unread, send, retry, isPlayer: !!identity.player };
+  /** Envía una foto (comprobante): la caja la lee y concilia sola. Solo JPG, PNG o WEBP de hasta 5 MB. */
+  const sendImage = useCallback(
+    async (file: File) => {
+      if (!operatorId) return;
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return setError("Solo imágenes JPG, PNG o WEBP");
+      if (file.size > 5 * 1024 * 1024) return setError("La imagen supera los 5 MB");
+      const clientMsgId = newId();
+      const localImage = URL.createObjectURL(file);
+      setMessages((prev) => [...prev, { id: `local-${clientMsgId}`, direction: "in", authorType: "contact", body: "📷 Imagen", clientMsgId, createdAt: new Date().toISOString(), state: "sending", hasAttachment: true, localImage }]);
+      try {
+        const id = await ensureIdentity();
+        const headers: Record<string, string> = { "Content-Type": file.type };
+        if (id.player) headers.Authorization = `Bearer ${id.player}`;
+        else if (id.visitor) headers["X-Visitor-Token"] = id.visitor;
+        const res = await fetch(`${API_URL}/inbox/v1/webchat/attachments?clientMsgId=${encodeURIComponent(clientMsgId)}`, { method: "POST", headers, body: file });
+        if (!res.ok) throw new ApiError(res.status, "UPLOAD", "upload");
+        const saved = (await res.json()) as ChatMessage;
+        setMessages((prev) => mergeMessages(prev, [{ ...saved, localImage }]));
+        setError(null);
+      } catch (e) {
+        setMessages((prev) => prev.map((m) => (m.clientMsgId === clientMsgId ? { ...m, state: "failed" } : m)));
+        setError(e instanceof ApiError && e.status === 415 ? "Solo imágenes JPG, PNG o WEBP" : "No se pudo enviar la imagen");
+      }
+    },
+    [ensureIdentity, operatorId],
+  );
+
+  return { messages, loading, error, unread, send, sendImage, retry, isPlayer: !!identity.player };
 }

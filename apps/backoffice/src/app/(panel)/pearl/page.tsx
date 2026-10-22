@@ -5,6 +5,7 @@ import { Banknote, Check, CircleAlert, Copy, Landmark, Plus, Trash2, X } from "l
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient, useSession } from "@/lib/hooks";
 import { Badge, Button, Card, Empty, ErrorBox, Field, inputCls, NeedOperator, Notice, PageHeader, Spinner, Tabs } from "@/components/ui";
+import { AuthImage } from "@/components/AuthImage";
 
 type ReceiptStatus = "credited" | "pending_review" | "waiting_bank" | "needs_info" | "rejected" | "duplicate" | "error";
 interface Receipt {
@@ -18,6 +19,7 @@ interface Receipt {
   reason?: string;
   checks: Array<{ code: string; ok: boolean; detail?: string }>;
   bankTxId?: string;
+  attachmentId?: string;
   source: "ai" | "manual";
   reviewerId?: string;
   createdAt: string;
@@ -26,6 +28,9 @@ interface BankTx { id: string; externalId: string; amount: string; currency: str
 interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number }
 interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; active: boolean }
 interface Feed { id: string; type: string; name: string; enabled: boolean; lastEventAt?: string }
+interface AiView { enabled: boolean; provider: "anthropic" | "gemini" | "deepseek"; readerModel: string; judgeModel: string; hasKey: boolean; keyFromEnv: boolean }
+const PROVIDER_LABEL = { anthropic: "Claude (Anthropic)", gemini: "Gemini (Google)", deepseek: "DeepSeek" } as const;
+const FIELDS = [["amount", "Monto (12.345,67)"], ["senderName", "Titular que paga"], ["date", "Fecha AAAA-MM-DD"], ["time", "Hora HH:MM"], ["receiverAccount", "Cuenta destino"]] as const;
 
 const STATUS: Record<ReceiptStatus, { label: string; tone: "neutral" | "good" | "bad" | "warn" }> = {
   credited: { label: "Acreditado", tone: "good" }, pending_review: { label: "En revisión", tone: "warn" }, waiting_bank: { label: "Esperando banco", tone: "neutral" },
@@ -46,6 +51,7 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
   const [sel, setSel] = useState<string | null>(null);
   const [pick, setPick] = useState<string>("");
   const [reason, setReason] = useState("");
+  const [edit, setEdit] = useState<Receipt["extracted"] | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const r = list.data?.items.find((x) => x.id === sel);
   const candidates = (txs.data?.items ?? []).filter((t) => !r?.amount || t.amount === r.amount);
@@ -70,7 +76,7 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
       <div className="min-w-0 space-y-2">
         {!items.length && <Card><Empty>No hay comprobantes aquí.</Empty></Card>}
         {items.map((x) => (
-          <button key={x.id} type="button" onClick={() => { setSel(x.id); setPick(x.bankTxId ?? ""); setMsg(null); }}
+          <button key={x.id} type="button" onClick={() => { setSel(x.id); setPick(x.bankTxId ?? ""); setMsg(null); setEdit(null); }}
             className={`flex w-full flex-wrap items-center gap-3 rounded-xl border bg-panel/80 p-3 text-left transition-colors hover:border-white/25 ${sel === x.id ? "border-[var(--color-brand)]" : "border-white/10"}`}>
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--color-brand)]/15 text-[var(--color-brand)]"><Banknote aria-hidden className="h-5 w-5" /></span>
             <div className="min-w-0 flex-1">
@@ -85,6 +91,7 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
       <Card title={r ? "Detalle del comprobante" : "Selecciona un comprobante"}>
         {!r ? <p className="text-sm text-white/45">Aquí ves los controles automáticos, el pago del banco sugerido y las acciones.</p> : (
           <div className="space-y-3 text-sm">
+            {r.attachmentId && <AuthImage path={`/pearl/v1/admin/receipts/${r.id}/image`} alt="Comprobante enviado por el jugador" className="max-h-72 w-full" />}
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
               <dt className="text-white/45">Monto</dt><dd>{r.currency} {minor(r.amount)}</dd>
               <dt className="text-white/45">Titular</dt><dd className="truncate">{r.extracted.senderName || "—"}</dd>
@@ -100,6 +107,23 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
                 </li>
               ))}
             </ul>
+            {["pending_review", "needs_info", "error"].includes(r.status) && (edit ? (
+              <div className="space-y-2 rounded-lg border border-white/10 p-2.5">
+                <p className="text-xs font-semibold text-white/60">Corregir datos leídos</p>
+                {FIELDS.map(([k, ph]) => (
+                  <input key={k} className={`${inputCls} w-full`} aria-label={ph} placeholder={ph} value={edit[k] ?? ""} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} />
+                ))}
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={() => void act(async () => {
+                    const clean = Object.fromEntries(Object.entries(edit).filter(([, v]) => v !== "" && v !== undefined));
+                    const out = await call<Receipt>(`/pearl/v1/admin/receipts/${r.id}`, { method: "PATCH", body: { extracted: { senderName: "", ...clean } } });
+                    setEdit(null);
+                    return out;
+                  })}>Guardar y conciliar</Button>
+                  <Button variant="ghost" onClick={() => setEdit(null)}>Cancelar</Button>
+                </div>
+              </div>
+            ) : <Button variant="ghost" className="w-full" onClick={() => setEdit({ ...r.extracted })}>Corregir datos leídos</Button>)}
             {["pending_review", "waiting_bank", "needs_info", "error"].includes(r.status) && (
               <>
                 <Field label="Pago del banco" htmlFor="tx">
@@ -159,6 +183,8 @@ function Config() {
   const settings = useApi<Settings>("/pearl/v1/admin/settings");
   const accounts = useApi<{ items: Account[] }>("/pearl/v1/admin/accounts");
   const feeds = useApi<{ items: Feed[] }>("/pearl/v1/admin/feeds");
+  const aiCfg = useApi<AiView>("/pearl/v1/admin/ai");
+  const [aiForm, setAiForm] = useState<{ provider?: AiView["provider"]; readerModel?: string; judgeModel?: string; apiKey?: string; enabled?: boolean }>({});
   const [form, setForm] = useState<Partial<Settings>>({});
   const [acc, setAcc] = useState({ holderName: "", alias: "", accountNumber: "" });
   const [feedType, setFeedType] = useState("quikipay");
@@ -169,7 +195,7 @@ function Config() {
     try {
       await fn();
       setMsg({ tone: "ok", text: ok });
-      settings.reload(); accounts.reload(); feeds.reload();
+      settings.reload(); accounts.reload(); feeds.reload(); aiCfg.reload();
     } catch (e) {
       setMsg({ tone: "warn", text: errMsg(e) });
     }
@@ -238,6 +264,31 @@ function Config() {
           </div>
         )}
       </Card>
+      {aiCfg.data && (
+        <Card title="IA de lectura y juez" className="xl:col-span-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <Field label="Proveedor" htmlFor="ai-p">
+              <select id="ai-p" className={`${inputCls} w-full`} value={aiForm.provider ?? aiCfg.data.provider} onChange={(e) => setAiForm({ ...aiForm, provider: e.target.value as AiView["provider"], readerModel: undefined, judgeModel: undefined })}>
+                {(Object.keys(PROVIDER_LABEL) as AiView["provider"][]).map((p) => <option key={p} value={p}>{PROVIDER_LABEL[p]}</option>)}
+              </select>
+            </Field>
+            <Field label="Modelo lector" htmlFor="ai-r"><input id="ai-r" className={`${inputCls} w-full`} placeholder={aiCfg.data.readerModel} value={aiForm.readerModel ?? ""} onChange={(e) => setAiForm({ ...aiForm, readerModel: e.target.value })} /></Field>
+            <Field label="Modelo juez" htmlFor="ai-j"><input id="ai-j" className={`${inputCls} w-full`} placeholder={aiCfg.data.judgeModel} value={aiForm.judgeModel ?? ""} onChange={(e) => setAiForm({ ...aiForm, judgeModel: e.target.value })} /></Field>
+            <Field label={aiCfg.data.hasKey ? (aiCfg.data.keyFromEnv ? "API key (del servidor)" : "API key guardada ✓") : "API key"} htmlFor="ai-k">
+              <input id="ai-k" type="password" autoComplete="off" className={`${inputCls} w-full`} placeholder={aiCfg.data.hasKey ? "•••••• (vacío = mantener)" : "Pega la clave del proveedor"} value={aiForm.apiKey ?? ""} onChange={(e) => setAiForm({ ...aiForm, apiKey: e.target.value })} />
+            </Field>
+            <div className="flex items-end gap-2">
+              <label className="mb-2 inline-flex items-center gap-1.5 text-sm"><input type="checkbox" checked={aiForm.enabled ?? aiCfg.data.enabled} onChange={(e) => setAiForm({ ...aiForm, enabled: e.target.checked })} /> Activa</label>
+              <Button className="flex-1" onClick={() => void run(async () => {
+                const body = Object.fromEntries(Object.entries(aiForm).filter(([, v]) => v !== "" && v !== undefined));
+                await call("/pearl/v1/admin/ai", { method: "PUT", body });
+                setAiForm({});
+              }, "IA guardada")}>Guardar IA</Button>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-white/40">Recomendado: Claude Haiku 5.5 lee los comprobantes y Claude Opus 5.5 juzga antes de acreditar. Sin clave, Pearl sigue funcionando y deja la lectura al cajero. La clave se guarda cifrada y nunca se vuelve a mostrar.</p>
+        </Card>
+      )}
       {msg && <div className="xl:col-span-3"><Notice tone={msg.tone}>{msg.text}</Notice></div>}
     </div>
   );

@@ -62,6 +62,9 @@
   .wc-input:focus { border-color: color-mix(in srgb, var(--wc-cyan) 60%, transparent); }
   .wc-send { width: 2.5rem; height: 2.5rem; align-self: flex-end; border-radius: .75rem; display: grid; place-items: center; border: 0; cursor: pointer; background: var(--wc-cyan); color: #04121f; }
   .wc-send:disabled { opacity: .4; cursor: default; }
+  .wc-attach { width: 2.5rem; height: 2.5rem; align-self: flex-end; border-radius: .75rem; display: grid; place-items: center; cursor: pointer; background: var(--wc-panel-2); color: var(--wc-gold); border: 1px solid var(--wc-border); }
+  .wc-attach:hover { border-color: color-mix(in srgb, var(--wc-gold) 50%, transparent); }
+  .wc-img { display: block; max-width: 100%; max-height: 14rem; border-radius: .6rem; }
   @keyframes wc-in { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
   @keyframes wc-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .wc-window, .wc-msg, .wc-badge { animation: none; } .wc-fab { transition: none; } }

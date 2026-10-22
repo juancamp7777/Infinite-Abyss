@@ -1,4 +1,4 @@
-import { DUPLICATE_RECEIPT, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
+import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
 
 /** Subconjunto del PrismaClient usado (evita depender de los tipos generados). */
 interface Delegate {
@@ -16,6 +16,7 @@ export interface PearlPrismaLike {
   pearlFeed: Delegate;
   pearlBankTx: Delegate;
   pearlReceipt: Delegate;
+  pearlAiConfig: Delegate;
 }
 
 const noNulls = <T>(r: any): T => {
@@ -122,6 +123,19 @@ export class PrismaPearlRepository implements PearlRepository {
   async waitingReceipts(limit: number) {
     return (await this.db.pearlReceipt.findMany({ where: { status: 'waiting_bank' }, orderBy: { createdAt: 'asc' }, take: limit })).map(receipt);
   }
+  async latestReceiptForConversation(operatorId: string, conversationId: string) {
+    const r = await this.db.pearlReceipt.findFirst({ where: { operatorId, conversationId }, orderBy: { createdAt: 'desc' } });
+    return r ? receipt(r) : null;
+  }
+  async getAi(operatorId: string) {
+    const r = await this.db.pearlAiConfig.findUnique({ where: { operatorId } });
+    return r ? noNulls<AiConfig>(r) : null;
+  }
+  async saveAi(c: AiConfig) {
+    const data = { ...c, keyEnc: c.keyEnc ?? null };
+    const { operatorId, ...rest } = data;
+    return noNulls<AiConfig>(await this.db.pearlAiConfig.upsert({ where: { operatorId }, create: data, update: rest }));
+  }
   async knownSenderNames(operatorId: string, playerId: string) {
     const rows = await this.db.pearlReceipt.findMany({ where: { operatorId, playerId, status: 'credited' }, select: { extracted: true }, take: 50, orderBy: { createdAt: 'desc' } });
     return [...new Set(rows.map((r) => String((r.extracted as { senderName?: string })?.senderName ?? '')).filter(Boolean))];
@@ -130,7 +144,7 @@ export class PrismaPearlRepository implements PearlRepository {
   private data(r: Receipt) {
     return {
       ...r, extracted: r.extracted as object, checks: r.checks as object[], conversationId: r.conversationId ?? null, playerId: r.playerId ?? null, imageHash: r.imageHash ?? null,
-      key: r.key ?? null, amount: r.amount ?? null, reason: r.reason ?? null, bankTxId: r.bankTxId ?? null, depositId: r.depositId ?? null, reviewerId: r.reviewerId ?? null,
+      key: r.key ?? null, attachmentId: r.attachmentId ?? null, amount: r.amount ?? null, reason: r.reason ?? null, bankTxId: r.bankTxId ?? null, depositId: r.depositId ?? null, reviewerId: r.reviewerId ?? null,
     };
   }
 }

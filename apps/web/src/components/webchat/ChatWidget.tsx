@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { MessageCircle, SendHorizontal, X } from "lucide-react";
+import { ImagePlus, MessageCircle, SendHorizontal, X } from "lucide-react";
 import { useChatOperatorId, useWebchat } from "@/lib/webchat";
 import "./webchat.css";
 
@@ -13,6 +13,7 @@ function ChatPanel({ chat, embedded = false, active = true, onClose }: { chat: C
   const [text, setText] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
@@ -59,7 +60,8 @@ function ChatPanel({ chat, embedded = false, active = true, onClose }: { chat: C
         {chat.messages.map((m) => (
           <div key={m.clientMsgId ?? m.id} className="contents">
             <div className={`wc-msg ${m.direction === "in" ? "wc-msg-in" : "wc-msg-out"} ${m.state ? `wc-msg-${m.state}` : ""}`}>
-              {m.body}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {m.localImage ? <img src={m.localImage} alt="Imagen enviada" className="wc-img" /> : m.body}
               <time dateTime={m.createdAt}>{m.state === "sending" ? "Enviando…" : time(m.createdAt)}</time>
             </div>
             {m.state === "failed" && m.clientMsgId && (
@@ -72,6 +74,14 @@ function ChatPanel({ chat, embedded = false, active = true, onClose }: { chat: C
       {chat.error && <div className="wc-error" role="alert">{chat.error}</div>}
 
       <form className="wc-form" onSubmit={submit}>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void chat.sendImage(f);
+          e.target.value = "";
+        }} />
+        <button type="button" className="wc-attach" onClick={() => fileRef.current?.click()} aria-label="Enviar comprobante o imagen" title="Enviar comprobante">
+          <ImagePlus aria-hidden className="h-4 w-4" />
+        </button>
         <textarea
           ref={inputRef}
           className="wc-input"

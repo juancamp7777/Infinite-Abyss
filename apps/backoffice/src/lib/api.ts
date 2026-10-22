@@ -131,3 +131,9 @@ export interface Skin {
   colors: { primary: string; secondary: string; background: string; surface: string; text: string; accent: string };
   banners: Array<{ title: string; subtitle: string; imageUrl?: string; href: string }>;
 }
+
+/** Descarga binaria autenticada (imágenes de comprobantes y adjuntos) como URL de objeto local. */
+export async function fetchObjectUrl(path: string, query?: RequestOptions["query"]): Promise<string> {
+  const res = await send(path, { query });
+  return URL.createObjectURL(await res.blob());
+}

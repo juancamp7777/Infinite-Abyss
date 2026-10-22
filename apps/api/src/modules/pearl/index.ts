@@ -1,7 +1,10 @@
+import { randomBytes } from 'crypto';
 import { currencyDecimals } from '../../domain/money/currencies';
+import { SecretBox } from '../inbox/domain/secretBox';
 import type { InboxService } from '../inbox/application/InboxService';
 import type { NymfoModule } from '../shared/module';
 import type { ExternalDepositPort } from '../shared/ports/ExternalDepositPort';
+import { PearlAi, type AiClientFactory } from './application/PearlAi';
 import { PearlService, type PearlOutcome } from './application/PearlService';
 import type { PearlRepository, Receipt } from './domain/types';
 import { buildPearlRouter } from './http/routes';
@@ -15,13 +18,17 @@ export interface PearlModuleOptions {
   deposits?: ExternalDepositPort;
   /** Barrido de comprobantes esperando al banco (ms); 0 = apagado. Por defecto PEARL_TICK_MS o 60000. */
   tickMs?: number;
+  /** Clientes de IA (las pruebas inyectan uno falso). */
+  aiFactory?: AiClientFactory;
 }
 
 const formatAmount = (r: Receipt) => {
   if (r.amount === undefined) return '';
   const dec = currencyDecimals(r.currency);
-  const n = Number(r.amount) / 10 ** dec;
-  return `${r.currency} ${n.toLocaleString('es', { minimumFractionDigits: dec > 2 ? 2 : dec, maximumFractionDigits: dec })}`;
+  // Formato fijo 12.345,67 (Intl omite el separador de miles en montos de 4 cifras).
+  const s = r.amount.toString().padStart(dec + 1, '0');
+  const int = s.slice(0, s.length - dec).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${r.currency} ${int}${dec ? `,${s.slice(-dec)}` : ''}`;
 };
 
 /** Mensajes al contacto por cada desenlace (el equipo ve además la nota interna en Sonar). */
@@ -54,7 +61,12 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
       const pearl = new PearlService(repo, { deposits, logger: deps.logger, defaultCurrency: deps.env.PEARL_DEFAULT_CURRENCY || 'ARS' });
 
       const inbox = deps.services['inbox.service'] as InboxService | undefined;
+      let ai: PearlAi | undefined;
       if (inbox) {
+        const box = new SecretBox(deps.env.INBOX_SECRETS_KEY || randomBytes(32).toString('hex'));
+        ai = new PearlAi(repo, pearl, inbox, box, { logger: deps.logger, envKey: deps.env.PEARL_ANTHROPIC_API_KEY || deps.env.ANTHROPIC_API_KEY || undefined, factory: opts.aiFactory });
+        // Prioridad sobre Tide: las imágenes y la respuesta del titular las atiende Pearl.
+        inbox.onEvent((e) => ai!.onInboxEvent(e), 10);
         pearl.setNotifier(async (r, outcome) => {
           if (!r.conversationId) return;
           await inbox.botMessage(r.operatorId, r.conversationId, pearlMessage(r, outcome));
@@ -62,13 +74,13 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
         });
       }
 
-      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, logger: deps.logger }));
+      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger }));
       const tickMs = opts.tickMs ?? Number(deps.env.PEARL_TICK_MS ?? 60_000);
       if (Number.isFinite(tickMs) && tickMs > 0) {
         const t = setInterval(() => void pearl.tick().catch((e) => deps.logger.error('[pearl] barrido', { error: (e as Error).message })), tickMs);
         t.unref?.();
       }
-      return { 'pearl.service': pearl };
+      return { 'pearl.service': pearl, ...(ai ? { 'pearl.ai': ai } : {}) };
     },
   };
 }

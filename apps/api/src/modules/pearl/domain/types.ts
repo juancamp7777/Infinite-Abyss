@@ -103,6 +103,8 @@ export interface Receipt {
   checks: Check[];
   bankTxId?: string;
   depositId?: string;
+  /** Imagen en Sonar (adjunto del mensaje). */
+  attachmentId?: string;
   source: 'ai' | 'manual';
   reviewerId?: string;
   createdAt: Date;
@@ -134,8 +136,22 @@ export interface PearlRepository {
   transitionReceipt(r: Receipt, from: ReceiptStatus[]): Promise<boolean>;
   listReceipts(operatorId: string, f: { status?: ReceiptStatus; limit: number }): Promise<Receipt[]>;
   waitingReceipts(limit: number): Promise<Receipt[]>;
+  latestReceiptForConversation(operatorId: string, conversationId: string): Promise<Receipt | null>;
+  getAi(operatorId: string): Promise<AiConfig | null>;
+  saveAi(c: AiConfig): Promise<AiConfig>;
   /** Titulares con los que el jugador ya pagó antes (nombres conocidos). */
   knownSenderNames(operatorId: string, playerId: string): Promise<string[]>;
 }
 
 export const DUPLICATE_RECEIPT = 'DUPLICATE_RECEIPT';
+
+/** IA del operador: proveedor, modelos y API key cifrada (nunca sale por la API). */
+export interface AiConfig {
+  operatorId: string;
+  enabled: boolean;
+  provider: 'anthropic' | 'gemini' | 'deepseek';
+  readerModel: string;
+  judgeModel: string;
+  keyEnc?: string;
+  updatedAt: Date;
+}

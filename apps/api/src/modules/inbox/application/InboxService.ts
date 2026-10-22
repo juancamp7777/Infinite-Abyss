@@ -20,6 +20,13 @@ export interface ContactIdentity {
   channelId?: string;
 }
 
+/** Eventos para automatizaciones (Tide): se esperan dentro de la operación y sus errores nunca la rompen. */
+export type InboxEvent =
+  | { type: 'contact_message'; conversation: Conversation; message: Message }
+  | { type: 'agent_message'; conversation: Conversation; message: Message }
+  | { type: 'closed'; conversation: Conversation };
+export type InboxListener = (e: InboxEvent) => Promise<void> | void;
+
 /** Entrega por canal externo (WhatsApp, Telegram); lanza si el canal rechaza el envío. */
 export type InboxDispatcher = (conversation: Conversation, message: Message) => Promise<{ externalMessageId: string }>;
 
@@ -28,6 +35,7 @@ const RATE_WINDOW_MS = 60_000;
 export class InboxService {
   private notifier?: InboxNotifier;
   private dispatcher?: InboxDispatcher;
+  private readonly listeners: InboxListener[] = [];
   private readonly recent = new Map<string, number[]>();
 
   constructor(
@@ -41,6 +49,20 @@ export class InboxService {
 
   setDispatcher(d: InboxDispatcher): void {
     this.dispatcher = d;
+  }
+
+  onEvent(l: InboxListener): void {
+    this.listeners.push(l);
+  }
+
+  private async emit(e: InboxEvent): Promise<void> {
+    for (const l of this.listeners) {
+      try {
+        await l(e);
+      } catch {
+        /* una automatización rota no debe tumbar el inbox (el motor registra sus propios errores) */
+      }
+    }
   }
 
   private now(): Date {
@@ -100,6 +122,7 @@ export class InboxService {
     this.notifier?.toAgents(conv.operatorId, 'inbox:message', msg);
     this.notifier?.toAgents(conv.operatorId, 'inbox:conversation', updated);
     this.notifier?.toContact(updated, msg);
+    await this.emit({ type: 'contact_message', conversation: updated, message: msg });
     return msg;
   }
 
@@ -130,7 +153,10 @@ export class InboxService {
     const saved = await this.repo.saveConversation(updated);
     this.notifier?.toAgents(operatorId, 'inbox:message', msg);
     this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
-    if (kind === 'reply') this.notifier?.toContact(saved, msg);
+    if (kind === 'reply') {
+      this.notifier?.toContact(saved, msg);
+      await this.emit({ type: 'agent_message', conversation: saved, message: msg });
+    }
     return msg;
   }
 
@@ -154,6 +180,37 @@ export class InboxService {
       else next.assigneeId = patch.assigneeId;
     }
     const saved = await this.repo.saveConversation(next);
+    this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
+    if (saved.status === 'closed' && conv.status !== 'closed') await this.emit({ type: 'closed', conversation: saved });
+    return saved;
+  }
+
+  // ------------------------------------------------------------ bot (Tide)
+
+  conversation(operatorId: string, id: string): Promise<Conversation> {
+    return this.must(operatorId, id);
+  }
+
+  /** Mensaje del bot: visible para el contacto y entregado por el canal; no asigna la conversación a nadie. */
+  async botMessage(operatorId: string, id: string, rawBody: string): Promise<Message> {
+    const conv = await this.must(operatorId, id);
+    const body = this.validBody(rawBody);
+    let msg = await this.repo.addMessage({ id: randomUUID(), conversationId: id, operatorId, direction: 'out', authorType: 'bot', body, createdAt: this.now() });
+    if (conv.channel !== 'webchat') msg = await this.dispatch(conv, msg);
+    const saved = await this.repo.saveConversation({ ...conv, lastMessageAt: msg.createdAt, lastMessagePreview: preview(body), updatedAt: msg.createdAt });
+    this.notifier?.toAgents(operatorId, 'inbox:message', msg);
+    this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
+    this.notifier?.toContact(saved, msg);
+    return msg;
+  }
+
+  /** El bot cede la conversación: nota interna para el equipo y queda abierta, sin asignar, en la cola. */
+  async botHandoff(operatorId: string, id: string, note: string): Promise<Conversation> {
+    const conv = await this.must(operatorId, id);
+    const body = cleanBody(`🤖 El bot pasó la conversación a un agente${note ? `: ${note}` : ''}`);
+    const msg = await this.repo.addMessage({ id: randomUUID(), conversationId: id, operatorId, direction: 'note', authorType: 'bot', body, createdAt: this.now() });
+    const saved = await this.repo.saveConversation({ ...conv, status: 'open', updatedAt: msg.createdAt });
+    this.notifier?.toAgents(operatorId, 'inbox:message', msg);
     this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
     return saved;
   }

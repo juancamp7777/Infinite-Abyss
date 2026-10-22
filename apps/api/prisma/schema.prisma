@@ -1418,3 +1418,47 @@ model InboxChannel {
   @@index([operatorId])
   @@map("inbox_channels")
 }
+
+// ───────────────────────── Tide: flujos y bots ─────────────────────────
+
+model TideFlow {
+  id               String   @id @db.Uuid
+  operatorId       String
+  name             String
+  enabled          Boolean  @default(false)
+  draft            Json
+  publishedVersion Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+
+  @@index([operatorId])
+  @@map("tide_flows")
+}
+
+model TideFlowVersion {
+  flowId      String   @db.Uuid
+  version     Int
+  graph       Json
+  publishedBy String
+  createdAt   DateTime @default(now())
+
+  @@id([flowId, version])
+  @@map("tide_flow_versions")
+}
+
+model TideSession {
+  conversationId String    @id @db.Uuid
+  operatorId     String
+  flowId         String    @db.Uuid
+  version        Int
+  nodeId         String
+  status         String
+  vars           Json
+  expiresAt      DateTime?
+  trace          Json
+  updatedAt      DateTime
+
+  @@index([status, expiresAt])
+  @@index([flowId])
+  @@map("tide_sessions")
+}

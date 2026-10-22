@@ -13,6 +13,7 @@ import { gamificationModule } from './gamification';
 import { backofficeModule } from './backoffice-api';
 import { feedModule } from './feed';
 import { inboxModule } from './inbox';
+import { tideModule } from './tide';
 
 export { captureRawBody } from './hub';
 export type { ModuleDeps, NymfoModule } from './shared/module';
@@ -28,6 +29,7 @@ export const ALL_MODULES: NymfoModule[] = [
   backofficeModule,
   feedModule,
   inboxModule,
+  tideModule,
 ];
 
 export type RegisterModulesDeps = Omit<ModuleDeps, 'services' | 'catalog' | 'betGuard' | 'segments'> & {

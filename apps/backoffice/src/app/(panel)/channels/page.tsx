@@ -83,7 +83,7 @@ export default function ChannelsPage() {
 
   return (
     <>
-      <PageHeader title="Canales del inbox" subtitle="Conecta números de WhatsApp Business y bots de Telegram: los mensajes llegan al Inbox y las respuestas salen por el mismo canal." />
+      <PageHeader title="Sonar · Canales" subtitle="Conecta números de WhatsApp Business y bots de Telegram: los mensajes llegan al Inbox y las respuestas salen por el mismo canal." />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-3">
           {list.loading ? <Spinner /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : !list.data?.items.length ? (

@@ -81,6 +81,7 @@ enum LedgerTxType {
 enum PaymentProviderCode {
   PASSIMPAY
   WOMPI
+  PEARL
 }
 
 enum DepositStatus {
@@ -1461,4 +1462,96 @@ model TideSession {
   @@index([status, expiresAt])
   @@index([flowId])
   @@map("tide_sessions")
+}
+
+// ───────────────────────── Pearl: caja asistida ─────────────────────────
+
+model PearlSettings {
+  operatorId       String   @id
+  mode             String   @default("review_all")
+  currency         String
+  autoMaxAmount    BigInt
+  minAmount        BigInt
+  maxAgeHours      Int      @default(48)
+  waitBankMinutes  Int      @default(20)
+  utcOffsetMinutes Int      @default(-180)
+  updatedAt        DateTime
+
+  @@map("pearl_settings")
+}
+
+model PearlBankAccount {
+  id            String   @id @db.Uuid
+  operatorId    String
+  holderName    String
+  alias         String?
+  accountNumber String
+  bank          String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([operatorId])
+  @@map("pearl_bank_accounts")
+}
+
+model PearlFeed {
+  id          String    @id @db.Uuid
+  operatorId  String
+  type        String
+  name        String
+  tokenHash   String
+  enabled     Boolean   @default(true)
+  lastEventAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([operatorId])
+  @@map("pearl_feeds")
+}
+
+model PearlBankTx {
+  id              String   @id @db.Uuid
+  operatorId      String
+  feedId          String   @db.Uuid
+  externalId      String
+  amount          BigInt
+  currency        String
+  senderName      String
+  senderTaxId     String?
+  senderAccount   String?
+  receiverAccount String?
+  occurredAt      DateTime
+  status          String
+  receiptId       String?  @db.Uuid
+  createdAt       DateTime @default(now())
+
+  @@unique([feedId, externalId])
+  @@index([operatorId, status, amount])
+  @@map("pearl_bank_txs")
+}
+
+model PearlReceipt {
+  id             String   @id @db.Uuid
+  operatorId     String
+  conversationId String?  @db.Uuid
+  playerId       String?
+  imageHash      String?
+  extracted      Json
+  key            String?
+  amount         BigInt?
+  currency       String
+  status         String
+  reason         String?
+  checks         Json
+  bankTxId       String?  @db.Uuid
+  depositId      String?
+  source         String
+  reviewerId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@unique([operatorId, imageHash])
+  @@unique([operatorId, key])
+  @@index([operatorId, status, createdAt])
+  @@index([status])
+  @@map("pearl_receipts")
 }

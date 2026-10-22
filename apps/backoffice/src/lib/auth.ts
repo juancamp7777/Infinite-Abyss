@@ -225,6 +225,7 @@ export const NAV: NavItem[] = [
   { href: "/inbox", label: "Sonar · Inbox", roles: ALL, section: "Jugadores" },
   { href: "/channels", label: "Sonar · Canales", roles: ADMINS, section: "Jugadores" },
   { href: "/tide", label: "Tide · Flujos y bots", roles: ADMINS, section: "Jugadores" },
+  { href: "/pearl", label: "Pearl · Caja", roles: ALL, section: "Jugadores" },
   { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
   { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS, section: "Marketing" },

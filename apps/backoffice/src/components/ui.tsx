@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 
 export const inputCls =
-  "w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50";
+  "w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-brand2 focus:outline-none focus:ring-2 focus:ring-brand2/40 disabled:opacity-50";
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
@@ -19,10 +19,10 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 
 export function Card({ title, children, className = "", actions }: { title?: string; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
-    <section className={`rounded-xl border border-white/10 bg-white/[0.04] p-4 ${className}`}>
+    <section className={`min-w-0 rounded-xl border border-white/10 bg-panel/80 p-4 ${className}`}>
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
-          {title && <h2 className="text-sm font-medium uppercase tracking-wide text-white/70">{title}</h2>}
+          {title && <h2 className="text-sm font-semibold text-white/85">{title}</h2>}
           {actions}
         </div>
       )}
@@ -34,7 +34,7 @@ export function Card({ title, children, className = "", actions }: { title?: str
 type BtnVariant = "primary" | "ghost" | "danger";
 export function Button({ variant = "primary", className = "", ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: BtnVariant }) {
   const v = {
-    primary: "bg-violet-600 text-white hover:bg-violet-500",
+    primary: "bg-brand text-ink font-semibold hover:bg-brand-hi",
     ghost: "border border-white/15 text-white/90 hover:bg-white/10",
     danger: "bg-red-600/80 text-white hover:bg-red-500",
   }[variant];
@@ -42,7 +42,7 @@ export function Button({ variant = "primary", className = "", ...p }: React.Butt
     <button
       type="button"
       {...p}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:cursor-not-allowed disabled:opacity-50 ${v} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand2 disabled:cursor-not-allowed disabled:opacity-50 ${v} ${className}`}
     />
   );
 }
@@ -50,7 +50,7 @@ export function Button({ variant = "primary", className = "", ...p }: React.Butt
 export function Spinner({ label = "Cargando…" }: { label?: string }) {
   return (
     <div role="status" className="flex items-center gap-3 py-8 text-sm text-white/60">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-violet-400" />
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-brand" />
       {label}
     </div>
   );
@@ -99,12 +99,26 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
   );
 }
 
-export function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "bad" }) {
+/** Tonos de acento de las tarjetas KPI (borde izquierdo y chip del ícono). */
+export const ACCENT = { gold: "#f4b73f", cyan: "#3cc8f0", green: "#34d399", red: "#f87171", violet: "#a78bfa", orange: "#fb923c", pink: "#f472b6" } as const;
+export type Accent = keyof typeof ACCENT;
+
+export function Stat({ label, value, sub, tone, icon, accent }: { label: string; value: string; sub?: ReactNode; tone?: "good" | "bad"; icon?: ReactNode; accent?: Accent }) {
+  const color = accent ? ACCENT[accent] : undefined;
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-      <div className="text-xs uppercase tracking-wide text-white/50">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-red-300" : "text-white"}`}>{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-white/40">{sub}</div>}
+    <div className={`kpi rounded-xl border border-white/10 bg-panel/80 p-4 ${accent ? "pl-5" : ""}`} style={color ? ({ ["--kpi" as string]: color } as React.CSSProperties) : undefined}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">{label}</div>
+          <div className={`mt-1.5 truncate text-2xl font-bold tabular-nums ${tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-red-300" : "text-white"}`}>{value}</div>
+          {sub && <div className="mt-1 text-xs text-white/45">{sub}</div>}
+        </div>
+        {icon && (
+          <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ background: color ? `color-mix(in srgb, ${color} 16%, transparent)` : "rgb(255 255 255 / .08)", color: color ?? "#fff" }}>
+            {icon}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -119,7 +133,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: Array<
           type="button"
           aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
-          className={`-mb-px border-b-2 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 ${value === t.id ? "border-violet-400 text-white" : "border-transparent text-white/60 hover:text-white"}`}
+          className={`-mb-px border-b-2 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand2 ${value === t.id ? "border-brand text-white" : "border-transparent text-white/60 hover:text-white"}`}
         >
           {t.label}
         </button>
@@ -146,7 +160,7 @@ export function DataTable<T>({ rows, columns, pageSize = 10, empty, rowKey, onRo
     <div>
       <div className="overflow-x-auto rounded-lg border border-white/10">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-white/5 text-xs uppercase text-white/50">
+          <thead className="bg-white/[0.03] text-[11px] uppercase tracking-wider text-white/45">
             <tr>
               {columns.map((c) => (
                 <th key={c.key} scope="col" className={`px-3 py-2 font-medium ${c.className ?? ""}`}>

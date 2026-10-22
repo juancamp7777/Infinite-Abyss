@@ -82,7 +82,7 @@ export default function PlayersPage() {
           </select>
         </Field>
       </form>
-      <div className="grid gap-4 xl:grid-cols-[1fr_28rem]">
+      <div className="grid gap-4 xl:grid-cols-[1fr_28rem] [&>*]:min-w-0">
         <div>
           {list.loading && !list.data && <Spinner />}
           {list.error && <ErrorBox message={list.error} onRetry={list.reload} />}

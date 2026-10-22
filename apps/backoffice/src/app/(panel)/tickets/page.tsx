@@ -89,7 +89,7 @@ function TicketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
           </div>
           <ul className="max-h-80 space-y-2 overflow-auto">
             {(t.data.messages ?? []).map((m) => (
-              <li key={m.id} className={`rounded p-2 ${m.authorType === "agent" ? "bg-violet-500/15" : "bg-black/20"}`}>
+              <li key={m.id} className={`rounded p-2 ${m.authorType === "agent" ? "bg-brand2/15" : "bg-black/20"}`}>
                 <div className="text-xs text-white/40">{m.authorType} · {dateTime(m.at)}</div>
                 <p className="whitespace-pre-wrap">{m.text}</p>
               </li>

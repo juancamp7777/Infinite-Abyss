@@ -1775,3 +1775,26 @@ model CrewPayrollClose {
   @@index([operatorId, month])
   @@map("crew_payroll_closes")
 }
+
+model CrewActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  memberId   String   @db.Uuid
+  type       String
+  xp         Int
+  value      Int?
+  refKey     String   @unique
+  at         DateTime @default(now())
+
+  @@index([operatorId, at])
+  @@index([memberId, at])
+  @@map("crew_activities")
+}
+
+model CrewResponseClock {
+  conversationId String    @id @db.Uuid
+  operatorId     String
+  waitingSince   DateTime?
+
+  @@map("crew_response_clocks")
+}

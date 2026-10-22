@@ -5,6 +5,7 @@ import { getPrincipal, requireAuth, requireRole, scopeOperator } from '../../sha
 import { asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
+import type { AscendService } from '../application/AscendService';
 import type { CrewService } from '../application/CrewService';
 
 const opQuery = z.object({ operatorId: z.string().min(1).max(100).optional() });
@@ -17,7 +18,7 @@ const date = z.coerce.date();
  * Montado en /crew/v1.
  * /me/*: cualquier persona del equipo (su usuario de backoffice vinculado). /admin/*: administradores del operador.
  */
-export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; logger?: ModuleLogger }): Router {
+export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; ascend: AscendService; logger?: ModuleLogger }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
   const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
@@ -78,6 +79,16 @@ export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; logger?:
     const { operatorId, member } = await me(req);
     await d.crew.ackAnnouncement(operatorId, member.id, parse(idParams, req.params).id);
     sendJson(res, { ok: true });
+  }));
+
+  /* ─── Ascend (gamificación del equipo) ─── */
+  r.get('/me/ascend', ...staff, asyncHandler(async (req, res) => {
+    const { operatorId, member } = await me(req);
+    sendJson(res, await d.ascend.profile(operatorId, member.id));
+  }));
+  r.get('/leaderboard', ...staff, asyncHandler(async (req, res) => {
+    const q = parse(z.object({ period: z.enum(['week', 'month', 'all']).default('week') }), req.query);
+    sendJson(res, { items: await d.ascend.leaderboard(op(req), q.period) });
   }));
 
   /* ─── Gestión (administradores) ─── */

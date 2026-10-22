@@ -205,8 +205,8 @@ export class MockAuthClient extends BaseAuthClient {
 
 export const authClient: AuthClient = MOCK_AUTH ? new MockAuthClient() : new PasswordAuthClient();
 
-export type NavSection = "Principal" | "Jugadores" | "Marketing" | "Juegos" | "Marca";
-export const NAV_SECTIONS: NavSection[] = ["Principal", "Jugadores", "Marketing", "Juegos", "Marca"];
+export type NavSection = "Principal" | "Jugadores" | "Equipo" | "Marketing" | "Juegos" | "Marca";
+export const NAV_SECTIONS: NavSection[] = ["Principal", "Jugadores", "Equipo", "Marketing", "Juegos", "Marca"];
 
 export interface NavItem {
   href: string;
@@ -228,6 +228,8 @@ export const NAV: NavItem[] = [
   { href: "/pearl", label: "Pearl · Caja", roles: ALL, section: "Jugadores" },
   { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
+  { href: "/crew", label: "Crew · Mi turno", roles: ALL, section: "Equipo" },
+  { href: "/crew-admin", label: "Crew · Gestión", roles: ADMINS, section: "Equipo" },
   { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS, section: "Marketing" },
   { href: "/bonuses", label: "Bonos", roles: ADMINS, section: "Marketing" },
   { href: "/tournaments", label: "Torneos", roles: ADMINS, section: "Marketing" },

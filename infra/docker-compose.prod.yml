@@ -1,0 +1,152 @@
+# Infinite Abyss — pila de producción para un VPS con Docker (ver infra/README.md).
+#
+#   cp infra/.env.production.example infra/.env.production   # completar y proteger (chmod 600)
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
+#
+# Con IMAGE_TAG usa las imágenes de GHCR que publica el CI; `--build` las construye en la máquina.
+# Postgres vive en una red interna sin salida a internet y sin puertos publicados: solo la API y el backup lo ven.
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    shm_size: 256mb
+
+  api:
+    <<: *hardening
+    image: ${REGISTRY:-ghcr.io/juancamp7777}/infinite-abyss-api:${IMAGE_TAG:-latest}
+    build: { context: ../apps/api }
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      PUBLIC_WEB_URL: https://${CASINO_DOMAIN}
+      BACKOFFICE_URL: https://${BACKOFFICE_DOMAIN}
+      PUBLIC_API_URL: https://${API_DOMAIN}
+      HUB_PUBLIC_API_URL: /api-proxy
+      HUB_INTERNAL_API_URL: http://localhost:4000
+      LOG_DIR: /app/logs
+    volumes:
+      - apilogs:/app/logs
+    networks: [data, edge]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health | grep -q '\"db\":\"up\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  web:
+    <<: *hardening
+    image: ${REGISTRY:-ghcr.io/juancamp7777}/infinite-abyss-web:${IMAGE_TAG:-latest}
+    build:
+      context: ../apps/web
+      args:
+        NEXT_PUBLIC_API_URL: /api-proxy
+        NEXT_PUBLIC_SOCKET_PATH: /api-proxy/socket.io
+        NEXT_PUBLIC_SITE_URL: https://${CASINO_DOMAIN}
+        NEXT_PUBLIC_GAME_FRAME_ORIGINS: ${NEXT_PUBLIC_GAME_FRAME_ORIGINS:-}
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/lobby >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backoffice:
+    <<: *hardening
+    image: ${REGISTRY:-ghcr.io/juancamp7777}/infinite-abyss-backoffice:${IMAGE_TAG:-latest}
+    build:
+      context: ../apps/backoffice
+      args:
+        NEXT_PUBLIC_API_URL: /api-proxy
+        NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH: "false"
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+
+  caddy:
+    <<: *hardening
+    image: caddy:2.8.4-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CASINO_DOMAIN: ${CASINO_DOMAIN:?define CASINO_DOMAIN}
+      BACKOFFICE_DOMAIN: ${BACKOFFICE_DOMAIN:?define BACKOFFICE_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN:?define API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?define ACME_EMAIL (avisos de Let's Encrypt)}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on: [web, backoffice, api]
+
+  backup:
+    <<: *hardening
+    image: postgres:16.4-alpine
+    entrypoint: ["/bin/sh", "/opt/backup/backup.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      # Copia externa cifrada (restic). Vacío = solo copias locales.
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+    volumes:
+      - ./backup:/opt/backup:ro
+      - backups:/backups
+    networks: [data, backup_out]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+networks:
+  # Sin salida a internet: la base de datos no puede hablar con nadie más.
+  data: { internal: true }
+  edge: {}
+  # Solo para que el backup suba la copia externa.
+  backup_out: {}
+
+volumes:
+  pgdata: {}
+  apilogs: {}
+  caddy_data: {}
+  caddy_config: {}
+  backups: {}

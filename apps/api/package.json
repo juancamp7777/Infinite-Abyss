@@ -16,7 +16,8 @@
     "test:long": "RTP_LONG=1 vitest run",
     "sim": "tsx src/modules/studio/scripts/sim.ts",
     "dev:modules": "tsx src/modules/dev-server.ts",
-    "prisma:modules": "prisma validate"
+    "prisma:modules": "prisma validate",
+    "bootstrap": "tsx scripts/bootstrap.ts"
   },
   "keywords": [],
   "author": "",

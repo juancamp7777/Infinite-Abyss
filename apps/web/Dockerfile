@@ -1,5 +1,5 @@
 # ── build ──
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -16,7 +16,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
 RUN npm run build
 
 # ── runtime ──
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=/api-proxy
 ARG NEXT_PUBLIC_GAME_FRAME_ORIGINS=

@@ -5,6 +5,7 @@ import { CheckCircle2, Circle, Coffee, LogIn, LogOut, Play, Wallet } from "lucid
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient } from "@/lib/hooks";
 import { Badge, Button, Card, Empty, ErrorBox, Field, inputCls, NeedOperator, Notice, PageHeader, Spinner } from "@/components/ui";
+import { AscendCard, Leaderboard } from "@/components/Ascend";
 
 interface Member { id: string; name: string; role: string; currency: string; timezone: string }
 interface Session { id: string; status: "working" | "paused" | "closed"; kind: "normal" | "extra" | "dayoff"; startedAt: string; lateMinutes: number; netMinutesSoFar?: number }
@@ -171,12 +172,14 @@ export default function CrewPage() {
       ) : me.data && (
         <div className="space-y-3">
           <Clock me={me.data} reload={me.reload} />
+          <AscendCard />
           <div className="grid gap-3 lg:grid-cols-2">
             <Checklist reloadKey={me.data.session ? 1 : 0} />
             <Tasks />
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
             <CashBox me={me.data} />
+            <Leaderboard compact />
             <Card title="Próximos turnos">
               {!me.data.shifts.length ? <Empty>Sin turnos planificados.</Empty> : (
                 <ul className="space-y-1.5 text-sm">{me.data.shifts.map((s) => <li key={s.id} className="flex justify-between gap-2 rounded-lg bg-white/[.03] px-3 py-1.5"><span className="font-medium">{s.label}</span><span className="text-white/50">{when(s.startsAt)} → {new Date(s.endsAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}</span></li>)}</ul>

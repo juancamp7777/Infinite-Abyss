@@ -44,6 +44,7 @@ export interface SubmitReceipt {
 export class PearlService {
   private notifier?: PearlNotifier;
   private judge?: PearlJudge;
+  private readonly reviewed: Array<(r: Receipt) => Promise<unknown>> = [];
 
   constructor(
     private readonly repo: PearlRepository,
@@ -55,6 +56,10 @@ export class PearlService {
   }
   setJudge(j: PearlJudge) {
     this.judge = j;
+  }
+  /** Comprobantes acreditados por un cajero (para KPIs y gamificación del equipo). */
+  onReviewed(cb: (r: Receipt) => Promise<unknown>) {
+    this.reviewed.push(cb);
   }
   private now() {
     return this.opts.now?.() ?? new Date();
@@ -194,7 +199,9 @@ export class PearlService {
       if (!tx || tx.status !== 'available') throw new HttpError(409, 'TX_UNAVAILABLE', 'Ese movimiento no está disponible');
       if (tx.amount !== r.amount) throw new HttpError(409, 'AMOUNT_MISMATCH', 'El monto del movimiento no coincide con el comprobante');
     }
-    return this.credit({ ...r, reviewerId }, tx, r.status);
+    const out = await this.credit({ ...r, reviewerId }, tx, r.status);
+    if (out.status === 'credited') for (const cb of this.reviewed) await cb(out).catch(() => undefined);
+    return out;
   }
 
   async reject(operatorId: string, id: string, reviewerId: string, reason: string): Promise<Receipt> {

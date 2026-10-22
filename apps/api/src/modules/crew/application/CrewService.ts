@@ -14,6 +14,9 @@ export function localDay(d: Date, timeZone: string): { day: string; weekday: num
   return { day, weekday: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(wd) };
 }
 
+/** Actividad para Ascend (XP); nunca rompe la operación si falla. */
+export type CrewActivityHook = (a: { operatorId: string; memberId?: string; userId?: string; type: 'on_time' | 'checklist' | 'task_done' | 'cash_perfect'; refId: string }) => Promise<unknown>;
+
 export interface MemberInput {
   id?: string;
   backofficeUserId?: string | null;
@@ -33,7 +36,15 @@ export interface MemberInput {
  * tareas, checklist por turno, avisos con confirmación obligatoria, caja por turno y nómina con mes congelado.
  */
 export class CrewService {
-  constructor(private readonly db: PrismaClient, private readonly opts: { now?: () => Date } = {}) {}
+  constructor(private readonly db: PrismaClient, private readonly opts: { now?: () => Date; onActivity?: CrewActivityHook } = {}) {}
+
+  private async activity(a: Parameters<CrewActivityHook>[0]) {
+    try {
+      await this.opts.onActivity?.(a);
+    } catch {
+      /* la gamificación nunca bloquea el trabajo */
+    }
+  }
 
   private now() {
     return this.opts.now?.() ?? new Date();
@@ -114,9 +125,12 @@ export class CrewService {
     });
     const kind: SessionKind = m.dayOff !== null && m.dayOff === weekday ? 'dayoff' : extra ? 'extra' : 'normal';
     try {
-      return await this.db.crewSession.create({
+      const s = await this.db.crewSession.create({
         data: { operatorId, memberId, openKey: memberId, shiftId: shift?.id ?? null, kind, status: 'working', startedAt: now, lateMinutes: kind === 'normal' ? lateMinutes(shift?.startsAt, now) : 0 },
       });
+      // Puntualidad: solo con turno planificado y llegando a tiempo.
+      if (s.kind === 'normal' && s.shiftId && s.lateMinutes === 0) await this.activity({ operatorId, memberId, type: 'on_time', refId: s.id });
+      return s;
     } catch (e) {
       if (isUnique(e)) throw new HttpError(409, 'ALREADY_OPEN', 'Ya tienes una jornada abierta');
       throw e;
@@ -203,7 +217,9 @@ export class CrewService {
     if (actorMemberId && (t.assigneeId !== actorMemberId || patch.assigneeId !== undefined || patch.title !== undefined)) throw new HttpError(403, 'FORBIDDEN', 'Solo puedes cambiar el estado de tus tareas');
     if (patch.assigneeId) await this.member(operatorId, patch.assigneeId);
     const completedAt = patch.status === 'done' ? (t.completedAt ?? this.now()) : patch.status ? null : t.completedAt;
-    return this.db.crewTask.update({ where: { id }, data: { ...patch, completedAt } });
+    const saved = await this.db.crewTask.update({ where: { id }, data: { ...patch, completedAt } });
+    if (saved.status === 'done' && t.status !== 'done' && saved.assigneeId) await this.activity({ operatorId, memberId: saved.assigneeId, type: 'task_done', refId: saved.id });
+    return saved;
   }
 
   async deleteTask(operatorId: string, id: string) {
@@ -245,7 +261,10 @@ export class CrewService {
     if (!item) throw notFound('Ítem');
     if (!(await this.db.crewSession.findFirst({ where: { openKey: memberId } }))) throw new HttpError(409, 'NOT_OPEN', 'Ficha tu entrada antes de marcar el checklist');
     const { day } = localDay(this.now(), m.timezone);
-    if (done) await this.db.crewChecklistMark.upsert({ where: { itemId_memberId_day: { itemId, memberId, day } }, create: { itemId, memberId, day }, update: {} });
+    if (done) {
+      await this.db.crewChecklistMark.upsert({ where: { itemId_memberId_day: { itemId, memberId, day } }, create: { itemId, memberId, day }, update: {} });
+      await this.activity({ operatorId, memberId, type: 'checklist', refId: `${itemId}:${memberId}:${day}` });
+    }
     else await this.db.crewChecklistMark.deleteMany({ where: { itemId, memberId, day } });
     return this.myChecklist(operatorId, memberId);
   }
@@ -320,6 +339,7 @@ export class CrewService {
       data: { status: 'closed', openKey: null, closedBy: by, closedAt: this.now(), expectedBalance: d.expectedNow, declaredBalance: declared, difference: declared - d.expectedNow, snapshot },
     });
     if (!n.count) throw new HttpError(409, 'CLOSED', 'La caja ya está cerrada');
+    if (declared === d.expectedNow) await this.activity({ operatorId, userId: by, type: 'cash_perfect', refId: id });
     return this.cashDetail(operatorId, id);
   }
 

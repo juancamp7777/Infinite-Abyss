@@ -5,6 +5,7 @@ import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient } from "@/lib/hooks";
 import { Badge, Button, Card, Empty, ErrorBox, inputCls, NeedOperator, Notice, PageHeader, Spinner, Tabs } from "@/components/ui";
+import { Leaderboard } from "@/components/Ascend";
 
 interface Member { id: string; name: string; role: string; team?: string | null; currency: string; payType: "monthly" | "hourly"; baseAmount: string; timezone: string; dayOff?: number | null; active: boolean; backofficeUserId?: string | null }
 interface Live { id: string; memberId: string; memberName: string; status: string; kind: string; startedAt: string; lateMinutes: number; netMinutesSoFar: number }
@@ -306,7 +307,7 @@ function PayrollTab() {
   );
 }
 
-type Tab = "live" | "team" | "shifts" | "tasks" | "checklist" | "announcements" | "cash" | "payroll";
+type Tab = "live" | "ranking" | "team" | "shifts" | "tasks" | "checklist" | "announcements" | "cash" | "payroll";
 export default function CrewAdminPage() {
   const { operatorId } = useApiClient();
   const members = useApi<{ items: Member[] }>(operatorId ? "/crew/v1/admin/members" : null);
@@ -317,11 +318,12 @@ export default function CrewAdminPage() {
     <>
       <PageHeader title="Crew · Gestión del equipo" subtitle="Turnos, fichajes en vivo, tareas, checklist, avisos, cajas y nómina de tu equipo." />
       <div className="mb-3 overflow-x-auto"><Tabs tabs={[
-        { id: "live", label: "En vivo" }, { id: "team", label: "Equipo" }, { id: "shifts", label: "Turnos" }, { id: "tasks", label: "Tareas" },
+        { id: "live", label: "En vivo" }, { id: "ranking", label: "Ranking" }, { id: "team", label: "Equipo" }, { id: "shifts", label: "Turnos" }, { id: "tasks", label: "Tareas" },
         { id: "checklist", label: "Checklist" }, { id: "announcements", label: "Avisos" }, { id: "cash", label: "Cajas" }, { id: "payroll", label: "Nómina" },
       ]} value={tab} onChange={setTab} /></div>
       {members.error && <ErrorBox message={members.error} onRetry={members.reload} />}
       {tab === "live" && <LiveTab />}
+      {tab === "ranking" && <Leaderboard />}
       {tab === "team" && <TeamTab members={list} reload={members.reload} />}
       {tab === "shifts" && <ShiftsTab members={list} />}
       {tab === "tasks" && <TasksTab members={list} />}

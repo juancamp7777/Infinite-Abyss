@@ -56,6 +56,8 @@ export class TideEngine {
       if (s && s.status === 'waiting') await this.repo.saveSession({ ...s, status: 'handoff', updatedAt: this.now() });
       return;
     }
+    // Las imágenes (comprobantes) las atiende Pearl, no el flujo.
+    if (e.message.attachmentId) return;
     return this.lock(conv.id, () => this.onContactMessage(conv, e.message.body));
   }
 

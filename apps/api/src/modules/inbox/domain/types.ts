@@ -39,6 +39,8 @@ export interface Message {
   body: string;
   /** Id del cliente para reintentos idempotentes (único por conversación). */
   clientMsgId?: string;
+  /** Imagen adjunta (comprobantes, capturas). */
+  attachmentId?: string;
   /** Id del mensaje en el canal externo (wamid, message_id de Telegram). */
   externalMessageId?: string;
   /** Entrega de respuestas por canales externos. */
@@ -48,6 +50,27 @@ export interface Message {
 }
 
 export type DeliveryStatus = 'sent' | 'failed';
+
+/** Archivo enviado por el contacto (solo imágenes; máx. MAX_ATTACHMENT bytes). */
+export interface Attachment {
+  id: string;
+  operatorId: string;
+  conversationId: string;
+  mime: string;
+  size: number;
+  sha256: string;
+  data: Buffer;
+  createdAt: Date;
+}
+
+export const MAX_ATTACHMENT = 5 * 1024 * 1024;
+const SIGNATURES: Array<[string, (b: Buffer) => boolean]> = [
+  ['image/jpeg', (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff],
+  ['image/png', (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))],
+  ['image/webp', (b) => b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP'],
+];
+/** Tipo real por firma de bytes (no se confía en la extensión ni en el Content-Type). */
+export const sniffImage = (b: Buffer): string | null => (b.length >= 12 ? SIGNATURES.find(([, ok]) => ok(b))?.[0] ?? null : null);
 export type ChannelType = Exclude<Channel, 'webchat'>;
 
 /** Canal externo del operador (un número de WhatsApp Business, un bot de Telegram…). */
@@ -104,6 +127,8 @@ export interface InboxRepository {
   saveQuickReply(q: QuickReply): Promise<QuickReply>;
   deleteQuickReply(operatorId: string, id: string): Promise<boolean>;
   saveMessage(m: Message): Promise<Message>;
+  saveAttachment(a: Attachment): Promise<Attachment>;
+  findAttachment(operatorId: string, id: string): Promise<Attachment | null>;
   saveVisitor(v: Visitor): Promise<Visitor>;
   findVisitorByTokenHash(tokenHash: string): Promise<Visitor | null>;
   listChannels(operatorId: string): Promise<InboxChannel[]>;

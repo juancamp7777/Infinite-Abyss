@@ -1370,6 +1370,7 @@ model InboxMessage {
   direction      String
   authorType     String
   authorId       String?
+  attachmentId   String?  @db.Uuid
   body           String
   clientMsgId       String?
   externalMessageId String?
@@ -1544,6 +1545,7 @@ model PearlReceipt {
   checks         Json
   bankTxId       String?  @db.Uuid
   depositId      String?
+  attachmentId   String?  @db.Uuid
   source         String
   reviewerId     String?
   createdAt      DateTime @default(now())
@@ -1554,4 +1556,30 @@ model PearlReceipt {
   @@index([operatorId, status, createdAt])
   @@index([status])
   @@map("pearl_receipts")
+}
+
+model InboxAttachment {
+  id             String   @id @db.Uuid
+  operatorId     String
+  conversationId String   @db.Uuid
+  mime           String
+  size           Int
+  sha256         String
+  data           Bytes
+  createdAt      DateTime @default(now())
+
+  @@index([operatorId, conversationId])
+  @@map("inbox_attachments")
+}
+
+model PearlAiConfig {
+  operatorId  String   @id
+  enabled     Boolean  @default(true)
+  provider    String
+  readerModel String
+  judgeModel  String
+  keyEnc      String?
+  updatedAt   DateTime
+
+  @@map("pearl_ai_configs")
 }

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { HttpError } from '../../../shared/http/errors';
-import { ChannelSendError, fetchPost, header, type ChannelAdapter, type HttpPost, type InboundMessage } from './ChannelAdapter';
+import { ChannelSendError, fetchGet, fetchPost, header, type ChannelAdapter, type HttpGet, type HttpPost, type InboundMessage } from './ChannelAdapter';
 
 export interface WhatsAppConfig {
   phoneNumberId: string;
@@ -32,7 +32,7 @@ const KIND_LABEL: Record<string, string> = {
 export class WhatsAppAdapter implements ChannelAdapter<WhatsAppConfig> {
   readonly type = 'whatsapp' as const;
 
-  constructor(private readonly http: HttpPost = fetchPost, private readonly graphBase = 'https://graph.facebook.com') {}
+  constructor(private readonly http: HttpPost = fetchPost, private readonly graphBase = 'https://graph.facebook.com', private readonly get: HttpGet = fetchGet) {}
 
   parseConfig(raw: unknown) {
     const r = schema.safeParse(raw);
@@ -67,11 +67,23 @@ export class WhatsAppAdapter implements ChannelAdapter<WhatsAppConfig> {
           const text = m.type === 'text' ? m.text?.body : m.type === 'button' ? m.button?.text : m.type === 'interactive' ? (m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title) : null;
           const caption = m[m.type]?.caption;
           const body = typeof text === 'string' && text ? text : `${KIND_LABEL[m.type] ?? `[${m.type}]`}${typeof caption === 'string' && caption ? `: ${caption}` : ''}`;
-          out.push({ from: m.from, name: names.get(m.from) || `+${m.from}`, messageId: m.id, body });
+          const mediaId = m.type === 'image' ? m.image?.id : m.type === 'document' && /^image\//.test(String(m.document?.mime_type ?? '')) ? m.document?.id : undefined;
+          out.push({ from: m.from, name: names.get(m.from) || `+${m.from}`, messageId: m.id, body, ...(typeof mediaId === 'string' ? { media: { ref: mediaId } } : {}) });
         }
       }
     }
     return out;
+  }
+
+  /** Media de Meta: GET /<id> devuelve una URL temporal que se descarga con el mismo token. */
+  async fetchMedia(config: WhatsAppConfig, ref: string): Promise<Buffer> {
+    const auth = { authorization: `Bearer ${config.accessToken}` };
+    const meta = await this.get(`${this.graphBase}/${config.apiVersion}/${encodeURIComponent(ref)}`, auth);
+    const url = (() => { try { return JSON.parse(meta.body.toString('utf8')).url as unknown; } catch { return null; } })();
+    if (meta.status !== 200 || typeof url !== 'string' || !/^https:\/\//.test(url)) throw new ChannelSendError(`WhatsApp no entregó la imagen (${meta.status})`);
+    const file = await this.get(url, auth);
+    if (file.status !== 200) throw new ChannelSendError(`Descarga de imagen fallida (${file.status})`);
+    return file.body;
   }
 
   async send(config: WhatsAppConfig, to: string, text: string) {

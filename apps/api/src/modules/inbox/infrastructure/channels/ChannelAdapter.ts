@@ -8,6 +8,8 @@ export interface InboundMessage {
   /** Id único del mensaje en el canal: base de la idempotencia ante reintentos del webhook. */
   messageId: string;
   body: string;
+  /** Imagen a descargar del proveedor (id de media de WhatsApp, file_id de Telegram). */
+  media?: { ref: string };
 }
 
 export interface WebhookRequest {
@@ -31,6 +33,16 @@ export const fetchPost: HttpPost = async (url, body, headers = {}) => {
   return { status: res.status, json: await res.json().catch(() => null) };
 };
 
+/** GET binario (descarga de imágenes), con tope de tamaño. Inyectable en pruebas. */
+export type HttpGet = (url: string, headers?: Record<string, string>) => Promise<{ status: number; body: Buffer }>;
+
+export const fetchGet: HttpGet = async (url, headers = {}) => {
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  const len = Number(res.headers.get('content-length') ?? 0);
+  if (len > 6 * 1024 * 1024) throw new ChannelSendError('Archivo demasiado grande');
+  return { status: res.status, body: Buffer.from(await res.arrayBuffer()) };
+};
+
 export class ChannelSendError extends Error {}
 
 export interface ChannelAdapter<C = Record<string, string>> {
@@ -44,6 +56,8 @@ export interface ChannelAdapter<C = Record<string, string>> {
   parse(body: unknown): InboundMessage[];
   /** Envía texto; devuelve el id del mensaje en el canal o lanza ChannelSendError. */
   send(config: C, to: string, text: string): Promise<{ externalMessageId: string }>;
+  /** Descarga una imagen recibida. */
+  fetchMedia?(config: C, ref: string): Promise<Buffer>;
   /** Tras guardar el canal (p. ej. registrar el webhook del bot de Telegram). */
   activate?(config: C, webhookUrl: string, webhookSecret: string): Promise<void>;
 }

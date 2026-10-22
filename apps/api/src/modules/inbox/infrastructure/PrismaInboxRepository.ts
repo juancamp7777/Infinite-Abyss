@@ -1,4 +1,4 @@
-import type { Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
+import type { Attachment, Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
 
 /** Subconjunto del PrismaClient usado (evita depender de los tipos generados). */
 interface Delegate {
@@ -15,6 +15,7 @@ export interface InboxPrismaLike {
   inboxQuickReply: Delegate;
   inboxVisitor: Delegate;
   inboxChannel: Delegate;
+  inboxAttachment: Delegate;
 }
 
 const strip = <T extends Record<string, unknown>>(row: T): T => {
@@ -23,7 +24,7 @@ const strip = <T extends Record<string, unknown>>(row: T): T => {
 };
 const conv = (r: any): Conversation => strip({ ...r }) as Conversation;
 const msg = (r: any): Message => strip({ ...r }) as Message;
-const nullable = (m: Message) => ({ ...m, authorId: m.authorId ?? null, clientMsgId: m.clientMsgId ?? null, externalMessageId: m.externalMessageId ?? null, status: m.status ?? null, error: m.error ?? null });
+const nullable = (m: Message) => ({ ...m, attachmentId: m.attachmentId ?? null, authorId: m.authorId ?? null, clientMsgId: m.clientMsgId ?? null, externalMessageId: m.externalMessageId ?? null, status: m.status ?? null, error: m.error ?? null });
 
 export class PrismaInboxRepository implements InboxRepository {
   constructor(private readonly db: InboxPrismaLike) {}
@@ -94,6 +95,16 @@ export class PrismaInboxRepository implements InboxRepository {
   async saveMessage(m: Message) {
     const { id, ...rest } = nullable(m);
     return msg(await this.db.inboxMessage.upsert({ where: { id }, create: nullable(m), update: rest }));
+  }
+
+  async saveAttachment(a: Attachment) {
+    await this.db.inboxAttachment.create({ data: a });
+    return a;
+  }
+
+  async findAttachment(operatorId: string, id: string) {
+    const r = await this.db.inboxAttachment.findFirst({ where: { id, operatorId } });
+    return r ? ({ ...r, data: Buffer.from(r.data) } as Attachment) : null;
   }
 
   async listChannels(operatorId: string) {

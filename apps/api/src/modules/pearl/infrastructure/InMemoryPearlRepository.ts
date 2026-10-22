@@ -1,4 +1,4 @@
-import { DUPLICATE_RECEIPT, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
+import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -8,6 +8,7 @@ export class InMemoryPearlRepository implements PearlRepository {
   private readonly feeds = new Map<string, Feed>();
   private readonly txs = new Map<string, BankTx>();
   private readonly receipts = new Map<string, Receipt>();
+  private readonly ai = new Map<string, AiConfig>();
 
   async getSettings(op: string) {
     const s = this.settings.get(op);
@@ -96,6 +97,18 @@ export class InMemoryPearlRepository implements PearlRepository {
   }
   async waitingReceipts(limit: number) {
     return [...this.receipts.values()].filter((r) => r.status === 'waiting_bank').slice(0, limit).map(clone);
+  }
+  async latestReceiptForConversation(op: string, conversationId: string) {
+    const r = [...this.receipts.values()].filter((x) => x.operatorId === op && x.conversationId === conversationId).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    return r ? clone(r) : null;
+  }
+  async getAi(op: string) {
+    const c = this.ai.get(op);
+    return c ? clone(c) : null;
+  }
+  async saveAi(c: AiConfig) {
+    this.ai.set(c.operatorId, clone(c));
+    return clone(c);
   }
   async knownSenderNames(op: string, playerId: string) {
     return [...new Set([...this.receipts.values()].filter((r) => r.operatorId === op && r.playerId === playerId && r.status === 'credited').map((r) => r.extracted.senderName))];

@@ -26,6 +26,7 @@ export interface SubmitReceipt {
   playerId?: string;
   image?: Buffer;
   extracted: ExtractedReceipt;
+  attachmentId?: string;
   source: 'ai' | 'manual';
 }
 
@@ -150,43 +151,24 @@ export class PearlService {
       if (prev) return this.duplicateOf(prev);
     }
     const x = input.extracted;
-    const amount = parseAmountToMinor(x.amount, currencyDecimals(s.currency)) ?? undefined;
-    const key = amount && x.senderName ? receiptKey({ amount, senderName: x.senderName, date: x.date, time: x.time }) : undefined;
-    if (key) {
-      const prev = await this.repo.findReceiptBy(input.operatorId, { key });
+    const a = await this.assess(input.operatorId, x, s);
+    if (a.key) {
+      const prev = await this.repo.findReceiptBy(input.operatorId, { key: a.key });
       if (prev) return this.duplicateOf(prev);
     }
-
-    const accounts = (await this.repo.listAccounts(input.operatorId)).filter((a) => a.active);
-    const at = this.receiptDate(x, s);
-    const checks: Check[] = [];
-    const add = (code: string, ok: boolean, detail?: string) => checks.push({ code, ok, ...(detail ? { detail } : {}) });
-    add('es_comprobante', !x.notAReceipt, x.notAReceipt ? 'Parece una pantalla previa a la transferencia, no un comprobante final' : undefined);
-    add('sin_edicion', !x.tamperSignals?.length, x.tamperSignals?.join('; '));
-    add('monto_legible', !!amount);
-    if (amount) add('monto_minimo', amount >= s.minAmount);
-    add('titular', !!x.senderName && !isWalletOrOwnName(x.senderName, accounts.map((a) => a.holderName)), x.senderName ? undefined : 'Sin titular');
-    if (x.receiverAccount) add('cuenta_destino', isOwnAccount(x.receiverAccount, accounts), x.receiverAccount);
-    if (at) {
-      const age = this.now().getTime() - at.getTime();
-      add('fecha_reciente', age <= s.maxAgeHours * 3_600_000 && age >= -10 * 60_000, at.toISOString());
-    }
-
     const base: Receipt = {
-      id: randomUUID(), operatorId: input.operatorId, conversationId: input.conversationId, playerId: input.playerId, imageHash, extracted: x, key, amount,
-      currency: s.currency, status: 'pending_review', checks, source: input.source, createdAt: this.now(), updatedAt: this.now(),
+      id: randomUUID(), operatorId: input.operatorId, conversationId: input.conversationId, playerId: input.playerId, imageHash, extracted: x, key: a.key, amount: a.amount,
+      ...(input.attachmentId ? { attachmentId: input.attachmentId } : {}), currency: s.currency, checks: a.checks, source: input.source, createdAt: this.now(), updatedAt: this.now(),
+      ...a.outcome,
     };
-    const failed = checks.filter((c) => !c.ok).map((c) => c.code);
-    if (failed.includes('es_comprobante')) Object.assign(base, { status: 'rejected', reason: 'no_es_comprobante' });
-    else if (failed.includes('titular') && x.senderName) Object.assign(base, { status: 'needs_info', reason: 'titular_billetera' });
-    else if (failed.length) Object.assign(base, { reason: failed.join(',') });
+    const failed = a.failed;
 
     let saved: Receipt;
     try {
       saved = await this.repo.insertReceipt(base);
     } catch (e) {
       if ((e as { code?: string }).code !== DUPLICATE_RECEIPT) throw e;
-      const prev = await this.repo.findReceiptBy(input.operatorId, { imageHash, key });
+      const prev = await this.repo.findReceiptBy(input.operatorId, { imageHash, key: a.key });
       if (prev) return this.duplicateOf(prev);
       throw e;
     }
@@ -234,7 +216,56 @@ export class PearlService {
     return waiting.length;
   }
 
+  /**
+   * Corrige los datos leídos (cajero, o el titular que responde el contacto) y vuelve a evaluar y conciliar.
+   * Solo sobre comprobantes abiertos.
+   */
+  async updateExtracted(operatorId: string, id: string, x: ExtractedReceipt): Promise<Receipt> {
+    const r = await this.getReceipt(operatorId, id);
+    if (!['pending_review', 'needs_info', 'error'].includes(r.status)) throw new HttpError(409, 'NOT_EDITABLE', 'El comprobante ya no se puede editar');
+    const s = await this.settings(operatorId);
+    const a = await this.assess(operatorId, x, s);
+    if (a.key) {
+      const other = await this.repo.findReceiptBy(operatorId, { key: a.key });
+      if (other && other.id !== r.id) throw new HttpError(409, 'DUPLICATE', 'Esos datos ya corresponden a otro comprobante');
+    }
+    const next: Receipt = { ...r, extracted: x, amount: a.amount, key: a.key, checks: a.checks, reason: undefined, updatedAt: this.now(), ...a.outcome };
+    if (!(await this.repo.transitionReceipt(next, [r.status]))) throw new HttpError(409, 'CONFLICT', 'El comprobante cambió; recarga');
+    if (a.failed.length) {
+      await this.notify(next, next.status === 'rejected' ? 'rejected' : next.status === 'needs_info' ? 'needs_info' : 'pending_review');
+      return next;
+    }
+    return this.reconcile(next, s, true);
+  }
+
   // ───────────────────────── internos ─────────────────────────
+
+  /** Controles deterministas del comprobante y su estado inicial. */
+  private async assess(operatorId: string, x: ExtractedReceipt, s: PearlSettings) {
+    const amount = parseAmountToMinor(x.amount, currencyDecimals(s.currency)) ?? undefined;
+    const key = amount && x.senderName ? receiptKey({ amount, senderName: x.senderName, date: x.date, time: x.time }) : undefined;
+    const accounts = (await this.repo.listAccounts(operatorId)).filter((acc) => acc.active);
+    const at = this.receiptDate(x, s);
+    const checks: Check[] = [];
+    const add = (code: string, ok: boolean, detail?: string) => checks.push({ code, ok, ...(detail ? { detail } : {}) });
+    add('es_comprobante', !x.notAReceipt, x.notAReceipt ? 'Parece una pantalla previa a la transferencia, no un comprobante final' : undefined);
+    add('sin_edicion', !x.tamperSignals?.length, x.tamperSignals?.join('; '));
+    add('monto_legible', !!amount);
+    if (amount) add('monto_minimo', amount >= s.minAmount);
+    add('titular', !!x.senderName && !isWalletOrOwnName(x.senderName, accounts.map((acc) => acc.holderName)), x.senderName ? undefined : 'Sin titular');
+    if (x.receiverAccount) add('cuenta_destino', isOwnAccount(x.receiverAccount, accounts), x.receiverAccount);
+    if (at) {
+      const age = this.now().getTime() - at.getTime();
+      add('fecha_reciente', age <= s.maxAgeHours * 3_600_000 && age >= -10 * 60_000, at.toISOString());
+    }
+    const failed = checks.filter((c) => !c.ok).map((c) => c.code);
+    let outcome: { status: ReceiptStatus; reason?: string } = { status: 'pending_review' };
+    if (failed.includes('es_comprobante')) outcome = { status: 'rejected', reason: 'no_es_comprobante' };
+    // Titular de billetera o sin titular legible: se le pide al contacto (el monto sí debe leerse).
+    else if (failed.includes('titular') && amount && failed.length === 1) outcome = { status: 'needs_info', reason: x.senderName ? 'titular_billetera' : 'falta_titular' };
+    else if (failed.length) outcome = { status: 'pending_review', reason: failed.join(',') };
+    return { amount, key, checks, failed, outcome };
+  }
 
   private async retryWaiting(operatorId: string) {
     const s = await this.settings(operatorId);

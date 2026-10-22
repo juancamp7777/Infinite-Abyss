@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { HttpError } from '../../../shared/http/errors';
-import { ChannelSendError, fetchPost, header, type ChannelAdapter, type HttpPost, type InboundMessage } from './ChannelAdapter';
+import { ChannelSendError, fetchGet, fetchPost, header, type ChannelAdapter, type HttpGet, type HttpPost, type InboundMessage } from './ChannelAdapter';
 
 export interface TelegramConfig {
   botToken: string;
@@ -20,7 +20,7 @@ const schema = z.object({
 export class TelegramAdapter implements ChannelAdapter<TelegramConfig> {
   readonly type = 'telegram' as const;
 
-  constructor(private readonly http: HttpPost = fetchPost, private readonly apiBase = 'https://api.telegram.org') {}
+  constructor(private readonly http: HttpPost = fetchPost, private readonly apiBase = 'https://api.telegram.org', private readonly get: HttpGet = fetchGet) {}
 
   parseConfig(raw: unknown) {
     const r = schema.safeParse(raw);
@@ -42,7 +42,18 @@ export class TelegramAdapter implements ChannelAdapter<TelegramConfig> {
     const name = [from.first_name, from.last_name].filter(Boolean).join(' ') || (from.username ? `@${from.username}` : `Telegram ${m.chat.id}`);
     const text = typeof m.text === 'string' ? m.text : m.photo ? '📷 Imagen' : m.voice ? '🎤 Audio' : m.document ? '📄 Documento' : m.sticker ? `💬 Sticker ${m.sticker.emoji ?? ''}`.trim() : '[mensaje no soportado]';
     const caption = typeof m.caption === 'string' && m.caption ? `: ${m.caption}` : '';
-    return [{ from: String(m.chat.id), name, messageId: `${body.edited_message ? 'edit-' : ''}${body.update_id}`, body: `${text}${m.text ? '' : caption}` }];
+    // La foto más grande es la última del arreglo; los documentos solo si son imágenes.
+    const fileId = Array.isArray(m.photo) && m.photo.length ? m.photo[m.photo.length - 1]?.file_id : /^image\//.test(String(m.document?.mime_type ?? '')) ? m.document?.file_id : undefined;
+    return [{ from: String(m.chat.id), name, messageId: `${body.edited_message ? 'edit-' : ''}${body.update_id}`, body: `${text}${m.text ? '' : caption}`, ...(typeof fileId === 'string' ? { media: { ref: fileId } } : {}) }];
+  }
+
+  async fetchMedia(config: TelegramConfig, ref: string): Promise<Buffer> {
+    const r = await this.http(`${this.apiBase}/bot${config.botToken}/getFile`, { file_id: ref });
+    const path = r.json?.result?.file_path;
+    if (!r.json?.ok || typeof path !== 'string' || path.includes('..')) throw new ChannelSendError('Telegram no entregó la imagen');
+    const file = await this.get(`${this.apiBase}/file/bot${config.botToken}/${path}`);
+    if (file.status !== 200) throw new ChannelSendError(`Descarga de imagen fallida (${file.status})`);
+    return file.body;
   }
 
   async send(config: TelegramConfig, to: string, text: string) {

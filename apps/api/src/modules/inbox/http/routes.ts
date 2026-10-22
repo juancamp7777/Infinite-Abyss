@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import express, { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
 import type { OperatorCurrencyPort } from '../../shared/ports/OperatorCurrencyPort';
@@ -31,7 +31,7 @@ const listQuery = opQuery.extend({
 });
 
 /** Vista del contacto: sin notas (ya filtradas) ni ids internos de agentes. */
-export const publicMessage = (m: Message) => ({ id: m.id, direction: m.direction, authorType: m.authorType, body: m.body, clientMsgId: m.clientMsgId, createdAt: m.createdAt });
+export const publicMessage = (m: Message) => ({ id: m.id, direction: m.direction, authorType: m.authorType, body: m.body, clientMsgId: m.clientMsgId, hasAttachment: !!m.attachmentId, createdAt: m.createdAt });
 
 /** Identidad del contacto del webchat: jugador (token) o visitante (cabecera X-Visitor-Token). */
 export async function resolveContact(svc: InboxService, p: Request['principal'] | null | undefined, visitorToken: unknown): Promise<ContactIdentity | null> {
@@ -89,6 +89,14 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
     sendJson(res, publicMessage(await d.svc.contactMessage(conv, b.body, b.clientMsgId)), 201);
   }));
 
+  /** Imagen del contacto (cuerpo binario; el tipo real se valida por firma). */
+  r.post('/webchat/attachments', optionalAuth(d.auth), express.raw({ type: () => true, limit: '6mb' }), asyncHandler(async (req, res) => {
+    const q = parse(z.object({ clientMsgId: z.string().min(1).max(64).optional(), caption: z.string().max(500).optional() }), req.query);
+    if (!Buffer.isBuffer(req.body) || !req.body.length) throw new HttpError(400, 'BAD_REQUEST', 'Falta la imagen');
+    const conv = await d.svc.conversationFor(await contact(req));
+    sendJson(res, publicMessage(await d.svc.contactAttachment(conv, req.body, q.caption, q.clientMsgId)), 201);
+  }));
+
   /* ─── Webhooks de canales (WhatsApp Cloud, Telegram) ─── */
   const webhook = asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
@@ -130,6 +138,11 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
   r.post('/admin/conversations/:id/read', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
     sendJson(res, await d.svc.markRead(op(req), id));
+  }));
+
+  r.get('/admin/attachments/:id', ...admin, asyncHandler(async (req, res) => {
+    const a = await d.svc.attachment(op(req), parse(idParams, req.params).id);
+    res.set({ 'Content-Type': a.mime, 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' }).send(a.data);
   }));
 
   r.post('/admin/conversations/:id/messages/:messageId/retry', ...admin, asyncHandler(async (req, res) => {

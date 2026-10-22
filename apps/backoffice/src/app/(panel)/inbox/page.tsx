@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { useApiClient } from "@/lib/hooks";
 import { connectSocket } from "@/lib/socket";
 import { Badge, Button, Empty, ErrorBox, inputCls, NeedOperator, PageHeader, Spinner, Tabs } from "@/components/ui";
+import { AuthImage } from "@/components/AuthImage";
 
 type Status = "open" | "pending" | "closed";
 interface Conversation {
@@ -28,6 +29,7 @@ interface Message {
   authorType: string;
   authorId?: string;
   body: string;
+  attachmentId?: string;
   status?: "sent" | "failed";
   error?: string;
   createdAt: string;
@@ -340,6 +342,7 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
             : m.direction === "note" ? "self-end rounded-br-md border border-amber-400/30 bg-amber-400/10 text-amber-100"
             : "self-end rounded-br-md bg-gradient-to-br from-[var(--color-brand2)] to-sky-500 text-slate-950"}`}>
             {m.direction === "note" && <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300"><Lock aria-hidden className="h-3 w-3" /> Nota interna</div>}
+            {m.attachmentId && <AuthImage path={`/inbox/v1/admin/attachments/${m.attachmentId}`} alt="Imagen enviada por el contacto" className="mb-1 max-h-60 max-w-full" />}
             <div className="whitespace-pre-wrap break-words">{m.body}</div>
             <div className={`mt-0.5 text-[10px] ${m.direction === "out" ? "text-slate-900/60" : "text-white/40"}`}>
               {hhmm(m.createdAt)}{m.status === "sent" && c.channel !== "webchat" ? " · ✓ entregado al canal" : ""}

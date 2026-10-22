@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { HttpError } from '../../shared/http/errors';
-import { cleanBody, preview, type Channel, type Conversation, type ConversationFilter, type ConversationStatus, type InboxRepository, type Message, type QuickReply } from '../domain/types';
+import { cleanBody, MAX_ATTACHMENT, preview, sniffImage, type Attachment, type Channel, type Conversation, type ConversationFilter, type ConversationStatus, type InboxRepository, type Message, type QuickReply } from '../domain/types';
 
 /** Recibe cambios para los sockets: agentes del operador y el contacto de cada conversación. */
 export interface InboxNotifier {
@@ -25,7 +25,8 @@ export type InboxEvent =
   | { type: 'contact_message'; conversation: Conversation; message: Message }
   | { type: 'agent_message'; conversation: Conversation; message: Message }
   | { type: 'closed'; conversation: Conversation };
-export type InboxListener = (e: InboxEvent) => Promise<void> | void;
+/** Un listener que devuelve 'handled' consume el evento (los de menor prioridad no lo reciben). */
+export type InboxListener = (e: InboxEvent) => Promise<void | 'handled'> | void | 'handled';
 
 /** Entrega por canal externo (WhatsApp, Telegram); lanza si el canal rechaza el envío. */
 export type InboxDispatcher = (conversation: Conversation, message: Message) => Promise<{ externalMessageId: string }>;
@@ -35,7 +36,7 @@ const RATE_WINDOW_MS = 60_000;
 export class InboxService {
   private notifier?: InboxNotifier;
   private dispatcher?: InboxDispatcher;
-  private readonly listeners: InboxListener[] = [];
+  private readonly listeners: Array<{ l: InboxListener; priority: number }> = [];
   private readonly recent = new Map<string, number[]>();
 
   constructor(
@@ -51,14 +52,16 @@ export class InboxService {
     this.dispatcher = d;
   }
 
-  onEvent(l: InboxListener): void {
-    this.listeners.push(l);
+  /** Mayor prioridad primero (Pearl atiende comprobantes antes que los flujos de Tide). */
+  onEvent(l: InboxListener, priority = 0): void {
+    this.listeners.push({ l, priority });
+    this.listeners.sort((a, b) => b.priority - a.priority);
   }
 
   private async emit(e: InboxEvent): Promise<void> {
-    for (const l of this.listeners) {
+    for (const { l } of this.listeners) {
       try {
-        await l(e);
+        if ((await l(e)) === 'handled') return;
       } catch {
         /* una automatización rota no debe tumbar el inbox (el motor registra sus propios errores) */
       }
@@ -102,7 +105,26 @@ export class InboxService {
   }
 
   /** Mensaje del contacto. Idempotente por clientMsgId; reabre la conversación si estaba cerrada. */
-  async contactMessage(conv: Conversation, rawBody: string, clientMsgId?: string, opts: { skipRateLimit?: boolean } = {}): Promise<Message> {
+  /** Imagen del contacto (comprobante, captura): se valida por firma de bytes y queda como adjunto del mensaje. */
+  async contactAttachment(conv: Conversation, data: Buffer, caption?: string, clientMsgId?: string, opts: { skipRateLimit?: boolean } = {}): Promise<Message> {
+    if (clientMsgId) {
+      const prev = await this.repo.findMessageByClientId(conv.id, clientMsgId);
+      if (prev) return prev;
+    }
+    if (data.length > MAX_ATTACHMENT) throw new HttpError(413, 'TOO_LARGE', 'La imagen supera los 5 MB');
+    const mime = sniffImage(data);
+    if (!mime) throw new HttpError(415, 'UNSUPPORTED_MEDIA', 'Solo se aceptan imágenes JPG, PNG o WEBP');
+    const att = await this.repo.saveAttachment({ id: randomUUID(), operatorId: conv.operatorId, conversationId: conv.id, mime, size: data.length, sha256: createHash('sha256').update(data).digest('hex'), data, createdAt: this.now() });
+    return this.contactMessage(conv, caption?.trim() || '📷 Imagen', clientMsgId, { ...opts, attachmentId: att.id });
+  }
+
+  async attachment(operatorId: string, id: string): Promise<Attachment> {
+    const a = await this.repo.findAttachment(operatorId, id);
+    if (!a) throw new HttpError(404, 'NOT_FOUND', 'Adjunto no encontrado');
+    return a;
+  }
+
+  async contactMessage(conv: Conversation, rawBody: string, clientMsgId?: string, opts: { skipRateLimit?: boolean; attachmentId?: string } = {}): Promise<Message> {
     if (clientMsgId) {
       const prev = await this.repo.findMessageByClientId(conv.id, clientMsgId);
       if (prev) return prev;
@@ -111,7 +133,7 @@ export class InboxService {
     if (!opts.skipRateLimit) this.rateLimit(conv.id);
     let msg: Message;
     try {
-      msg = await this.repo.addMessage({ id: randomUUID(), conversationId: conv.id, operatorId: conv.operatorId, direction: 'in', authorType: 'contact', body, ...(clientMsgId ? { clientMsgId } : {}), createdAt: this.now() });
+      msg = await this.repo.addMessage({ id: randomUUID(), conversationId: conv.id, operatorId: conv.operatorId, direction: 'in', authorType: 'contact', body, ...(opts.attachmentId ? { attachmentId: opts.attachmentId } : {}), ...(clientMsgId ? { clientMsgId } : {}), createdAt: this.now() });
     } catch (e) {
       // Reintento concurrente con el mismo clientMsgId: devolver el que ganó.
       const prev = clientMsgId && (e as { code?: string }).code === 'DUPLICATE_CLIENT_MSG' ? await this.repo.findMessageByClientId(conv.id, clientMsgId) : null;

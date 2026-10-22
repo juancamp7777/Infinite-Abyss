@@ -2,9 +2,11 @@ import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
 import { getPrincipal, requireAuth, requireRole, scopeOperator } from '../../shared/http/auth';
-import { asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
+import type { Attachment } from '../../inbox/domain/types';
+import type { PearlAi } from '../application/PearlAi';
 import type { PearlService } from '../application/PearlService';
 
 const opQuery = z.object({ operatorId: z.string().min(1).max(100).optional() });
@@ -23,7 +25,7 @@ const extracted = z.object({
 const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_info', 'rejected', 'duplicate', 'error'] as const;
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
-export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; logger?: ModuleLogger }): Router {
+export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
   const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
@@ -76,6 +78,21 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; logge
     sendJson(res, { ok: true });
   }));
 
+  /* ─── IA (la clave nunca se devuelve) ─── */
+  r.get('/admin/ai', ...admin, asyncHandler(async (req, res) => {
+    if (!d.ai) throw new HttpError(503, 'AI_UNAVAILABLE', 'IA no disponible');
+    sendJson(res, await d.ai.config(op(req)));
+  }));
+  r.put('/admin/ai', ...admin, asyncHandler(async (req, res) => {
+    if (!d.ai) throw new HttpError(503, 'AI_UNAVAILABLE', 'IA no disponible');
+    const b = parse(z.object({
+      enabled: z.boolean().optional(), provider: z.enum(['anthropic', 'gemini', 'deepseek']).optional(),
+      readerModel: z.string().trim().regex(/^[A-Za-z0-9_.:/-]{2,80}$/).optional(), judgeModel: z.string().trim().regex(/^[A-Za-z0-9_.:/-]{2,80}$/).optional(),
+      apiKey: z.string().trim().min(10).max(400).nullable().optional(),
+    }), req.body);
+    sendJson(res, await d.ai.saveConfig(op(req), b));
+  }));
+
   /* ─── Operación diaria (cajeros) ─── */
   r.get('/admin/bank-txs', ...staff, asyncHandler(async (req, res) => {
     const q = parse(z.object({ status: z.enum(['available', 'used', 'ignored']).optional() }), req.query);
@@ -89,6 +106,17 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; logge
   r.post('/admin/receipts', ...staff, asyncHandler(async (req, res) => {
     const b = parse(z.object({ conversationId: z.string().uuid().optional(), playerId: z.string().min(1).max(100).optional(), extracted }), req.body);
     sendJson(res, await d.pearl.submit({ operatorId: op(req), conversationId: b.conversationId, playerId: b.playerId, extracted: b.extracted, source: 'manual' }), 201);
+  }));
+  r.patch('/admin/receipts/:id', ...staff, asyncHandler(async (req, res) => {
+    const b = parse(z.object({ extracted }), req.body);
+    sendJson(res, await d.pearl.updateExtracted(op(req), parse(idParams, req.params).id, b.extracted));
+  }));
+  r.get('/admin/receipts/:id/image', ...staff, asyncHandler(async (req, res) => {
+    const operatorId = op(req);
+    const rec = await d.pearl.getReceipt(operatorId, parse(idParams, req.params).id);
+    if (!rec.attachmentId || !d.attachment) throw new HttpError(404, 'NOT_FOUND', 'El comprobante no tiene imagen');
+    const a = await d.attachment(operatorId, rec.attachmentId);
+    res.set({ 'Content-Type': a.mime, 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(a.data);
   }));
   r.post('/admin/receipts/:id/approve', ...staff, asyncHandler(async (req, res) => {
     const b = parse(z.object({ bankTxId: z.string().uuid().optional() }), req.body);

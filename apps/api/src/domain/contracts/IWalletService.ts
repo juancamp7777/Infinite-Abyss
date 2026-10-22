@@ -72,7 +72,8 @@ export interface RollbackInput {
 export interface CreditDepositInput extends WalletOpBase {
   amount: bigint;
   depositId: string;
-  provider: 'PASSIMPAY' | 'WOMPI';
+  /** PEARL = caja asistida (comprobante conciliado contra el banco del operador). */
+  provider: 'PASSIMPAY' | 'WOMPI' | 'PEARL';
 }
 
 export interface WithdrawalLedgerInput extends WalletOpBase {

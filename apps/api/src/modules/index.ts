@@ -14,6 +14,7 @@ import { backofficeModule } from './backoffice-api';
 import { feedModule } from './feed';
 import { inboxModule } from './inbox';
 import { tideModule } from './tide';
+import { pearlModule } from './pearl';
 
 export { captureRawBody } from './hub';
 export type { ModuleDeps, NymfoModule } from './shared/module';
@@ -30,6 +31,7 @@ export const ALL_MODULES: NymfoModule[] = [
   feedModule,
   inboxModule,
   tideModule,
+  pearlModule,
 ];
 
 export type RegisterModulesDeps = Omit<ModuleDeps, 'services' | 'catalog' | 'betGuard' | 'segments'> & {

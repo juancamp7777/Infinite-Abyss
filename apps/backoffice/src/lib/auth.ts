@@ -237,7 +237,8 @@ export const NAV: NavItem[] = [
   { href: "/vip", label: "VIP y misiones", roles: ADMINS, section: "Marketing" },
   { href: "/catalog", label: "Catálogo y proveedores", roles: ADMINS, section: "Juegos" },
   { href: "/studios", label: "Juegos Studios", roles: ADMINS, section: "Juegos" },
-  { href: "/skin", label: "Skin del operador", roles: ADMINS, section: "Marca" },
+  { href: "/reef", label: "Reef · Plantillas", roles: ADMINS, section: "Marca" },
+  { href: "/skin", label: "Skin clásica", roles: ADMINS, section: "Marca" },
   { href: "/reports", label: "Reportes", roles: ADMINS, section: "Principal" },
 ];
 

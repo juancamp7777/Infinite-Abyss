@@ -2,6 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useTheme } from "@/lib/theme";
+import { safeHref, useReefSite } from "@/lib/reef";
+
+const SOCIAL_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", x: "X", tiktok: "TikTok", telegram: "Telegram", whatsapp: "WhatsApp", youtube: "YouTube" };
 
 /** Logo del operador (o su nombre si no hay imagen). */
 export function BrandLogo({ className = "h-8" }: { className?: string }) {
@@ -11,7 +14,9 @@ export function BrandLogo({ className = "h-8" }: { className?: string }) {
 }
 
 export function SiteFooter() {
-  const { brand, operator } = useTheme();
+  const { brand, operator, status } = useTheme();
+  const reef = useReefSite(status === "loading" ? null : operator.id);
+  if (reef) return <ReefFooter site={reef.config} />;
   const name = brand.displayName || operator.name;
   const legal = brand.legal;
   const legalText = typeof legal === "string" ? legal : legal?.text;
@@ -38,6 +43,30 @@ export function SiteFooter() {
         <p className="text-gray-400">
           © {new Date().getFullYear()} {name} · Plataforma Infinite Abyss
         </p>
+      </div>
+    </footer>
+  );
+}
+
+/** Footer de la plantilla Reef publicada: texto, redes, aviso legal y licencia del operador. */
+function ReefFooter({ site }: { site: NonNullable<ReturnType<typeof useReefSite>>["config"] }) {
+  const { brand, footer } = site;
+  return (
+    <footer className="w-full border-t border-white/10 px-6 py-8 text-center text-xs text-gray-400" style={{ background: site.colors.background }}>
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+        {brand.logoUrl ? <img src={brand.logoUrl} alt={`Logotipo de ${brand.siteName}`} className="h-8 w-auto" /> : <p className="text-base font-bold" style={{ color: site.colors.primary }}>{brand.siteName}</p>}
+        {footer.about && <p className="leading-relaxed">{footer.about}</p>}
+        {footer.socials.length > 0 && (
+          <nav aria-label="Redes sociales" className="flex flex-wrap justify-center gap-4">
+            {footer.socials.map((s) => (
+              <a key={s.url} href={safeHref(s.url)} className="font-semibold underline-offset-2 hover:underline" style={{ color: site.colors.primary }} target="_blank" rel="noopener noreferrer">{SOCIAL_LABEL[s.type] ?? s.type}</a>
+            ))}
+          </nav>
+        )}
+        {footer.legal && <p className="whitespace-pre-line leading-relaxed">{footer.legal}</p>}
+        {footer.license && <p>{footer.license}</p>}
+        {!footer.legal && <p>Juega con responsabilidad. Solo mayores de 18 años.</p>}
+        <p>© {new Date().getFullYear()} {brand.siteName}</p>
       </div>
     </footer>
   );

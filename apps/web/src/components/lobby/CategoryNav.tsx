@@ -100,3 +100,22 @@ export function BottomNav({ onMenu, onSearch, menuOpen }: { onMenu: () => void; 
     </nav>
   );
 }
+
+const TOP: NavItem[] = NAV_ITEMS.filter((i) => i.href !== '/lobby/favorites' && i.href !== '/lobby/recent');
+
+/** Menú horizontal de escritorio (plantillas Reef con navegación superior). */
+export function TopNav() {
+  const path = usePathname();
+  return (
+    <nav aria-label="Categorías" className="nf-topnav mx-auto hidden max-w-[1240px] px-3 sm:px-5 lg:flex">
+      {TOP.map(({ label, href, icon: Icon }) => {
+        const on = isActive(path, href);
+        return (
+          <Link key={href} href={href} aria-current={on ? 'page' : undefined} className={`nf-nav ${on ? 'nf-nav-on' : ''}`}>
+            <Icon aria-hidden className="h-4 w-4 shrink-0" />{label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

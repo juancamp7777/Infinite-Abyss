@@ -14,3 +14,8 @@ _source/
 
 # Configuración local de Claude Code (vista previa)
 .claude/
+
+# Variables reales de despliegue (secretos)
+infra/.env.production
+infra/.env.staging
+infra/ansible/inventory.ini

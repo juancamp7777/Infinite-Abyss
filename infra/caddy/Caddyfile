@@ -1,0 +1,46 @@
+# Infinite Abyss — proxy de entrada con HTTPS automático (Let's Encrypt).
+# Dominios por variables: CASINO_DOMAIN, BACKOFFICE_DOMAIN, API_DOMAIN (con *.localhost Caddy usa su CA interna).
+{
+	email {$ACME_EMAIL}
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+(seguridad) {
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+		-X-Powered-By
+	}
+	encode zstd gzip
+}
+
+# /api-proxy/* va directo a la API (también websockets de socket.io); el resto, a cada app.
+{$CASINO_DOMAIN} {
+	import seguridad
+	handle_path /api-proxy/* {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+{$BACKOFFICE_DOMAIN} {
+	import seguridad
+	handle_path /api-proxy/* {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy backoffice:3001
+	}
+}
+
+# API pública: callbacks de proveedores/agregadores, webhooks de pasarelas y outbound B2B.
+{$API_DOMAIN} {
+	import seguridad
+	reverse_proxy api:4000
+}

@@ -2,6 +2,8 @@ import type { NymfoModule } from '../shared/module';
 import { randomBytes } from 'crypto';
 import { ChannelService } from './application/ChannelService';
 import { InboxService } from './application/InboxService';
+import { LeadService } from './application/LeadService';
+import type { PlayerAccountsPort } from '../shared/ports/PlayerAccountsPort';
 import { SecretBox } from './domain/secretBox';
 import type { InboxRepository } from './domain/types';
 import { buildInboxRouter } from './http/routes';
@@ -46,8 +48,10 @@ export function createInboxModule(opts: InboxModuleOptions = {}): NymfoModule {
         publicBaseUrl: deps.env.INBOX_PUBLIC_URL || (/^https?:\/\//i.test(deps.env.HUB_PUBLIC_API_URL ?? '') ? deps.env.HUB_PUBLIC_API_URL : undefined),
         logger: deps.logger,
       });
-      app.use(INBOX_PREFIX, buildInboxRouter({ auth: deps.auth, svc, channels, operators: deps.operators, logger: deps.logger, sessionsPerMinute: opts.sessionsPerMinute }));
-      return { 'inbox.service': svc, 'inbox.channels': channels };
+      const accounts = deps.services['players.accounts'] as PlayerAccountsPort | undefined;
+      const leads = accounts ? new LeadService(svc, accounts, { webUrl: deps.env.PUBLIC_WEB_URL }) : undefined;
+      app.use(INBOX_PREFIX, buildInboxRouter({ auth: deps.auth, svc, channels, leads, operators: deps.operators, logger: deps.logger, sessionsPerMinute: opts.sessionsPerMinute }));
+      return { 'inbox.service': svc, 'inbox.channels': channels, ...(leads ? { 'inbox.leads': leads } : {}) };
     },
   };
 }

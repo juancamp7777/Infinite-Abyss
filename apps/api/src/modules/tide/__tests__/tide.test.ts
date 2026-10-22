@@ -80,7 +80,14 @@ function setup() {
   const inboxRepo = new InMemoryInboxRepository();
   const inbox = new InboxService(inboxRepo, { now: clock, contactRatePerMinute: 1000 });
   const repo = new InMemoryTideRepository();
-  const engine = new TideEngine(repo, inbox, { logger: silentLogger, now: clock });
+  const withdrawals: Array<[string, string, string]> = [];
+  const engine = new TideEngine(repo, inbox, {
+    logger: silentLogger, now: clock,
+    actions: () => ({
+      ensurePlayer: async (c) => ({ playerId: c.playerId ?? 'nuevo-1', created: !c.playerId }),
+      withdraw: async (_c, a, acc, h) => { withdrawals.push([a, acc, h]); return { ok: true }; },
+    }),
+  });
   inbox.onEvent((e) => engine.onInboxEvent(e));
   const flows = new FlowService(repo);
   const say = async (externalId: string, body: string) => {
@@ -89,7 +96,7 @@ function setup() {
     return conv.id;
   };
   const bot = async (convId: string) => (await inbox.get(OP, convId)).messages.filter((m) => m.authorType === 'bot').map((m) => `${m.direction}:${m.body.split('\n')[0]}`);
-  return { inbox, repo, engine, flows, say, bot, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
+  return { inbox, repo, engine, flows, say, bot, withdrawals, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
 }
 
 describe('motor de Tide', () => {
@@ -100,13 +107,47 @@ describe('motor de Tide', () => {
     const c = await t.say('v1', 'hola');
     expect(await t.bot(c)).toEqual(['out:¡Hola Ana! 👋 Soy el asistente virtual.', 'out:¿En qué te ayudo? Elige una opción o escribe tu pregunta.']);
     expect(await t.repo.findSession(c)).toMatchObject({ status: 'waiting', nodeId: 'menu' });
-    await t.say('v1', '2');
-    expect((await t.bot(c)).slice(2)).toEqual(['out:Los retiros se solicitan en Caja → Retirar y se procesan en menos de 24 horas hábiles.', 'out:¿Te ayudo con algo más?']);
-    expect((await t.repo.findSession(c))?.vars).toEqual({ motivo: '2' });
+    await t.say('v1', '1');
+    expect((await t.bot(c)).slice(2)).toEqual(['out:Para depositar entra a Caja → Depositar. Se acredita al instante una vez confirmado el pago.', 'out:¿Te ayudo con algo más?']);
+    expect((await t.repo.findSession(c))?.vars).toEqual({ motivo: '1' });
     await t.say('v1', 'no, gracias');
     expect((await t.bot(c)).at(-1)).toMatch(/Gracias por escribirnos/);
     expect((await t.inbox.get(OP, c)).conversation.status).toBe('closed');
     expect(await t.repo.findSession(c)).toBeNull();
+  });
+
+  it('retiro guiado: monto → cuenta → titular → solicitud registrada (sin IA)', async () => {
+    const t = setup();
+    const f = await t.flows.create(OP, 'Bienvenida', 'welcome');
+    await t.flows.publish(OP, f.id, 'admin');
+    const c = await t.say('vr', 'hola');
+    await t.say('vr', 'Retiros');
+    expect((await t.bot(c)).at(-1)).toMatch(/Cuánto quieres retirar/);
+    await t.say('vr', '15.000');
+    await t.say('vr', 'mi.alias.mp');
+    await t.say('vr', 'Ana Ruiz');
+    expect(t.withdrawals).toEqual([['15.000', 'mi.alias.mp', 'Ana Ruiz']]);
+    expect(await t.repo.findSession(c)).toMatchObject({ status: 'done', nodeId: 'withdraw' });
+  });
+
+  it('nodos de sala y alta de cuenta; el bot calla en salas de atención humana', async () => {
+    const t = setup();
+    const f = await t.flows.create(OP, 'Alta', 'blank');
+    await t.flows.saveDraft(OP, f.id, { draft: {
+      nodes: [
+        { id: 'start', type: 'trigger', config: {}, x: 0, y: 0 },
+        { id: 'reg', type: 'register', config: {}, x: 0, y: 0 },
+        { id: 'ok', type: 'message', config: { text: 'cuenta creada' }, x: 0, y: 0 },
+        { id: 'room', type: 'move_stage', config: { stage: 'support' }, x: 0, y: 0 },
+      ],
+      edges: [{ from: 'start', port: 'next', to: 'reg' }, { from: 'reg', port: 'created', to: 'ok' }, { from: 'ok', port: 'next', to: 'room' }],
+    } });
+    await t.flows.publish(OP, f.id, 'admin');
+    const c = await t.say('vs', 'hola');
+    expect(await t.bot(c)).toEqual(['out:cuenta creada']);
+    expect((await t.inbox.get(OP, c)).conversation.stage).toBe('support');
+    await t.say('vs', 'hola de nuevo');
+    expect(await t.bot(c)).toEqual(['out:cuenta creada']);
   });
 
   it('pregunta libre → FAQ; sin coincidencia → humano y el bot se calla', async () => {
@@ -200,12 +241,13 @@ describe('motor de Tide', () => {
       botMessage: async () => { throw new Error('canal caído'); },
       botHandoff: async () => undefined,
       update: async () => undefined,
+      setStage: async () => undefined,
     };
     const engine = new TideEngine(repo, broken, { logger: silentLogger });
     const flows = new FlowService(repo);
     const f = await flows.create(OP, 'Frágil', 'welcome');
     await flows.publish(OP, f.id, 'admin');
-    const conv = { id: '00000000-0000-4000-8000-000000000001', operatorId: OP, channel: 'webchat', externalId: 'x', contactName: 'X', status: 'open', lastMessageAt: new Date(), lastMessagePreview: '', unread: 0, createdAt: new Date(), updatedAt: new Date() } as const;
+    const conv = { id: '00000000-0000-4000-8000-000000000001', operatorId: OP, channel: 'webchat', externalId: 'x', contactName: 'X', status: 'open', stage: 'new_lead', lastMessageAt: new Date(), lastMessagePreview: '', unread: 0, createdAt: new Date(), updatedAt: new Date() } as const;
     for (let i = 0; i < 5; i++) await engine.onInboxEvent({ type: 'contact_message', conversation: { ...conv }, message: { body: 'hola' } as never });
     expect((await flows.get(OP, f.id)).enabled).toBe(false);
   });

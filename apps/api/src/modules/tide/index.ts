@@ -1,4 +1,5 @@
 import type { InboxService } from '../inbox/application/InboxService';
+import type { Conversation } from '../inbox/domain/types';
 import type { NymfoModule } from '../shared/module';
 import { FlowService } from './application/FlowService';
 import { TideEngine } from './application/TideEngine';
@@ -26,7 +27,18 @@ export function createTideModule(opts: TideModuleOptions = {}): NymfoModule {
       const inbox = deps.services['inbox.service'] as InboxService | undefined;
       if (!inbox) throw new Error('tide necesita el módulo inbox montado antes');
       const repo = opts.repo ?? (deps.prisma ? new PrismaTideRepository(deps.prisma as TidePrismaLike) : new InMemoryTideRepository());
-      const engine = new TideEngine(repo, inbox, { logger: deps.logger });
+      // Cuentas y caja se publican después (inbox.leads, pearl.cashier): se resuelven al ejecutar.
+      const engine = new TideEngine(repo, inbox, {
+        logger: deps.logger,
+        actions: () => {
+          const leads = deps.services['inbox.leads'] as { ensurePlayer(c: Conversation): Promise<{ playerId: string; created: boolean }> } | undefined;
+          const cashier = deps.services['pearl.cashier'] as { withdraw(c: Conversation, a: string, acc: string, h: string): Promise<{ ok: boolean }> } | undefined;
+          return {
+            ...(leads ? { ensurePlayer: (c: Conversation) => leads.ensurePlayer(c) } : {}),
+            ...(cashier ? { withdraw: (c: Conversation, a: string, acc: string, h: string) => cashier.withdraw(c, a, acc, h) } : {}),
+          };
+        },
+      });
       inbox.onEvent((e) => engine.onInboxEvent(e));
       const flows = new FlowService(repo);
       app.use(TIDE_PREFIX, buildTideRouter({ auth: deps.auth, flows, logger: deps.logger }));

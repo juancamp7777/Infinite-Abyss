@@ -1,6 +1,6 @@
 import type { ModuleLogger } from '../../shared/module';
 import type { InboxEvent } from '../../inbox/application/InboxService';
-import type { Conversation } from '../../inbox/domain/types';
+import { BOT_SILENT_STAGES, type Conversation, type Stage } from '../../inbox/domain/types';
 import { bestFaq, compare, matchOption, normalize, render, type FlowGraph, type FlowNode } from '../domain/graph';
 import type { NodeConfig } from '../domain/nodes';
 import type { TideFlow, TideRepository, TideSession } from '../domain/types';
@@ -11,6 +11,13 @@ export interface TideInboxPort {
   botMessage(operatorId: string, id: string, body: string): Promise<unknown>;
   botHandoff(operatorId: string, id: string, note: string): Promise<unknown>;
   update(operatorId: string, id: string, patch: { status: 'closed' }): Promise<unknown>;
+  setStage(operatorId: string, id: string, stage: Stage): Promise<unknown>;
+}
+
+/** Acciones de otros módulos (cuentas y caja); se resuelven en tiempo de ejecución. */
+export interface TideActions {
+  ensurePlayer?(conv: Conversation): Promise<{ playerId: string; created: boolean }>;
+  withdraw?(conv: Conversation, amount: string, account: string, holder: string): Promise<{ ok: boolean }>;
 }
 
 const MAX_STEPS = 40;
@@ -31,7 +38,7 @@ export class TideEngine {
   constructor(
     private readonly repo: TideRepository,
     private readonly inbox: TideInboxPort,
-    private readonly opts: { logger: ModuleLogger; now?: () => Date },
+    private readonly opts: { logger: ModuleLogger; now?: () => Date; actions?: () => TideActions },
   ) {}
 
   private now() {
@@ -62,7 +69,8 @@ export class TideEngine {
   }
 
   private async onContactMessage(conv: Conversation, body: string): Promise<void> {
-    if (conv.assigneeId) return;
+    // Con agente asignado o en salas de atención humana, el bot no habla.
+    if (conv.assigneeId || BOT_SILENT_STAGES.includes(conv.stage)) return;
     const s = await this.repo.findSession(conv.id);
     if (s?.status === 'handoff') return;
     if (s?.status === 'waiting') {
@@ -106,7 +114,8 @@ export class TideEngine {
   }
 
   /** Ejecuta desde `startId` hasta una Pregunta (espera), un traspaso, un cierre o el final del camino. */
-  private async run(session: TideSession, graph: FlowGraph, conv: Conversation, body: string, startId: string | null): Promise<void> {
+  private async run(session: TideSession, graph: FlowGraph, initialConv: Conversation, body: string, startId: string | null): Promise<void> {
+    let conv = initialConv;
     const s: TideSession = { ...session, trace: [...session.trace] };
     const ctx = () => ({ contact: { name: conv.contactName, channel: conv.channel, playerId: conv.playerId ?? '' }, vars: s.vars, message: { body } });
     const send = (text: string) => this.inbox.botMessage(conv.operatorId, conv.id, text);
@@ -155,6 +164,29 @@ export class TideEngine {
         case 'handoff':
           await this.inbox.botHandoff(conv.operatorId, conv.id, render((node.config as NodeConfig<'handoff'>).note, ctx()));
           return finish('handoff', node.id);
+        case 'move_stage':
+          await this.inbox.setStage(conv.operatorId, conv.id, (node.config as NodeConfig<'move_stage'>).stage);
+          break;
+        case 'register': {
+          const ensure = this.opts.actions?.().ensurePlayer;
+          if (!ensure) { port = 'failed'; break; }
+          try {
+            const r = await ensure(conv);
+            conv = { ...conv, playerId: r.playerId };
+            port = r.created ? 'created' : 'existing';
+          } catch (e) {
+            this.opts.logger.warn('[tide] alta de cuenta fallida', { conversationId: conv.id, error: (e as Error).message });
+            port = 'failed';
+          }
+          break;
+        }
+        case 'withdraw': {
+          const cfg = node.config as NodeConfig<'withdraw'>;
+          const withdraw = this.opts.actions?.().withdraw;
+          const r = withdraw ? await withdraw(conv, s.vars[cfg.amountVar] ?? '', s.vars[cfg.accountVar] ?? '', s.vars[cfg.holderVar] ?? '') : { ok: false };
+          port = r.ok ? 'requested' : 'failed';
+          break;
+        }
         case 'close': {
           const cfg = node.config as NodeConfig<'close'>;
           if (cfg.text) await send(render(cfg.text, ctx()));

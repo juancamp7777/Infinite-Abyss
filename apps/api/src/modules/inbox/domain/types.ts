@@ -2,6 +2,13 @@
 
 export type Channel = 'webchat' | 'whatsapp' | 'telegram';
 export type ConversationStatus = 'open' | 'pending' | 'closed';
+/**
+ * Salas: en qué etapa está el contacto. new_lead → client (primer depósito) · vip · deposit_review (comprobante en revisión)
+ * · withdraw (retiro pedido) · support (atención humana). En las tres últimas el bot de Tide no responde.
+ */
+export const STAGES = ['new_lead', 'client', 'vip', 'deposit_review', 'withdraw', 'support'] as const;
+export type Stage = (typeof STAGES)[number];
+export const BOT_SILENT_STAGES: readonly Stage[] = ['deposit_review', 'withdraw', 'support'];
 /** in = del contacto; out = respuesta visible para el contacto; note = nota interna (NUNCA se envía al contacto). */
 export type Direction = 'in' | 'out' | 'note';
 export type AuthorType = 'contact' | 'agent' | 'bot' | 'system';
@@ -20,6 +27,7 @@ export interface Conversation {
   playerId?: string;
   contactName: string;
   status: ConversationStatus;
+  stage: Stage;
   assigneeId?: string;
   lastMessageAt: Date;
   lastMessagePreview: string;
@@ -109,6 +117,7 @@ export interface Visitor {
 
 export interface ConversationFilter {
   status?: ConversationStatus;
+  stage?: Stage;
   assigneeId?: string | null;
   q?: string;
   limit: number;

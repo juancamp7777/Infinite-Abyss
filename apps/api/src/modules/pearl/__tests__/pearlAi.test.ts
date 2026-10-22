@@ -168,3 +168,40 @@ describe('imágenes entrantes de WhatsApp y Telegram', () => {
     expect((await tg.fetchMedia({ botToken: '123456:TOKEN', botUsername: '' }, 'BIG')).toString()).toBe('foto');
   });
 });
+
+describe('lead nuevo: primer comprobante → cuenta automática → acreditación', () => {
+  it('crea la cuenta con el titular del comprobante, envía las credenciales y acredita a ese jugador', async () => {
+    const app = express();
+    app.use(express.json());
+    const server = createServer(app);
+    const credited: Array<{ playerId: string }> = [];
+    const leads: string[] = [];
+    const deps: ModuleDeps = { wallet: new InMemoryWallet(), bus: new InMemoryEventBus(), auth: new MockAuth({ NODE_ENV: 'test' }), compliance: new InMemoryPlayerCompliance(), logger: silentLogger, env: { INBOX_SECRETS_KEY: 'k'.repeat(40), PUBLIC_WEB_URL: 'https://casino.example', PEARL_ANTHROPIC_API_KEY: 'sk-test-only-env' }, services: {} };
+    deps.services['players.accounts'] = {
+      createLead: async (_op: string, name: string) => { leads.push(name); return { playerId: 'lead-1', username: 'martina1234', password: 'Pw7kq2xZ9a' }; },
+      exists: async () => true, currency: async () => 'ARS', requestWithdrawal: async () => { throw new Error('no'); },
+    };
+    Object.assign(deps.services, await createInboxModule().register(app, undefined, deps));
+    const published = await createPearlModule({
+      tickMs: 0,
+      deposits: { credit: async (req) => { credited.push({ playerId: req.playerId }); return { depositId: 'd', txId: 't', duplicate: false }; } },
+      aiFactory: () => ({ readReceipt: async () => ({ amount: '9000', senderName: 'Martina López' }), judge: async () => ({ approve: true, reason: 'ok' }) }),
+    }).register(app, undefined, deps);
+    const pearl = published['pearl.service'] as PearlService;
+    await pearl.updateSettings(OP, { mode: 'auto', currency: 'ARS', minAmount: 100n });
+    const feed = await pearl.createFeed(OP, 'generic', 'Banco');
+    await pearl.ingest(feed.feed.id, feed.token, { id: 'L1', amount: '9000', senderName: 'LOPEZ MARTINA', occurredAt: new Date().toISOString() });
+    await new Promise<void>((r) => server.listen(0, r));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const s = (await (await fetch(`${base}/inbox/v1/webchat/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ operatorId: OP }) })).json()) as { token: string };
+    await fetch(`${base}/inbox/v1/webchat/attachments`, { method: 'POST', headers: { 'content-type': 'image/png', 'x-visitor-token': s.token }, body: new Uint8Array(png('lead-recibo')) });
+    await (published["pearl.ai"] as PearlAi).drain();
+    const conv = (await (await fetch(`${base}/inbox/v1/webchat/conversation`, { headers: { 'x-visitor-token': s.token } })).json()) as { messages: Array<{ authorType: string; body: string }> };
+    const bot = conv.messages.filter((m) => m.authorType === 'bot').map((m) => m.body);
+    expect(leads).toEqual(['Martina López']);
+    expect(bot[0]).toMatch(/Usuario: martina1234\nContraseña: Pw7kq2xZ9a\nEntra en https:\/\/casino\.example/);
+    expect(bot[1]).toMatch(/Acreditamos ARS 9\.000,00/);
+    expect(credited).toEqual([{ playerId: 'lead-1' }]);
+    await new Promise<void>((r) => server.close(() => r()));
+  });
+});

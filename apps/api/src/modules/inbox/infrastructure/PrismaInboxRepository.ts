@@ -48,6 +48,7 @@ export class PrismaInboxRepository implements InboxRepository {
   async listConversations(operatorId: string, f: ConversationFilter) {
     const where: Record<string, unknown> = { operatorId };
     if (f.status) where.status = f.status;
+    if (f.stage) where.stage = f.stage;
     if (f.assigneeId !== undefined) where.assigneeId = f.assigneeId;
     if (f.q) {
       where.OR = ['contactName', 'lastMessagePreview', 'playerId'].map((k) => ({ [k]: { contains: f.q, mode: 'insensitive' } }));

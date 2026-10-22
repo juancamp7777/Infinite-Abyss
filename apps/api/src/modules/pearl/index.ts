@@ -4,7 +4,11 @@ import { SecretBox } from '../inbox/domain/secretBox';
 import type { InboxService } from '../inbox/application/InboxService';
 import type { NymfoModule } from '../shared/module';
 import type { ExternalDepositPort } from '../shared/ports/ExternalDepositPort';
+import { ChatCashier } from './application/ChatCashier';
 import { PearlAi, type AiClientFactory } from './application/PearlAi';
+import { formatMoney } from './domain/money';
+import type { LeadService } from '../inbox/application/LeadService';
+import type { PlayerAccountsPort } from '../shared/ports/PlayerAccountsPort';
 import { PearlService, type PearlOutcome } from './application/PearlService';
 import type { PearlRepository, Receipt } from './domain/types';
 import { buildPearlRouter } from './http/routes';
@@ -22,15 +26,7 @@ export interface PearlModuleOptions {
   aiFactory?: AiClientFactory;
 }
 
-const formatAmount = (r: Receipt) => {
-  if (r.amount === undefined) return '';
-  const dec = currencyDecimals(r.currency);
-  // Formato fijo 12.345,67 (Intl omite el separador de miles en montos de 4 cifras).
-  const s = r.amount.toString().padStart(dec + 1, '0');
-  const int = s.slice(0, s.length - dec).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${r.currency} ${int}${dec ? `,${s.slice(-dec)}` : ''}`;
-};
-
+const formatAmount = (r: Receipt) => (r.amount === undefined ? '' : formatMoney(r.amount, r.currency));
 /** Mensajes al contacto por cada desenlace (el equipo ve además la nota interna en Sonar). */
 export function pearlMessage(r: Receipt, outcome: PearlOutcome): string {
   switch (outcome) {
@@ -64,13 +60,26 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
       let ai: PearlAi | undefined;
       if (inbox) {
         const box = new SecretBox(deps.env.INBOX_SECRETS_KEY || randomBytes(32).toString('hex'));
-        ai = new PearlAi(repo, pearl, inbox, box, { logger: deps.logger, envKey: deps.env.PEARL_ANTHROPIC_API_KEY || deps.env.ANTHROPIC_API_KEY || undefined, factory: opts.aiFactory });
+        ai = new PearlAi(repo, pearl, inbox, box, {
+          logger: deps.logger, envKey: deps.env.PEARL_ANTHROPIC_API_KEY || deps.env.ANTHROPIC_API_KEY || undefined, factory: opts.aiFactory,
+          ensurePlayer: () => {
+            const leads = deps.services['inbox.leads'] as LeadService | undefined;
+            return leads ? (conv, name) => leads.ensurePlayer(conv, name) : undefined;
+          },
+        });
         // Prioridad sobre Tide: las imágenes y la respuesta del titular las atiende Pearl.
         inbox.onEvent((e) => ai!.onInboxEvent(e), 10);
         pearl.setNotifier(async (r, outcome) => {
           if (!r.conversationId) return;
           await inbox.botMessage(r.operatorId, r.conversationId, pearlMessage(r, outcome));
-          if (outcome === 'pending_review') await inbox.botHandoff(r.operatorId, r.conversationId, `Pearl: comprobante ${formatAmount(r)} a revisión (${r.reason ?? 'sin motivo'})`);
+          // Salas: depósito acreditado → cliente (los VIP se quedan en VIP); en revisión → revisión de depósito.
+          if (outcome === 'pending_review') {
+            await inbox.botHandoff(r.operatorId, r.conversationId, `Pearl: comprobante ${formatAmount(r)} a revisión (${r.reason ?? 'sin motivo'})`);
+            await inbox.setStage(r.operatorId, r.conversationId, 'deposit_review');
+          } else if (outcome === 'credited') {
+            const conv = await inbox.conversation(r.operatorId, r.conversationId);
+            if (conv.stage !== 'vip') await inbox.setStage(r.operatorId, r.conversationId, 'client');
+          }
         });
       }
 
@@ -80,7 +89,8 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
         const t = setInterval(() => void pearl.tick().catch((e) => deps.logger.error('[pearl] barrido', { error: (e as Error).message })), tickMs);
         t.unref?.();
       }
-      return { 'pearl.service': pearl, ...(ai ? { 'pearl.ai': ai } : {}) };
+      const cashier = inbox ? new ChatCashier(inbox, deps.services['players.accounts'] as PlayerAccountsPort | undefined, { logger: deps.logger }) : undefined;
+      return { 'pearl.service': pearl, ...(ai ? { 'pearl.ai': ai } : {}), ...(cashier ? { 'pearl.cashier': cashier } : {}) };
     },
   };
 }

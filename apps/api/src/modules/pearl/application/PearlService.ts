@@ -66,7 +66,7 @@ export class PearlService {
     const currency = this.opts.defaultCurrency;
     const unit = 10n ** BigInt(currencyDecimals(currency));
     // Arranque seguro: todo a revisión humana hasta que el operador active el modo automático.
-    return { operatorId, mode: 'review_all', currency, autoMaxAmount: 100_000n * unit, minAmount: 1n * unit, maxAgeHours: 48, waitBankMinutes: 20, utcOffsetMinutes: -180, updatedAt: this.now() };
+    return { operatorId, mode: 'review_all', currency, autoMaxAmount: 100_000n * unit, minAmount: 1n * unit, maxAgeHours: 48, waitBankMinutes: 20, utcOffsetMinutes: -180, autoRegisterLeads: true, updatedAt: this.now() };
   }
 
   async updateSettings(operatorId: string, patch: Partial<Omit<PearlSettings, 'operatorId' | 'updatedAt'>>): Promise<PearlSettings> {

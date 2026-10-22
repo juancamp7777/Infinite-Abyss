@@ -26,7 +26,8 @@ const registerSchema = z.object({
     .regex(/^[A-Za-z0-9_.-]+$/)
     .optional(),
 });
-const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(200) });
+/** Correo o usuario (3-30 caracteres alfanuméricos, punto, guion o guion bajo). */
+const loginSchema = z.object({ email: z.union([emailSchema, z.string().trim().regex(/^[A-Za-z0-9_.-]{3,30}$/)]), password: z.string().min(1).max(200) });
 const refreshSchema = z.object({ refreshToken: z.string().min(20).max(200) });
 
 export function createAuthRouter(deps: AuthRoutesDeps): Router {

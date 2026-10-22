@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { HttpError } from '../../shared/http/errors';
-import { cleanBody, MAX_ATTACHMENT, preview, sniffImage, type Attachment, type Channel, type Conversation, type ConversationFilter, type ConversationStatus, type InboxRepository, type Message, type QuickReply } from '../domain/types';
+import { cleanBody, MAX_ATTACHMENT, preview, sniffImage, type Attachment, type Stage, type Channel, type Conversation, type ConversationFilter, type ConversationStatus, type InboxRepository, type Message, type QuickReply } from '../domain/types';
 
 /** Recibe cambios para los sockets: agentes del operador y el contacto de cada conversación. */
 export interface InboxNotifier {
@@ -97,7 +97,7 @@ export class InboxService {
     const now = this.now();
     const c = await this.repo.saveConversation({
       id: randomUUID(), operatorId: id.operatorId, channel: id.channel, externalId: id.externalId,
-      ...(id.playerId ? { playerId: id.playerId } : {}), ...(id.channelId ? { channelId: id.channelId } : {}), contactName: id.name, status: 'open',
+      ...(id.playerId ? { playerId: id.playerId } : {}), ...(id.channelId ? { channelId: id.channelId } : {}), contactName: id.name, status: 'open', stage: id.playerId ? 'client' : 'new_lead',
       lastMessageAt: now, lastMessagePreview: '', unread: 0, createdAt: now, updatedAt: now,
     });
     this.notifier?.toAgents(c.operatorId, 'inbox:conversation', c);
@@ -193,10 +193,11 @@ export class InboxService {
     return saved;
   }
 
-  async update(operatorId: string, id: string, patch: { status?: ConversationStatus; assigneeId?: string | null }): Promise<Conversation> {
+  async update(operatorId: string, id: string, patch: { status?: ConversationStatus; assigneeId?: string | null; stage?: Stage }): Promise<Conversation> {
     const conv = await this.must(operatorId, id);
     const next: Conversation = { ...conv, updatedAt: this.now() };
     if (patch.status) next.status = patch.status;
+    if (patch.stage) next.stage = patch.stage;
     if (patch.assigneeId !== undefined) {
       if (patch.assigneeId === null) delete next.assigneeId;
       else next.assigneeId = patch.assigneeId;
@@ -211,6 +212,23 @@ export class InboxService {
 
   conversation(operatorId: string, id: string): Promise<Conversation> {
     return this.must(operatorId, id);
+  }
+
+  /** Mueve de sala (automatizaciones). No-op si ya está ahí. */
+  async setStage(operatorId: string, id: string, stage: Stage): Promise<Conversation> {
+    const conv = await this.must(operatorId, id);
+    if (conv.stage === stage) return conv;
+    const saved = await this.repo.saveConversation({ ...conv, stage, updatedAt: this.now() });
+    this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
+    return saved;
+  }
+
+  /** Vincula la conversación a un jugador (lead registrado o cuenta existente verificada por un agente). */
+  async linkPlayer(operatorId: string, id: string, playerId: string): Promise<Conversation> {
+    const conv = await this.must(operatorId, id);
+    const saved = await this.repo.saveConversation({ ...conv, playerId, updatedAt: this.now() });
+    this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
+    return saved;
   }
 
   /** Mensaje del bot: visible para el contacto y entregado por el canal; no asigna la conversación a nadie. */
@@ -231,7 +249,7 @@ export class InboxService {
     const conv = await this.must(operatorId, id);
     const body = cleanBody(`🤖 El bot pasó la conversación a un agente${note ? `: ${note}` : ''}`);
     const msg = await this.repo.addMessage({ id: randomUUID(), conversationId: id, operatorId, direction: 'note', authorType: 'bot', body, createdAt: this.now() });
-    const saved = await this.repo.saveConversation({ ...conv, status: 'open', updatedAt: msg.createdAt });
+    const saved = await this.repo.saveConversation({ ...conv, status: 'open', stage: 'support', updatedAt: msg.createdAt });
     this.notifier?.toAgents(operatorId, 'inbox:message', msg);
     this.notifier?.toAgents(operatorId, 'inbox:conversation', saved);
     return saved;

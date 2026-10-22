@@ -42,7 +42,7 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
   r.put('/admin/settings', ...admin, asyncHandler(async (req, res) => {
     const b = parse(z.object({
       mode: z.enum(['auto', 'review_all']).optional(), currency: z.string().regex(/^[A-Z]{3,5}$/).optional(), autoMaxAmount: money.optional(), minAmount: money.optional(),
-      maxAgeHours: z.number().int().min(1).max(720).optional(), waitBankMinutes: z.number().int().min(1).max(1440).optional(), utcOffsetMinutes: z.number().int().min(-720).max(840).optional(),
+      maxAgeHours: z.number().int().min(1).max(720).optional(), waitBankMinutes: z.number().int().min(1).max(1440).optional(), utcOffsetMinutes: z.number().int().min(-720).max(840).optional(), autoRegisterLeads: z.boolean().optional(),
     }), req.body);
     sendJson(res, await d.pearl.updateSettings(op(req), b));
   }));

@@ -115,11 +115,11 @@ export class AuthService {
     input: { email: string; password: string },
     meta: RequestMeta = {},
   ): Promise<PlayerAuthResult> {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        operatorId_emailNormalized: { operatorId: tenant.operatorId, emailNormalized: normalizeEmail(input.email) },
-      },
-    });
+    // Correo, o usuario (las cuentas creadas por el chat de la caja entran con usuario y contraseña).
+    const id = input.email.trim();
+    const user = id.includes('@')
+      ? await this.prisma.user.findUnique({ where: { operatorId_emailNormalized: { operatorId: tenant.operatorId, emailNormalized: normalizeEmail(id) } } })
+      : await this.prisma.user.findUnique({ where: { operatorId_username: { operatorId: tenant.operatorId, username: id.toLowerCase() } } });
     // Siempre se ejecuta una comparación bcrypt, exista o no el usuario.
     const ok = await bcrypt.compare(input.password, user ? user.passwordHash : await this.getDummyHash());
     if (!user || !ok || user.status !== 'ACTIVE') throw AppError.unauthorized(GENERIC_LOGIN_ERROR);

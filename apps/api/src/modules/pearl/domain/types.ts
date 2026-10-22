@@ -22,6 +22,8 @@ export interface PearlSettings {
   waitBankMinutes: number;
   /** Desfase horario de los comprobantes respecto a UTC (Argentina: -180). */
   utcOffsetMinutes: number;
+  /** Crear la cuenta de casino del lead que manda su primer comprobante (y enviarle usuario y contraseña). */
+  autoRegisterLeads: boolean;
   updatedAt: Date;
 }
 

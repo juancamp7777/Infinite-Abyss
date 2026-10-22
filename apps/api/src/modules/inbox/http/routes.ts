@@ -8,12 +8,14 @@ import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
 import type { ChannelService } from '../application/ChannelService';
 import type { ContactIdentity, InboxService } from '../application/InboxService';
-import type { Message } from '../domain/types';
+import type { LeadService } from '../application/LeadService';
+import { STAGES, type Message } from '../domain/types';
 
 export interface InboxRouterDeps {
   auth: AuthPort;
   svc: InboxService;
   channels: ChannelService;
+  leads?: LeadService;
   operators?: OperatorCurrencyPort;
   logger?: ModuleLogger;
   /** Sesiones de visitante por IP y minuto (antiabuso del endpoint público). */
@@ -25,6 +27,7 @@ const idParams = z.object({ id: z.string().uuid() });
 const body = z.string().max(8000);
 const listQuery = opQuery.extend({
   status: z.enum(['open', 'pending', 'closed']).optional(),
+  stage: z.enum(STAGES).optional(),
   assignee: z.string().min(1).max(100).optional(),
   q: z.string().trim().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -113,7 +116,7 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
     const q = parse(listQuery, req.query);
     const operatorId = op(req);
     const assigneeId = q.assignee === 'me' ? getPrincipal(req).userId : q.assignee === 'unassigned' ? null : q.assignee;
-    sendJson(res, { items: await d.svc.list(operatorId, { status: q.status, assigneeId, q: q.q || undefined, limit: q.limit }), me: getPrincipal(req).userId });
+    sendJson(res, { items: await d.svc.list(operatorId, { status: q.status, stage: q.stage, assigneeId, q: q.q || undefined, limit: q.limit }), me: getPrincipal(req).userId });
   }));
 
   r.get('/admin/conversations/:id', ...admin, asyncHandler(async (req, res) => {
@@ -129,15 +132,23 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
 
   r.patch('/admin/conversations/:id', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
-    const b = parse(z.object({ status: z.enum(['open', 'pending', 'closed']).optional(), assigneeId: z.string().min(1).max(100).nullable().optional() }), req.body);
+    const b = parse(z.object({ status: z.enum(['open', 'pending', 'closed']).optional(), stage: z.enum(STAGES).optional(), assigneeId: z.string().min(1).max(100).nullable().optional() }), req.body);
     // "me" = el agente autenticado.
     const assigneeId = b.assigneeId === 'me' ? getPrincipal(req).userId : b.assigneeId;
-    sendJson(res, await d.svc.update(op(req), id, { status: b.status, assigneeId }));
+    sendJson(res, await d.svc.update(op(req), id, { status: b.status, stage: b.stage, assigneeId }));
   }));
 
   r.post('/admin/conversations/:id/read', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
     sendJson(res, await d.svc.markRead(op(req), id));
+  }));
+
+  /** Jugador de la conversación: crear la cuenta del lead o vincular una existente (identidad verificada por el agente). */
+  r.post('/admin/conversations/:id/player', ...admin, asyncHandler(async (req, res) => {
+    if (!d.leads) throw new HttpError(503, 'UNAVAILABLE', 'Alta de cuentas no disponible');
+    const { id } = parse(idParams, req.params);
+    const b = parse(z.union([z.object({ create: z.literal(true) }), z.object({ playerId: z.string().min(1).max(100) })]), req.body);
+    sendJson(res, 'create' in b ? await d.leads.createFor(op(req), id) : await d.leads.linkExisting(op(req), id, b.playerId), 201);
   }));
 
   r.get('/admin/attachments/:id', ...admin, asyncHandler(async (req, res) => {

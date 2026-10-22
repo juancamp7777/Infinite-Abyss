@@ -245,6 +245,8 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
   if (modulesEnabled) {
     const deps = buildModuleDeps({
       prisma,
+      authService,
+      requestWithdrawal,
       walletService,
       jwt,
       rgPolicy,

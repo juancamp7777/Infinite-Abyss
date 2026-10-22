@@ -31,7 +31,9 @@ function Form({ mode }: { mode: "login" | "register" }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof errors = {};
-    if (!EMAIL_RE.test(email.trim())) errs.email = "Ingresa un correo válido.";
+    // Al entrar también vale el usuario (las cuentas creadas por el chat de la caja no tienen correo).
+    const id = email.trim();
+    if (isRegister ? !EMAIL_RE.test(id) : !(EMAIL_RE.test(id) || /^[A-Za-z0-9_.-]{3,30}$/.test(id))) errs.email = isRegister ? "Ingresa un correo válido." : "Ingresa tu correo o usuario.";
     if (isRegister ? password.length < 8 : password.length === 0) {
       errs.password = isRegister ? "La contraseña debe tener al menos 8 caracteres." : "Ingresa tu contraseña.";
     }
@@ -71,7 +73,9 @@ function Form({ mode }: { mode: "login" | "register" }) {
           </div>
         )}
 
-        <Field label="Correo electrónico" type="email" value={email} onChange={setEmail} error={errors.email} autoComplete="email" required inputMode="email" name="email" />
+        {isRegister
+          ? <Field label="Correo electrónico" type="email" value={email} onChange={setEmail} error={errors.email} autoComplete="email" required inputMode="email" name="email" />
+          : <Field label="Correo o usuario" type="text" value={email} onChange={setEmail} error={errors.email} autoComplete="username" required name="email" />}
         {isRegister && (
           <Field label="Usuario (opcional)" value={username} onChange={setUsername} error={errors.username} autoComplete="username" name="username" />
         )}

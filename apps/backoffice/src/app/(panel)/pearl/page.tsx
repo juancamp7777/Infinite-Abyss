@@ -25,7 +25,7 @@ interface Receipt {
   createdAt: string;
 }
 interface BankTx { id: string; externalId: string; amount: string; currency: string; senderName: string; senderTaxId?: string; occurredAt: string; status: "available" | "used" | "ignored" }
-interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number }
+interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean }
 interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; active: boolean }
 interface Feed { id: string; type: string; name: string; enabled: boolean; lastEventAt?: string }
 interface AiView { enabled: boolean; provider: "anthropic" | "gemini" | "deepseek"; readerModel: string; judgeModel: string; hasKey: boolean; keyFromEnv: boolean }
@@ -217,6 +217,7 @@ function Config() {
           </Field>
           <Field label="Tope automático (unidades mínimas)" htmlFor="cap"><input id="cap" className={`${inputCls} w-full`} value={s.autoMaxAmount} onChange={(e) => setForm({ ...form, autoMaxAmount: e.target.value.replace(/\D/g, "") })} /></Field>
           <Field label="Depósito mínimo (unidades mínimas)" htmlFor="min"><input id="min" className={`${inputCls} w-full`} value={s.minAmount} onChange={(e) => setForm({ ...form, minAmount: e.target.value.replace(/\D/g, "") })} /></Field>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.autoRegisterLeads ?? true} onChange={(e) => setForm({ ...form, autoRegisterLeads: e.target.checked })} /> Crear la cuenta del lead con su primer comprobante</label>
           <Field label="Esperar al banco (minutos)" htmlFor="wait"><input id="wait" type="number" className={`${inputCls} w-full`} value={s.waitBankMinutes} onChange={(e) => setForm({ ...form, waitBankMinutes: Number(e.target.value) })} /></Field>
           <Button className="w-full" onClick={() => void run(() => call("/pearl/v1/admin/settings", { method: "PUT", body: form }), "Reglas guardadas")}>Guardar reglas</Button>
         </div>
@@ -294,7 +295,62 @@ function Config() {
   );
 }
 
-type Tab = "review" | "waiting" | "all" | "bank" | "config";
+interface Withdrawal { id: string; userId: string; provider: string; status: "REQUESTED" | "APPROVED" | "REJECTED" | "PROCESSING" | "PAID" | "FAILED"; amount: string; currency: string; destination: { account?: string; holderName?: string; channel?: string }; createdAt: string; rejectionReason?: string }
+const W_STATUS: Record<Withdrawal["status"], { label: string; tone: "neutral" | "good" | "bad" | "warn" }> = {
+  REQUESTED: { label: "Solicitado", tone: "warn" }, APPROVED: { label: "Aprobado · pagar", tone: "warn" }, PROCESSING: { label: "En proceso", tone: "neutral" },
+  PAID: { label: "Pagado", tone: "good" }, REJECTED: { label: "Rechazado", tone: "bad" }, FAILED: { label: "Fallido", tone: "bad" },
+};
+
+function Withdrawals() {
+  const { call } = useApiClient();
+  const session = useSession();
+  const [status, setStatus] = useState<"REQUESTED" | "APPROVED" | "">("REQUESTED");
+  const list = useApi<{ items: Withdrawal[] }>("/api/backoffice/withdrawals", status ? { status } : {});
+  const [reason, setReason] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
+  const finance = session?.role === "PLATFORM_ADMIN" || session?.role === "OPERATOR_FINANCE";
+  const act = async (fn: () => Promise<unknown>, ok: string) => {
+    setMsg(null);
+    try { await fn(); setMsg({ tone: "ok", text: ok }); list.reload(); } catch (e) { setMsg({ tone: "warn", text: errMsg(e) }); }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {([["REQUESTED", "Por aprobar"], ["APPROVED", "Por pagar"], ["", "Todos"]] as const).map(([v, l]) => (
+          <button key={v} type="button" onClick={() => setStatus(v)} className={`rounded-full px-3 py-1 text-xs font-semibold ${status === v ? "bg-[var(--color-brand)] text-black" : "bg-white/5 text-white/60"}`}>{l}</button>
+        ))}
+      </div>
+      {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+      {list.loading ? <Spinner /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : !list.data?.items.length ? <Card><Empty>No hay retiros aquí.</Empty></Card> : list.data.items.map((w) => (
+        <Card key={w.id}>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold">{w.currency} {minor(w.amount)} <span className="font-normal text-white/50">· {w.destination.holderName ?? "—"}</span></div>
+              <div className="truncate text-xs text-white/45">{when(w.createdAt)} · cuenta {w.destination.account ?? "—"} · {w.provider === "PEARL" ? "pedido por chat" : w.provider} · jugador {w.userId.slice(0, 8)}</div>
+            </div>
+            <Badge tone={W_STATUS[w.status].tone}>{W_STATUS[w.status].label}</Badge>
+          </div>
+          {w.status === "REQUESTED" && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button onClick={() => void act(() => call(`/api/backoffice/withdrawals/${w.id}/approve`, { method: "POST", body: {} }), "Retiro aprobado: haz la transferencia y márcalo como pagado.")}><Check aria-hidden className="h-4 w-4" /> Aprobar</Button>
+              <input className={`${inputCls} min-w-0 flex-1`} placeholder="Motivo del rechazo" value={reason[w.id] ?? ""} onChange={(e) => setReason({ ...reason, [w.id]: e.target.value })} aria-label="Motivo del rechazo" />
+              <Button variant="danger" disabled={(reason[w.id] ?? "").trim().length < 3} onClick={() => void act(() => call(`/api/backoffice/withdrawals/${w.id}/reject`, { method: "POST", body: { reason: reason[w.id] } }), "Retiro rechazado: el saldo volvió al jugador.")}><X aria-hidden className="h-4 w-4" /> Rechazar</Button>
+            </div>
+          )}
+          {w.status === "APPROVED" && (
+            <div className="mt-3">
+              {finance
+                ? <Button onClick={() => void act(() => call(`/api/backoffice/withdrawals/${w.id}/mark-paid`, { method: "POST", body: {} }), "Retiro marcado como pagado.")}><Banknote aria-hidden className="h-4 w-4" /> Ya transferí: marcar pagado</Button>
+                : <p className="text-xs text-white/45">Lo marca como pagado el equipo de finanzas.</p>}
+            </div>
+          )}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+type Tab = "review" | "waiting" | "all" | "bank" | "withdrawals" | "config";
 export default function PearlPage() {
   const { operatorId } = useApiClient();
   const session = useSession();
@@ -302,7 +358,7 @@ export default function PearlPage() {
   const [tab, setTab] = useState<Tab>("review");
   if (!operatorId) return <><PageHeader title="Pearl" /><NeedOperator /></>;
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "review", label: "En revisión" }, { id: "waiting", label: "Esperando banco" }, { id: "all", label: "Todos" }, { id: "bank", label: "Movimientos del banco" },
+    { id: "review", label: "En revisión" }, { id: "waiting", label: "Esperando banco" }, { id: "all", label: "Todos" }, { id: "bank", label: "Movimientos del banco" }, { id: "withdrawals", label: "Retiros" },
     ...(isAdmin ? [{ id: "config" as Tab, label: "Configuración" }] : []),
   ];
   return (
@@ -313,6 +369,7 @@ export default function PearlPage() {
       {tab === "waiting" && <Review status="waiting_bank" />}
       {tab === "all" && <Review status="all" />}
       {tab === "bank" && <BankFeed />}
+      {tab === "withdrawals" && <Withdrawals />}
       {tab === "config" && <Config />}
     </>
   );

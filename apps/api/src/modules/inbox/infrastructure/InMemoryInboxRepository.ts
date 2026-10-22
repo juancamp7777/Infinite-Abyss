@@ -30,6 +30,7 @@ export class InMemoryInboxRepository implements InboxRepository {
     return [...this.convs.values()]
       .filter((c) => c.operatorId === operatorId)
       .filter((c) => (f.status ? c.status === f.status : true))
+      .filter((c) => (f.stage ? c.stage === f.stage : true))
       .filter((c) => (f.assigneeId === undefined ? true : f.assigneeId === null ? !c.assigneeId : c.assigneeId === f.assigneeId))
       .filter((c) => (q ? `${c.contactName} ${c.lastMessagePreview} ${c.playerId ?? ''}`.toLowerCase().includes(q) : true))
       .sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime())

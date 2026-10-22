@@ -7,6 +7,9 @@ import type { EventBus } from '../../modules/shared/events/EventBus';
 import type { ModuleLogger } from '../../modules/shared/module';
 import { createModuleWalletAdapters } from './wallet';
 import { Phase1ExternalDeposits } from './wallet/Phase1ExternalDeposits';
+import { Phase1PlayerAccounts } from './players/Phase1PlayerAccounts';
+import type { AuthService } from '../../application/auth/AuthService';
+import type { RequestWithdrawalUseCase } from '../../application/cashier/RequestWithdrawalUseCase';
 import { Phase1ModuleAuth } from './auth/Phase1ModuleAuth';
 import { Phase1BetGuard, Phase1PlayerCompliance } from './compliance/Phase1Compliance';
 import { PrismaOperatorCurrency } from './operators/PrismaOperatorCurrency';
@@ -26,6 +29,9 @@ export interface ModuleIntegrationInput {
   bus: EventBus;
   logger: ModuleLogger;
   env: NodeJS.ProcessEnv;
+  /** Alta de leads y retiros por chat (Sonar/Pearl/Tide). */
+  authService?: AuthService;
+  requestWithdrawal?: RequestWithdrawalUseCase;
 }
 
 /**
@@ -48,6 +54,9 @@ export function buildModuleDeps(input: ModuleIntegrationInput): RegisterModulesD
     services: {
       'wallet.bonusFunds': adapters.bonusFunds,
       'wallet.jackpotLedger': adapters.jackpotLedger,
+      ...(input.authService && input.requestWithdrawal
+        ? { 'players.accounts': new Phase1PlayerAccounts({ prisma: input.prisma, auth: input.authService, requestWithdrawal: input.requestWithdrawal }) }
+        : {}),
       'cashier.externalDeposits': new Phase1ExternalDeposits({ prisma: input.prisma, wallet: input.walletService, rg: input.rgPolicy, bus: input.bus, logger: input.logger }),
     },
   };

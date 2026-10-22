@@ -35,6 +35,15 @@ export const NODE_SCHEMAS = {
   }),
   handoff: z.object({ note: z.string().max(500).default('') }),
   close: z.object({ text: z.string().max(2000).default('') }),
+  move_stage: z.object({ stage: z.enum(['new_lead', 'client', 'vip', 'deposit_review', 'withdraw', 'support']) }),
+  /** Crea la cuenta de casino del lead (si no tiene) y le envía usuario y contraseña. */
+  register: z.object({}),
+  /** Registra un retiro con los datos que juntó el flujo (variables). Sin IA: circuito real con revisión humana. */
+  withdraw: z.object({
+    amountVar: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/).default('monto'),
+    accountVar: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/).default('cuenta'),
+    holderVar: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/).default('titular'),
+  }),
 } as const;
 
 export type NodeType = keyof typeof NODE_SCHEMAS;
@@ -65,6 +74,11 @@ export const NODE_CATALOG: NodeDescriptor[] = [
     fields: [{ key: 'entries', label: 'Preguntas y respuestas', kind: 'faq' }, { key: 'threshold', label: 'Similitud mínima', kind: 'number' }] },
   { type: 'handoff', label: 'Pasar a humano', description: 'Deja la conversación en la cola de agentes y detiene el bot.', ports: [],
     fields: [{ key: 'note', label: 'Nota interna para el agente', kind: 'textarea' }] },
+  { type: 'move_stage', label: 'Mover de sala', description: 'Cambia la sala del contacto (en soporte, revisión o retiro el bot se calla).', ports: ['next'],
+    fields: [{ key: 'stage', label: 'Sala', kind: 'select', options: ['new_lead', 'client', 'vip', 'deposit_review', 'withdraw', 'support'] }] },
+  { type: 'register', label: 'Crear cuenta', description: 'Crea la cuenta de casino del lead y le envía usuario y contraseña.', ports: ['created', 'existing', 'failed'], fields: [] },
+  { type: 'withdraw', label: 'Solicitar retiro', description: 'Registra el retiro con monto, cuenta y titular guardados en variables; lo aprueba y paga el equipo.', ports: ['requested', 'failed'],
+    fields: [{ key: 'amountVar', label: 'Variable del monto', kind: 'text' }, { key: 'accountVar', label: 'Variable de la cuenta (CBU/CVU/alias)', kind: 'text' }, { key: 'holderVar', label: 'Variable del titular', kind: 'text' }] },
   { type: 'close', label: 'Finalizar', description: 'Despide (opcional) y cierra la conversación.', ports: [],
     fields: [{ key: 'text', label: 'Despedida', kind: 'textarea' }] },
 ];

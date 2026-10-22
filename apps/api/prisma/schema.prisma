@@ -1350,6 +1350,7 @@ model InboxConversation {
   playerId           String?
   contactName        String
   status             String   @default("open")
+  stage              String   @default("new_lead")
   assigneeId         String?
   lastMessageAt      DateTime
   lastMessagePreview String   @default("")
@@ -1360,6 +1361,7 @@ model InboxConversation {
   @@index([operatorId, status, lastMessageAt])
   @@index([operatorId, channel, externalId])
   @@index([operatorId, assigneeId])
+  @@index([operatorId, stage])
   @@map("inbox_conversations")
 }
 
@@ -1476,6 +1478,7 @@ model PearlSettings {
   maxAgeHours      Int      @default(48)
   waitBankMinutes  Int      @default(20)
   utcOffsetMinutes Int      @default(-180)
+  autoRegisterLeads Boolean @default(true)
   updatedAt        DateTime
 
   @@map("pearl_settings")

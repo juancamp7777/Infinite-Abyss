@@ -9,6 +9,9 @@ import { Badge, Button, Empty, ErrorBox, inputCls, NeedOperator, PageHeader, Spi
 import { AuthImage } from "@/components/AuthImage";
 
 type Status = "open" | "pending" | "closed";
+type Stage = "new_lead" | "client" | "vip" | "deposit_review" | "withdraw" | "support";
+const STAGE_LABEL: Record<Stage, string> = { new_lead: "Lead nuevo", client: "Cliente", vip: "VIP", deposit_review: "Revisión de depósito", withdraw: "Retiro", support: "Soporte" };
+const STAGE_COLOR: Record<Stage, string> = { new_lead: "#3cc8f0", client: "#34d399", vip: "#f4b73f", deposit_review: "#fb923c", withdraw: "#a78bfa", support: "#f472b6" };
 interface Conversation {
   id: string;
   operatorId: string;
@@ -17,6 +20,7 @@ interface Conversation {
   playerId?: string;
   contactName: string;
   status: Status;
+  stage: Stage;
   assigneeId?: string;
   lastMessageAt: string;
   lastMessagePreview: string;
@@ -77,6 +81,7 @@ export default function InboxPage() {
   const { call, operatorId } = useApiClient();
   const [filter, setFilter] = useState<Filter>("open");
   const [q, setQ] = useState("");
+  const [stage, setStage] = useState<Stage | "">("");
   const [items, setItems] = useState<Conversation[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +100,7 @@ export default function InboxPage() {
     setError(null);
     try {
       const query = filter === "mine" ? { assignee: "me" } : filter === "unassigned" ? { assignee: "unassigned" } : { status: filter };
-      const r = await call<{ items: Conversation[]; me: string }>("/inbox/v1/admin/conversations", { query: { ...query, q: q.trim() || undefined, limit: 100 } });
+      const r = await call<{ items: Conversation[]; me: string }>("/inbox/v1/admin/conversations", { query: { ...query, stage: stage || undefined, q: q.trim() || undefined, limit: 100 } });
       setItems(filter === "mine" || filter === "unassigned" ? r.items.filter((c) => c.status !== "closed") : r.items);
       setMe(r.me);
     } catch (e) {
@@ -103,7 +108,7 @@ export default function InboxPage() {
     } finally {
       setLoading(false);
     }
-  }, [call, operatorId, filter, q]);
+  }, [call, operatorId, filter, q, stage]);
 
   useEffect(() => {
     setLoading(true);
@@ -166,7 +171,7 @@ export default function InboxPage() {
     };
   }, [operatorId, call]);
 
-  const patch = async (body: { status?: Status; assigneeId?: string | null }) => {
+  const patch = async (body: { status?: Status; assigneeId?: string | null; stage?: Stage }) => {
     if (!thread) return;
     try {
       const c = await call<Conversation>(`/inbox/v1/admin/conversations/${thread.conversation.id}`, { method: "PATCH", body });
@@ -199,6 +204,10 @@ export default function InboxPage() {
               <input className={`${inputCls} w-full pl-9`} placeholder="Buscar contacto o mensaje" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar" />
             </div>
             <div className="overflow-x-auto"><Tabs tabs={FILTERS} value={filter} onChange={(f) => { setFilter(f); setSel(null); }} /></div>
+            <select className={`${inputCls} w-full`} value={stage} onChange={(e) => { setStage(e.target.value as Stage | ""); setSel(null); }} aria-label="Filtrar por sala">
+              <option value="">Todas las salas</option>
+              {(Object.keys(STAGE_LABEL) as Stage[]).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
+            </select>
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? <Spinner /> : items.length === 0 ? <div className="p-4"><Empty>No hay conversaciones aquí.</Empty></div> : (
@@ -220,6 +229,7 @@ export default function InboxPage() {
                         <span className="mt-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/35">
                           <Globe aria-hidden className="h-3 w-3" style={{ color: CHANNEL_COLOR[c.channel] }} /> {CHANNEL_LABEL[c.channel]}
                           {c.playerId && <span className="rounded bg-[var(--color-brand2)]/15 px-1 text-[var(--color-brand2)]">Jugador</span>}
+                          {c.stage && <span className="rounded px-1" style={{ color: STAGE_COLOR[c.stage], background: `${STAGE_COLOR[c.stage]}22` }}>{STAGE_LABEL[c.stage]}</span>}
                         </span>
                       </span>
                     </button>
@@ -248,7 +258,7 @@ export default function InboxPage() {
 
         {/* Detalles y respuestas rápidas */}
         <aside className="hidden min-w-0 flex-col gap-3 xl:flex">
-          {thread && sel && <Details c={thread.conversation} me={me} />}
+          {thread && sel && <Details c={thread.conversation} me={me} call={call} onChange={(c) => setThread((t) => (t ? { ...t, conversation: c } : t))} />}
           <QuickReplies items={replies} reload={loadReplies} call={call} />
         </aside>
       </div>
@@ -261,7 +271,7 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
   me: string | null;
   replies: QuickReply[];
   onBack(): void;
-  onPatch(b: { status?: Status; assigneeId?: string | null }): void;
+  onPatch(b: { status?: Status; assigneeId?: string | null; stage?: Stage }): void;
   onSent(m: Message): void;
   send(body: string, kind: "reply" | "note"): Promise<Message>;
   retry(id: string): Promise<Message>;
@@ -325,6 +335,9 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
           <div className="text-xs text-white/45">{CHANNEL_LABEL[c.channel]} · <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge></div>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5">
+          <select className={`${inputCls} py-1 text-xs`} value={c.stage} onChange={(e) => onPatch({ stage: e.target.value as Stage })} aria-label="Mover de sala">
+            {(Object.keys(STAGE_LABEL) as Stage[]).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
+          </select>
           {c.assigneeId === me
             ? <Button variant="ghost" onClick={() => onPatch({ assigneeId: null })}><UserMinus aria-hidden className="h-4 w-4" /> Soltar</Button>
             : <Button variant="ghost" onClick={() => onPatch({ assigneeId: "me" })}><UserCheck aria-hidden className="h-4 w-4" /> Asignarme</Button>}
@@ -386,10 +399,23 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
   );
 }
 
-function Details({ c, me }: { c: Conversation; me: string | null }) {
+function Details({ c, me, call, onChange }: { c: Conversation; me: string | null; call: ReturnType<typeof useApiClient>["call"]; onChange(c: Conversation): void }) {
+  const [playerId, setPlayerId] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const linkPlayer = async (body: { create: true } | { playerId: string }) => {
+    setMsg(null);
+    try {
+      const r = await call<{ playerId?: string; username?: string } & Partial<Conversation>>(`/inbox/v1/admin/conversations/${c.id}/player`, { method: "POST", body });
+      onChange({ ...c, playerId: r.playerId });
+      setMsg("username" in r && r.username ? `Cuenta creada: ${r.username}. Las credenciales se enviaron al contacto.` : "Jugador vinculado.");
+    } catch (e) {
+      setMsg(errMsg(e));
+    }
+  };
   const rows: Array<[string, string]> = [
     ["Canal", CHANNEL_LABEL[c.channel]],
     ["Estado", STATUS_LABEL[c.status]],
+    ["Sala", c.stage ? STAGE_LABEL[c.stage] : "—"],
     ["Asignada a", c.assigneeId ? (c.assigneeId === me ? "Ti" : c.assigneeId.slice(0, 8)) : "Nadie"],
     ["Jugador", c.playerId ? c.playerId.slice(0, 12) : "Visitante anónimo"],
     ["Último mensaje", new Date(c.lastMessageAt).toLocaleString("es-CO")],
@@ -403,6 +429,17 @@ function Details({ c, me }: { c: Conversation; me: string | null }) {
       <dl className="space-y-2 text-sm">
         {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-white/45">{k}</dt><dd className="truncate text-right">{v}</dd></div>)}
       </dl>
+      {!c.playerId && (
+        <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+          <Button className="w-full" onClick={() => void linkPlayer({ create: true })}>Crear cuenta de casino</Button>
+          <div className="flex gap-2">
+            <input className={`${inputCls} min-w-0 flex-1`} placeholder="Id de jugador existente" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label="Id de jugador existente" />
+            <Button variant="ghost" disabled={!playerId.trim()} onClick={() => void linkPlayer({ playerId: playerId.trim() })}>Vincular</Button>
+          </div>
+          <p className="text-[11px] text-white/35">Vincula una cuenta existente solo si verificaste la identidad del contacto.</p>
+        </div>
+      )}
+      {msg && <p className="mt-2 text-xs text-white/60">{msg}</p>}
     </div>
   );
 }

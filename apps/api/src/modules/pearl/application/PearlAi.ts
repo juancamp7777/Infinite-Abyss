@@ -2,7 +2,7 @@ import type { InboxEvent } from '../../inbox/application/InboxService';
 import type { SecretBox } from '../../inbox/domain/secretBox';
 import type { Attachment, Conversation } from '../../inbox/domain/types';
 import type { ModuleLogger } from '../../shared/module';
-import { nameTokens } from '../domain/matching';
+import { isWalletOrOwnName, nameTokens } from '../domain/matching';
 import type { AiConfig, BankTx, ExtractedReceipt, PearlRepository, PearlSettings, Receipt } from '../domain/types';
 import { AI_DEFAULTS, AnthropicPearlAi, OpenAiCompatiblePearlAi, type AiProviderName, type PearlAiClient } from '../infrastructure/ai/providers';
 import type { PearlService } from './PearlService';
@@ -41,7 +41,7 @@ export class PearlAi {
     private readonly pearl: PearlService,
     private readonly inbox: InboxPort,
     private readonly box: SecretBox,
-    private readonly opts: { logger: ModuleLogger; envKey?: string; factory?: AiClientFactory },
+    private readonly opts: { logger: ModuleLogger; envKey?: string; factory?: AiClientFactory; ensurePlayer?: () => ((conv: Conversation, name: string) => Promise<{ playerId: string }>) | undefined },
   ) {
     pearl.setJudge((ctx) => this.judge(ctx));
   }
@@ -111,7 +111,17 @@ export class PearlAi {
         this.opts.logger.warn('[pearl] lectura con IA fallida: queda para lectura manual', { conversationId: conv.id, error: (err as Error).message });
       }
     }
-    await this.pearl.submit({ operatorId: conv.operatorId, conversationId: conv.id, playerId: conv.playerId, image: att.data, attachmentId: att.id, extracted, source: client ? 'ai' : 'manual' });
+    // Lead nuevo con un comprobante legible: se le crea la cuenta (como hacía la caja anterior) antes de conciliar.
+    let playerId = conv.playerId;
+    const ensure = this.opts.ensurePlayer?.();
+    if (!playerId && ensure && extracted.amount && !extracted.notAReceipt && (await this.pearl.settings(conv.operatorId)).autoRegisterLeads) {
+      const name = extracted.senderName && !isWalletOrOwnName(extracted.senderName, []) ? extracted.senderName : conv.contactName;
+      playerId = await ensure(conv, name).then((r) => r.playerId).catch((err: Error) => {
+        this.opts.logger.warn('[pearl] alta automática del lead fallida', { conversationId: conv.id, error: err.message });
+        return undefined;
+      });
+    }
+    await this.pearl.submit({ operatorId: conv.operatorId, conversationId: conv.id, playerId, image: att.data, attachmentId: att.id, extracted, source: client ? 'ai' : 'manual' });
   }
 
   private async judge(ctx: { receipt: Receipt; bankTx: BankTx; settings: PearlSettings }): Promise<{ approve: boolean; reason?: string }> {

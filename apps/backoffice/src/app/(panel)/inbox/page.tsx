@@ -28,6 +28,8 @@ interface Message {
   authorType: string;
   authorId?: string;
   body: string;
+  status?: "sent" | "failed";
+  error?: string;
   createdAt: string;
 }
 interface QuickReply {
@@ -46,6 +48,7 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
 ];
 const STATUS_LABEL: Record<Status, string> = { open: "Abierta", pending: "Pendiente", closed: "Cerrada" };
 const STATUS_TONE = { open: "warn", pending: "neutral", closed: "good" } as const;
+const CHANNEL_COLOR = { webchat: "#3cc8f0", whatsapp: "#25d366", telegram: "#29a9eb" } as const;
 const CHANNEL_LABEL = { webchat: "Webchat", whatsapp: "WhatsApp", telegram: "Telegram" } as const;
 
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -58,6 +61,9 @@ const ago = (iso: string) => {
 };
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : "Error inesperado");
+
+/** Inserta o reemplaza por id (p. ej. un reintento de entrega actualiza el estado del mismo mensaje). */
+const upsertMessage = (list: Message[], m: Message) => (list.some((x) => x.id === m.id) ? list.map((x) => (x.id === m.id ? m : x)) : [...list, m]);
 
 function matches(c: Conversation, f: Filter, me: string | null): boolean {
   if (f === "mine") return !!me && c.assigneeId === me && c.status !== "closed";
@@ -148,7 +154,7 @@ export default function InboxPage() {
       setThread((t) => (t && t.conversation.id === c.id ? { ...t, conversation: c } : t));
     });
     s.on("inbox:message", (msg: Message) => {
-      setThread((t) => (t && t.conversation.id === msg.conversationId && !t.messages.some((x) => x.id === msg.id) ? { ...t, messages: [...t.messages, msg] } : t));
+      setThread((t) => (t && t.conversation.id === msg.conversationId ? { ...t, messages: upsertMessage(t.messages, msg) } : t));
       if (msg.direction === "in" && selRef.current === msg.conversationId) {
         void call(`/inbox/v1/admin/conversations/${msg.conversationId}/read`, { method: "POST", body: {} }).catch(() => {});
       }
@@ -210,7 +216,7 @@ export default function InboxPage() {
                           {c.unread > 0 && <span className="ml-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[var(--color-brand)] px-1.5 text-[11px] font-bold text-black">{c.unread}</span>}
                         </span>
                         <span className="mt-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/35">
-                          <Globe aria-hidden className="h-3 w-3" /> {CHANNEL_LABEL[c.channel]}
+                          <Globe aria-hidden className="h-3 w-3" style={{ color: CHANNEL_COLOR[c.channel] }} /> {CHANNEL_LABEL[c.channel]}
                           {c.playerId && <span className="rounded bg-[var(--color-brand2)]/15 px-1 text-[var(--color-brand2)]">Jugador</span>}
                         </span>
                       </span>
@@ -232,8 +238,9 @@ export default function InboxPage() {
             </div>
           ) : !thread ? <Spinner /> : (
             <Thread thread={thread} me={me} replies={replies} onBack={() => setSel(null)} onPatch={patch}
-              onSent={(m) => setThread((t) => (t && !t.messages.some((x) => x.id === m.id) ? { ...t, messages: [...t.messages, m] } : t))}
-              send={(body, kind) => call<Message>(`/inbox/v1/admin/conversations/${thread.conversation.id}/messages`, { method: "POST", body: { body, kind } })} />
+              onSent={(m) => setThread((t) => (t ? { ...t, messages: upsertMessage(t.messages, m) } : t))}
+              send={(body, kind) => call<Message>(`/inbox/v1/admin/conversations/${thread.conversation.id}/messages`, { method: "POST", body: { body, kind } })}
+              retry={(id) => call<Message>(`/inbox/v1/admin/conversations/${thread.conversation.id}/messages/${id}/retry`, { method: "POST", body: {} })} />
           )}
         </section>
 
@@ -247,7 +254,7 @@ export default function InboxPage() {
   );
 }
 
-function Thread({ thread, me, replies, onBack, onPatch, onSent, send }: {
+function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
   thread: { conversation: Conversation; messages: Message[] };
   me: string | null;
   replies: QuickReply[];
@@ -255,6 +262,7 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send }: {
   onPatch(b: { status?: Status; assigneeId?: string | null }): void;
   onSent(m: Message): void;
   send(body: string, kind: "reply" | "note"): Promise<Message>;
+  retry(id: string): Promise<Message>;
 }) {
   const c = thread.conversation;
   const [text, setText] = useState("");
@@ -333,7 +341,15 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send }: {
             : "self-end rounded-br-md bg-gradient-to-br from-[var(--color-brand2)] to-sky-500 text-slate-950"}`}>
             {m.direction === "note" && <div className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300"><Lock aria-hidden className="h-3 w-3" /> Nota interna</div>}
             <div className="whitespace-pre-wrap break-words">{m.body}</div>
-            <div className={`mt-0.5 text-[10px] ${m.direction === "out" ? "text-slate-900/60" : "text-white/40"}`}>{hhmm(m.createdAt)}</div>
+            <div className={`mt-0.5 text-[10px] ${m.direction === "out" ? "text-slate-900/60" : "text-white/40"}`}>
+              {hhmm(m.createdAt)}{m.status === "sent" && c.channel !== "webchat" ? " · ✓ entregado al canal" : ""}
+            </div>
+            {m.status === "failed" && (
+              <div className="mt-1 rounded-lg bg-red-950/60 px-2 py-1 text-[11px] text-red-200">
+                No enviado: {m.error ?? "error del canal"}{" "}
+                <button type="button" className="font-semibold underline" onClick={() => void retry(m.id).then(onSent).catch((e) => setErr(errMsg(e)))}>Reintentar</button>
+              </div>
+            )}
           </div>
         ))}
       </div>

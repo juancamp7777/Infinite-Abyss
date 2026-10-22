@@ -44,6 +44,7 @@ services:
       PUBLIC_WEB_URL: https://${CASINO_DOMAIN}
       BACKOFFICE_URL: https://${BACKOFFICE_DOMAIN}
       PUBLIC_API_URL: https://${API_DOMAIN}
+      INBOX_PUBLIC_URL: https://${API_DOMAIN}
       HUB_PUBLIC_API_URL: /api-proxy
       HUB_INTERNAL_API_URL: http://localhost:4000
       LOG_DIR: /app/logs

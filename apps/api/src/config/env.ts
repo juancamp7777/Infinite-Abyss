@@ -56,12 +56,14 @@ const schema = z.object({
   PROMO_DROPS_SECRET: optionalStr,
   /** Clave HMAC de los alias públicos del feed de apuestas en vivo. Obligatorio en producción. */
   FEED_PSEUDONYM_SECRET: optionalStr,
+  INBOX_SECRETS_KEY: optionalStr,
+  INBOX_PUBLIC_URL: optionalStr,
   /** URL pública con la que los proveedores llaman al Hub (/hub/v1/wallet). Por defecto PUBLIC_API_URL. */
   HUB_PUBLIC_API_URL: optionalStr,
 }).superRefine((e, ctx) => {
   if (e.NODE_ENV !== 'production' || e.MODULES_ENABLED !== 'true') return;
   // En producción no hay secretos efímeros ni por defecto para los módulos.
-  for (const key of ['MKT_UNSUBSCRIBE_SECRET', 'PROMO_DROPS_SECRET', 'FEED_PSEUDONYM_SECRET'] as const) {
+  for (const key of ['MKT_UNSUBSCRIBE_SECRET', 'PROMO_DROPS_SECRET', 'FEED_PSEUDONYM_SECRET', 'INBOX_SECRETS_KEY'] as const) {
     const v = e[key];
     if (!v || v.length < 32) ctx.addIssue({ code: 'custom', path: [key], message: `${key} is required in production (min 32 chars)` });
   }

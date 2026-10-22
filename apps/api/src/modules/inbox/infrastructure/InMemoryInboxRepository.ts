@@ -1,4 +1,4 @@
-import type { Channel, Conversation, ConversationFilter, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
+import type { Channel, Conversation, ConversationFilter, InboxChannel, InboxRepository, Message, QuickReply, Visitor } from '../domain/types';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -8,6 +8,7 @@ export class InMemoryInboxRepository implements InboxRepository {
   private readonly msgs: Message[] = [];
   private readonly replies = new Map<string, QuickReply>();
   private readonly visitors = new Map<string, Visitor>();
+  private readonly channels = new Map<string, InboxChannel>();
 
   async findConversation(operatorId: string, id: string) {
     const c = this.convs.get(id);
@@ -62,6 +63,27 @@ export class InMemoryInboxRepository implements InboxRepository {
     const r = this.replies.get(id);
     if (!r || r.operatorId !== operatorId) return false;
     return this.replies.delete(id);
+  }
+  async saveMessage(m: Message) {
+    const i = this.msgs.findIndex((x) => x.id === m.id);
+    if (i < 0) throw new Error('Mensaje inexistente');
+    this.msgs[i] = clone(m);
+    return clone(m);
+  }
+  async listChannels(operatorId: string) {
+    return [...this.channels.values()].filter((c) => c.operatorId === operatorId).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map(clone);
+  }
+  async findChannel(id: string) {
+    const c = this.channels.get(id);
+    return c ? clone(c) : null;
+  }
+  async saveChannel(c: InboxChannel) {
+    this.channels.set(c.id, clone(c));
+    return clone(c);
+  }
+  async deleteChannel(operatorId: string, id: string) {
+    const c = this.channels.get(id);
+    return !!c && c.operatorId === operatorId && this.channels.delete(id);
   }
   async saveVisitor(v: Visitor) {
     this.visitors.set(v.tokenHash, clone(v));

@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CreatedApp } from '../../src/app';
@@ -84,5 +85,31 @@ describe('inbox con Postgres (app real)', () => {
     expect((await request(created.app).post('/inbox/v1/admin/quick-replies').set(bearer(agentToken)).send({ shortcut, body: 'dup' })).status).toBe(409);
     expect((await request(created.app).delete(`/inbox/v1/admin/quick-replies/${q.body.id}`).set(bearer(otherToken))).status).toBe(404);
     expect((await request(created.app).delete(`/inbox/v1/admin/quick-replies/${q.body.id}`).set(bearer(agentToken))).status).toBe(200);
+  });
+
+  it('canal de WhatsApp en Postgres: credenciales cifradas, webhook firmado e idempotente', async () => {
+    const appSecret = '0123456789abcdef0123456789abcdef';
+    const accessToken = 'EAAG-it-test-only-token-abcdefghijklmnop';
+    const adminTok = jwt.signAccess({ sub: (await createBackofficeUser('OPERATOR_ADMIN', opId)).id, op: opId, typ: 'backoffice', role: 'OPERATOR_ADMIN' });
+    const c = await request(created.app).post('/inbox/v1/admin/channels').set(bearer(adminTok))
+      .send({ type: 'whatsapp', name: 'WA IT', config: { phoneNumberId: '1098765432', accessToken, appSecret } });
+    expect(c.status).toBe(201);
+    const row = await prisma.inboxChannel.findUnique({ where: { id: c.body.channel.id } });
+    expect(row?.configEnc).toMatch(/^v1./);
+    expect(row?.configEnc).not.toContain(accessToken);
+    expect(JSON.stringify(c.body)).not.toContain(appSecret);
+
+    const wamid = `wamid.it-${Date.now()}`;
+    const raw = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: { contacts: [{ wa_id: '573009998877', profile: { name: 'Cliente WA' } }], messages: [{ from: '573009998877', id: wamid, type: 'text', text: { body: 'hola por WhatsApp' } }] } }] }] });
+    const sig = `sha256=${createHmac('sha256', appSecret).update(raw).digest('hex')}`;
+    const hook = `/inbox/v1/channels/${c.body.channel.id}/webhook`;
+    for (let i = 0; i < 2; i++) {
+      await request(created.app).post(hook).set('content-type', 'application/json').set('x-hub-signature-256', sig).send(raw).expect(200);
+    }
+    await request(created.app).post(hook).set('content-type', 'application/json').set('x-hub-signature-256', 'sha256=00').send(raw).expect(401);
+    const conv = await prisma.inboxConversation.findFirst({ where: { operatorId: opId, channelId: c.body.channel.id } });
+    expect(conv).toMatchObject({ channel: 'whatsapp', contactName: 'Cliente WA', unread: 1 });
+    expect(await prisma.inboxMessage.count({ where: { conversationId: conv!.id } })).toBe(1);
+    expect((await request(created.app).get('/inbox/v1/admin/channels').set(bearer(otherToken))).body.items).toHaveLength(0);
   });
 });

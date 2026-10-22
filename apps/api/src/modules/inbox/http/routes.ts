@@ -6,12 +6,14 @@ import { getPrincipal, optionalAuth, requireAuth, requireRole, scopeOperator } f
 import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
+import type { ChannelService } from '../application/ChannelService';
 import type { ContactIdentity, InboxService } from '../application/InboxService';
 import type { Message } from '../domain/types';
 
 export interface InboxRouterDeps {
   auth: AuthPort;
   svc: InboxService;
+  channels: ChannelService;
   operators?: OperatorCurrencyPort;
   logger?: ModuleLogger;
   /** Sesiones de visitante por IP y minuto (antiabuso del endpoint público). */
@@ -87,6 +89,17 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
     sendJson(res, publicMessage(await d.svc.contactMessage(conv, b.body, b.clientMsgId)), 201);
   }));
 
+  /* ─── Webhooks de canales (WhatsApp Cloud, Telegram) ─── */
+  const webhook = asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const raw = (req as Request & { rawBody?: Buffer }).rawBody;
+    const out = await d.channels.webhook(id, { method: req.method, headers: req.headers, query: req.query as Record<string, unknown>, rawBody: Buffer.isBuffer(raw) ? raw : Buffer.alloc(0), body: req.body });
+    if (typeof out === 'string') res.type('text/plain').send(out);
+    else sendJson(res, out);
+  });
+  r.get('/channels/:id/webhook', webhook);
+  r.post('/channels/:id/webhook', webhook);
+
   /* ─── Agentes ─── */
   r.get('/admin/conversations', ...admin, asyncHandler(async (req, res) => {
     const q = parse(listQuery, req.query);
@@ -117,6 +130,32 @@ export function buildInboxRouter(d: InboxRouterDeps): Router {
   r.post('/admin/conversations/:id/read', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
     sendJson(res, await d.svc.markRead(op(req), id));
+  }));
+
+  r.post('/admin/conversations/:id/messages/:messageId/retry', ...admin, asyncHandler(async (req, res) => {
+    const { id, messageId } = parse(z.object({ id: z.string().uuid(), messageId: z.string().uuid() }), req.params);
+    sendJson(res, await d.svc.retryDelivery(op(req), id, messageId));
+  }));
+
+  /* ─── Canales (solo administradores) ─── */
+  const owners = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
+  const channelBody = z.object({ type: z.enum(['whatsapp', 'telegram']), name: z.string().max(80).default(''), config: z.record(z.string(), z.unknown()) });
+  r.get('/admin/channels', ...owners, asyncHandler(async (req, res) => {
+    sendJson(res, { items: await d.channels.list(op(req)) });
+  }));
+  r.post('/admin/channels', ...owners, asyncHandler(async (req, res) => {
+    const b = parse(channelBody, req.body);
+    sendJson(res, await d.channels.create(op(req), b.type, b.name, b.config), 201);
+  }));
+  r.patch('/admin/channels/:id', ...owners, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    const b = parse(z.object({ name: z.string().max(80).optional(), enabled: z.boolean().optional(), config: z.record(z.string(), z.unknown()).optional() }), req.body);
+    sendJson(res, await d.channels.update(op(req), id, b));
+  }));
+  r.delete('/admin/channels/:id', ...owners, asyncHandler(async (req, res) => {
+    const { id } = parse(idParams, req.params);
+    await d.channels.remove(op(req), id);
+    sendJson(res, { ok: true });
   }));
 
   const qr = z.object({ shortcut: z.string().trim().toLowerCase(), body });

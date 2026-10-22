@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
-  BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare,
+  BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower,
   Palette, Trophy, Users, X, Zap, type LucideIcon,
 } from "lucide-react";
 import { authClient, BASE_PATH, canAccess, homeFor, NAV, NAV_SECTIONS, ROLE_LABEL, type NavSection } from "@/lib/auth";
@@ -15,7 +15,7 @@ const noop = () => () => {};
 const COLLAPSED_KEY = "abyss.bo.collapsedSections";
 
 const ICON: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/players": Users, "/inbox": MessagesSquare, "/tickets": LifeBuoy, "/segments": Layers,
+  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tickets": LifeBuoy, "/segments": Layers,
   "/campaigns": Megaphone, "/bonuses": Gift, "/tournaments": Trophy, "/jackpots": Zap, "/vip": Crown,
   "/catalog": Gamepad2, "/studios": BarChart3, "/skin": Palette,
 };

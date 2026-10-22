@@ -19,12 +19,12 @@ function safeDecimals(currency: string): number | null {
 }
 
 const DEFAULT_COLORS = {
-  primary: '#7c3aed',
-  secondary: '#1e1b4b',
-  accent: '#22d3ee',
-  background: '#0b0b14',
-  surface: '#151526',
-  text: '#f5f5ff',
+  primary: '#f4b73f',
+  secondary: '#3cc8f0',
+  accent: '#ffd978',
+  background: '#050d1c',
+  surface: '#0b1a30',
+  text: '#e8eef8',
 };
 
 export function createOperatorRouter(deps: OperatorRoutesDeps): Router {

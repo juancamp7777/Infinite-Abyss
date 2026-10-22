@@ -5,9 +5,9 @@ const HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const MAX_SVG = 20_000;
 
 export const DEFAULT_SKIN: Skin = {
-  name: 'Nymfo Casino',
+  name: 'Infinite Abyss',
   logoUrl: '',
-  colors: { primary: '#7c3aed', secondary: '#db2777', background: '#0b0b14', surface: '#15152a', text: '#f4f4f8', accent: '#facc15' },
+  colors: { primary: '#f4b73f', secondary: '#3cc8f0', background: '#050d1c', surface: '#0b1a30', text: '#e8eef8', accent: '#ffd978' },
   banners: [],
 };
 

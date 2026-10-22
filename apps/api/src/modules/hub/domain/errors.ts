@@ -1,6 +1,6 @@
 import { HttpError } from '../../shared/http/errors';
 
-/** Códigos de error estables de la API seamless wallet y del lado saliente de Nymfo Hub. */
+/** Códigos de error estables de la API seamless wallet y del lado saliente de Infinite Abyss Hub. */
 export type HubErrorCode =
   | 'INVALID_SIGNATURE'
   | 'UNKNOWN_PROVIDER'

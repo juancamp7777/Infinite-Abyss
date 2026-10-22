@@ -13,9 +13,9 @@ try {
 const config = getConfig();
 const { httpServer, services, close, ready } = createApp(config);
 
-// Si los módulos Nymfo no se pueden montar, el proceso no debe quedar sirviendo a medias.
+// Si los módulos Infinite Abyss no se pueden montar, el proceso no debe quedar sirviendo a medias.
 ready.catch((err: unknown) => {
-  logger.error('Nymfo modules failed to mount; exiting', { event: 'MODULES_MOUNT_FATAL', error: String(err) });
+  logger.error('Infinite Abyss modules failed to mount; exiting', { event: 'MODULES_MOUNT_FATAL', error: String(err) });
   process.exit(1);
 });
 
@@ -26,7 +26,7 @@ const job = startReconciliationJob(services.reconciliationService, {
 });
 
 httpServer.listen(config.port, () => {
-  logger.info(`Nymfo API listening on port ${config.port}`, { event: 'SERVER_START' });
+  logger.info(`Infinite Abyss API listening on port ${config.port}`, { event: 'SERVER_START' });
 });
 
 let shuttingDown = false;

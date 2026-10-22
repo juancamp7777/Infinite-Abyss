@@ -5,7 +5,7 @@ import type { WalletAction, WalletErrorResponse, WalletOkResponse } from '../../
 export const STUDIO_PROVIDER_ID = 'nymfo-studios';
 
 /**
- * Proveedor interno (Nymfo Studios). Sus juegos corren en apps/web y cobran con
+ * Proveedor interno (Abyss Studios). Sus juegos corren en apps/web y cobran con
  * services.walletForSession(token): no usan la API seamless entrante, así que verifySignature falla cerrado.
  */
 export class NymfoStudiosAdapter implements ProviderAdapter {

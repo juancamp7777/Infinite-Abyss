@@ -18,7 +18,7 @@ describe('Hub · catálogo', () => {
   });
   afterEach(async () => h.close());
 
-  it('siembra los juegos de Nymfo Studios con sus ids y los del MockProvider', async () => {
+  it('siembra los juegos de Abyss Studios con sus ids y los del MockProvider', async () => {
     const r = await api(h.base, 'GET', '/hub/v1/games?provider=nymfo-studios&pageSize=50');
     const ids = r.body.items.map((g: any) => g.id).sort();
     expect(ids).toEqual(

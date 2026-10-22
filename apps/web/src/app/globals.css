@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  /* Valores por defecto de Nymfo; el ThemeProvider los sobrescribe con la marca del operador. */
-  --brand-primary: #D4AF37;
-  --brand-secondary: #AA8222;
-  --brand-accent: #F3E5AB;
-  --brand-background: #050505;
-  --brand-surface: #120a1a;
-  --brand-text: #ededed;
+  /* Valores por defecto de Infinite Abyss; el ThemeProvider los sobrescribe con la marca del operador. */
+  --brand-primary: #f4b73f;
+  --brand-secondary: #3cc8f0;
+  --brand-accent: #ffd978;
+  --brand-background: #050d1c;
+  --brand-surface: #0b1a30;
+  --brand-text: #e8eef8;
   --brand-font: var(--font-geist-sans);
   --background: var(--brand-background);
   --foreground: var(--brand-text);
@@ -20,12 +20,12 @@
   --color-surface: var(--brand-surface);
   --color-gold-300: var(--brand-accent);
   --color-gold-400: var(--brand-primary);
-  --color-gold-500: var(--brand-secondary);
-  --color-gold-600: color-mix(in srgb, var(--brand-secondary) 75%, black);
-  --color-gold-900: color-mix(in srgb, var(--brand-secondary) 35%, black);
-  --color-metallic-dark: #1A1A1A;
-  --color-metallic-gray: #2A2A2A;
-  --color-metallic-light: #404040;
+  --color-gold-500: color-mix(in srgb, var(--brand-primary) 82%, black);
+  --color-gold-600: color-mix(in srgb, var(--brand-primary) 62%, black);
+  --color-gold-900: color-mix(in srgb, var(--brand-primary) 30%, black);
+  --color-metallic-dark: color-mix(in srgb, var(--brand-surface) 80%, black);
+  --color-metallic-gray: color-mix(in srgb, var(--brand-surface) 88%, white 4%);
+  --color-metallic-light: color-mix(in srgb, var(--brand-surface) 70%, white 14%);
   
   --font-sans: var(--brand-font), sans-serif;
   --font-mono: var(--font-geist-mono);

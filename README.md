@@ -1,6 +1,6 @@
-# Nymfo Casino
+# Infinite Abyss
 
-Plataforma iGaming **multi-operador (white-label)**: cada operador levanta su propia sala (nombre, skin y dominio), los jugadores se registran, depositan, juegan y retiran. Todo el dinero pasa por un **ledger de doble partida** en enteros (unidades mínimas, BigInt). Sobre esa base están integrados los **módulos Nymfo**: Hub de juegos de terceros, Studios (juegos propios), CRM, marketing, promociones (bonos, jackpots, torneos), gamificación y el backoffice-api.
+Plataforma iGaming **multi-operador (white-label)**: cada operador levanta su propia sala (nombre, skin y dominio), los jugadores se registran, depositan, juegan y retiran. Todo el dinero pasa por un **ledger de doble partida** en enteros (unidades mínimas, BigInt). Sobre esa base están integrados los **módulos**: Hub de juegos de terceros, Studios (juegos propios), CRM, marketing, promociones (bonos, jackpots, torneos), gamificación, feed de apuestas en vivo y el backoffice-api.
 
 ## Estructura
 
@@ -38,7 +38,7 @@ La API aplica `prisma migrate deploy` al arrancar (nunca `db push`).
 
 | URL | Qué es |
 |---|---|
-| http://localhost:3000 | Lobby del operador “Nymfo Casino” (la home redirige a `/lobby`) |
+| http://localhost:3000 | Lobby del operador “Infinite Abyss” (la home redirige a `/lobby`) |
 | http://demo.localhost:3000 | Operador demo de ejemplo (otra skin; `*.localhost` resuelve a 127.0.0.1 en navegadores modernos) |
 | http://localhost:3001 | Backoffice. Usuarios del seed (contraseña `SEED_ADMIN_PASSWORD`): `platform@nymfo.local` (PLATFORM_ADMIN, vista de plataforma), `admin@<slug>.local` (OPERATOR_ADMIN), `finance@<slug>.local` (OPERATOR_FINANCE); jugadores demo `demo@<slug>.local` |
 | http://localhost:3000/admin | Página de administración heredada de la Fase 1 |

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { zAmount, zAmountOrZero } from '../../shared/http/validate';
 
 /**
- * Protocolo seamless wallet estándar de Nymfo (v1). Es el formato que hablan nuestros endpoints
+ * Protocolo seamless wallet estándar de Infinite Abyss (v1). Es el formato que hablan nuestros endpoints
  * /hub/v1/wallet/* y también el que enviamos a casinos remotos en el lado saliente.
  *
  * Cabeceras: X-Provider-Id (o X-Operator-Id en el saliente) y X-Signature = hex(HMAC-SHA256(secreto, rawBody)).
@@ -69,7 +69,7 @@ export interface WalletOkResponse {
   balance: bigint;
   cash: bigint;
   bonus: bigint;
-  /** Id de la transacción en Nymfo Hub (ausente en balance). */
+  /** Id de la transacción en Infinite Abyss Hub (ausente en balance). */
   transactionId?: string;
   /** transactionId recibido del proveedor. */
   providerTransactionId?: string;

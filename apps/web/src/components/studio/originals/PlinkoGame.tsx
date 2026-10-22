@@ -213,7 +213,7 @@ export default function PlinkoGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Nymfo Plinko" session={session} aside={aside}>
+    <GameShell title="Abyss Plinko" session={session} aside={aside}>
       <div className="space-y-3">
         <canvas ref={canvasRef} width={W} height={H} role="img" aria-label="Tablero de Plinko" className="aspect-[8/7] w-full rounded-2xl border border-white/10" />
         <ResultBanner win={o && last ? o.payout >= 1 : null} text={o && last ? `Casilla ${o.bin + 1}: ${o.payout}× · ${formatMinor(last.win, last.currency)}` : ''} />

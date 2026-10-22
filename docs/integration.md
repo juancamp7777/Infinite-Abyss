@@ -1,4 +1,4 @@
-# Integración de los módulos Nymfo en la API
+# Integración de los módulos Infinite Abyss en la API
 
 > **Estado: YA INTEGRADO.** Los módulos (Hub, Studios, CRM, marketing, promociones, gamificación y backoffice-api) están montados en `createApp` (`apps/api/src/app.ts`) sobre la Fase 1 de `main`. Este documento describe cómo funciona hoy, no un plan de integración pendiente.
 

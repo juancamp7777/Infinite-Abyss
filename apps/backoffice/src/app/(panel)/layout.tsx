@@ -26,7 +26,7 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
     <div className="min-h-screen md:flex">
       <header className="flex items-center justify-between border-b border-white/10 p-3 md:hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${BASE_PATH}/brand/nymfo-logo.svg`} alt="Nymfo Backoffice" className="h-8 w-auto" />
+        <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss Backoffice" className="h-8 w-auto" />
         <Button variant="ghost" aria-expanded={open} aria-controls="sidebar" onClick={() => setOpen((o) => !o)}>
           Menú
         </Button>
@@ -34,7 +34,7 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
       <aside id="sidebar" className={`${open ? "block" : "hidden"} border-b border-white/10 bg-black/30 p-4 md:block md:min-h-screen md:w-64 md:shrink-0 md:border-b-0 md:border-r`}>
         <div className="mb-4 hidden md:block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${BASE_PATH}/brand/nymfo-logo.svg`} alt="Nymfo Casino" className="h-9 w-auto" />
+          <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss" className="h-9 w-auto" />
           <div className="mt-1 text-xs text-white/60">Backoffice</div>
         </div>
         <nav aria-label="Principal" className="space-y-1">

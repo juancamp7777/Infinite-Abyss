@@ -7,7 +7,7 @@ import { api, decimalsFor, type BrandResponse, type BrandInfo, type OperatorInfo
 export const NYMFO_BRAND: BrandResponse = {
   operator: {
     slug: "nymfo-casino",
-    name: "Nymfo Casino",
+    name: "Infinite Abyss",
     // La moneda real llega de /api/operator/brand; mientras carga no se asume ninguna.
     currencies: [],
     defaultCurrency: "",
@@ -16,7 +16,7 @@ export const NYMFO_BRAND: BrandResponse = {
     chipMinorUnitsPerChip: null,
   },
   brand: {
-    displayName: "Nymfo Casino",
+    displayName: "Infinite Abyss",
     logoUrl: null,
     colors: {},
     fontFamily: null,
@@ -82,7 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        // Se mantiene la marca Nymfo por defecto y se informa del fallo.
+        // Se mantiene la marca Infinite Abyss por defecto y se informa del fallo.
         setError(e instanceof Error ? e.message : "No se pudo cargar la marca");
         setStatus("error");
       });

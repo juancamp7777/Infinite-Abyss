@@ -13,7 +13,7 @@ const header = (h: SignedRequest['headers'], name: string): string | undefined =
 };
 
 /**
- * Adaptador base para proveedores que hablan el protocolo seamless estándar de Nymfo
+ * Adaptador base para proveedores que hablan el protocolo seamless estándar de Infinite Abyss
  * (X-Signature = HMAC-SHA256 hex del raw body). Los proveedores con protocolo propio
  * sobrescriben mapRequest/mapResponse/mapError/verifySignature.
  */

@@ -253,7 +253,7 @@ export function createHubRouter(ctx: HubRouterContext): Router {
     }
   });
 
-  // ---------------- Lado saliente (Nymfo como proveedor) ----------------
+  // ---------------- Lado saliente (Infinite Abyss como proveedor) ----------------
   r.get(
     '/outbound/games',
     asyncHandler(async (_req, res) => {

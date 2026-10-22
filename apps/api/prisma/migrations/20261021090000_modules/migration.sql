@@ -1,4 +1,4 @@
--- Nymfo Casino · módulos (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice).
+-- Infinite Abyss · módulos (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice).
 -- Generada con prisma migrate diff desde el esquema de 20261020190000_init. Requiere PostgreSQL >= 12
 -- (varios ADD VALUE de enum en la misma transacción; los valores nuevos no se usan en esta migración).
 -- Las tablas de módulos no tienen FK hacia la Fase 1: operatorId/playerId se guardan como texto.

@@ -43,7 +43,7 @@ function intEnv(v: string | undefined, def: number): number {
 }
 
 /**
- * Nymfo Studios: originals provably fair, API de juego, rondas, RTP por operador y crash en vivo (/studio).
+ * Abyss Studios: originals provably fair, API de juego, rondas, RTP por operador y crash en vivo (/studio).
  * Servicios publicados: studioPlay, studioConfig, studioFairness (+ crashLive si hay socket.io).
  */
 export const studioModule: NymfoModule = {

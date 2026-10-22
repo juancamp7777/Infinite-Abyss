@@ -1,5 +1,5 @@
 /**
- * Verdant Grid — slot de clusters 7x7 de Nymfo Studios (tema: jardín botánico encantado).
+ * Verdant Grid — slot de clusters 7x7 de Abyss Studios (tema: jardín botánico encantado).
  *
  * Reglas (datos en config.json):
  *  - Grilla 7x7 rellenada símbolo a símbolo por pesos. Gana todo grupo de `minCluster` (5) o más símbolos iguales

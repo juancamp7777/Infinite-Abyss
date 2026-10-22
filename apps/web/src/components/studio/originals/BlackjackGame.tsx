@@ -143,7 +143,7 @@ export default function BlackjackGame(props: StudioGameProps) {
   const won = last ? BigInt(last.win) : null;
   const staked = last ? BigInt(last.bet) : BigInt(0);
   return (
-    <GameShell title="Nymfo Blackjack" session={session} aside={aside}>
+    <GameShell title="Abyss Blackjack" session={session} aside={aside}>
       <style>{`@keyframes bjdeal{from{opacity:0;transform:translateY(-16px) scale(.9)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: reduce){[style*="bjdeal"],.animate-\\[bjdeal_0\\.3s_ease-out_both\\]{animation:none!important}}`}</style>
       <div className="space-y-3">
         <div className="min-h-[360px] space-y-5 rounded-2xl bg-emerald-900/50 p-3 sm:p-5">

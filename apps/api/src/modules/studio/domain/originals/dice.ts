@@ -3,7 +3,7 @@ import type { Rng } from '../fairness/Rng';
 import { floor4, GameParamError, OriginalGameMath, resolveOriginalRtp } from './types';
 
 /**
- * Nymfo Dice: tirada 0.00–99.99 (10 000 resultados equiprobables, floor(f·10000)/100).
+ * Abyss Dice: tirada 0.00–99.99 (10 000 resultados equiprobables, floor(f·10000)/100).
  * - over: gana si roll > target · under: gana si roll < target.
  * - multiplicador = floor4(RTP / P(ganar)); probabilidad de ganar entre 1 % y 98 %.
  */
@@ -57,7 +57,7 @@ export function dicePayout(target: number, over: boolean, rtp: number): { winCha
 
 export const nymfoDice: OriginalGameMath<DiceConfig, DiceOutcome> = {
   id: 'nymfo-dice',
-  name: 'Nymfo Dice',
+  name: 'Abyss Dice',
   kind: 'original',
   rtpTarget: 0.99,
   rtpRange: { min: 0.97, max: 0.99 },

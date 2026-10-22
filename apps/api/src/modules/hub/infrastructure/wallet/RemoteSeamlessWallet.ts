@@ -44,8 +44,8 @@ const REMOTE_TO_WALLET: Record<string, WalletErrorCode> = {
 class RetryableError extends Error {}
 
 /**
- * WalletPort que cobra/paga en la billetera de un casino remoto (lado saliente: Nymfo como proveedor).
- * Habla el mismo protocolo seamless estándar de Nymfo: POST {walletCallbackUrl}/balance|bet|win|rollback,
+ * WalletPort que cobra/paga en la billetera de un casino remoto (lado saliente: Infinite Abyss como proveedor).
+ * Habla el mismo protocolo seamless estándar de Infinite Abyss: POST {walletCallbackUrl}/balance|bet|win|rollback,
  * firmado con HMAC-SHA256 del cuerpo (X-Signature) usando HUB_REMOTE_<ID>_SECRET.
  *
  * - La idempotencyKey viaja como transactionId: los reintentos son seguros en ambos lados.

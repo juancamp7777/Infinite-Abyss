@@ -1,5 +1,5 @@
 /**
- * Cliente REST de Nymfo. Base NEXT_PUBLIC_API_URL, cabecera X-Operator-Host (tenant),
+ * Cliente REST de Infinite Abyss. Base NEXT_PUBLIC_API_URL, cabecera X-Operator-Host (tenant),
  * Bearer y refresh automático (una sola vez) ante 401.
  */
 
@@ -23,12 +23,14 @@ function apiBasePath(): string {
 /**
  * Destino de Socket.io: url = NEXT_PUBLIC_SOCKET_URL o el origen actual (o el del API si es absoluto);
  * path = NEXT_PUBLIC_SOCKET_PATH o `${ruta de la base}/socket.io`. `namespace` p. ej. '/promotions'.
+ * `addTrailingSlash: false` (pásalo a io()): el rewrite /api-proxy de Next redirige `/socket.io/` a `/socket.io`
+ * y el polling se perdería; la API acepta ambas formas.
  */
-export function socketTarget(namespace = ""): { url: string; path: string } {
+export function socketTarget(namespace = ""): { url: string; path: string; addTrailingSlash: false } {
   const envUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || "").replace(/\/+$/, "");
   const origin = envUrl || apiOrigin() || (typeof window !== "undefined" ? window.location.origin : "");
-  const path = process.env.NEXT_PUBLIC_SOCKET_PATH || `${apiBasePath()}/socket.io`;
-  return { url: `${origin}${namespace}`, path };
+  const path = (process.env.NEXT_PUBLIC_SOCKET_PATH || `${apiBasePath()}/socket.io`).replace(/\/+$/, "");
+  return { url: `${origin}${namespace}`, path, addTrailingSlash: false };
 }
 
 export class ApiError extends Error {

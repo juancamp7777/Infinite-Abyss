@@ -1,4 +1,4 @@
-# Nymfo Casino — Contratos compartidos (Fase 1)
+# Infinite Abyss — Contratos compartidos (Fase 1)
 
 Fuente de verdad para s2–s8. Esquema: `apps/api/prisma/schema.prisma` (migración `prisma/migrations/20261020190000_init`). Nadie más edita `schema.prisma` ni `package.json`: pedir el cambio al integrador (s8).
 

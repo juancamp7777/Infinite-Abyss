@@ -1,6 +1,6 @@
 import { API_URL, ApiError, moduleOperatorId, moduleRequest } from '../modules';
 import type {
-  Balance, Game, GameQuery, Jackpot, Leaderboard, LaunchResult, Mission, Page, Provider, Skin, Streak,
+  Balance, FeedBet, FeedKind, Game, GameQuery, Jackpot, Leaderboard, LaunchResult, Mission, Page, Provider, Skin, Streak,
   Tournament, VipState, WheelResult, WheelStatus,
 } from './types';
 
@@ -33,6 +33,9 @@ export const api = {
       method: 'POST', auth: true, body: { mode, ...(currency ? { currency } : {}), operatorId: moduleOperatorId() },
     }),
   jackpots: () => request<{ jackpots: Jackpot[] }>(`/promo/v1/jackpots${qs({ operatorId: moduleOperatorId() })}`),
+  feed: (kind: FeedKind, limit = 20) =>
+    request<{ kind: FeedKind; bets: FeedBet[] }>(`/feed/v1/bets${qs({ operatorId: moduleOperatorId(), kind, limit })}`),
+  myBets: (limit = 20) => request<{ bets: FeedBet[] }>(`/feed/v1/bets/mine${qs({ limit })}`, { auth: true }),
   skin: () => request<Skin>(`/backoffice/v1/public/skin${qs({ operatorId: moduleOperatorId() })}`),
   balance: () => request<Balance>('/studio/v1/balance', { auth: true }),
   vip: () => request<VipState>('/gamification/v1/vip', { auth: true }),

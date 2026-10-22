@@ -1,5 +1,5 @@
 /**
- * Cliente mínimo de la API de Nymfo Studios (/studio/v1) para los originals.
+ * Cliente mínimo de la API de Abyss Studios (/studio/v1) para los originals.
  * Montos siempre como string bigint en unidades mínimas. El cliente nunca decide resultados.
  */
 import type { StudioGameProps } from '../types';

@@ -62,7 +62,16 @@ export interface Leaderboard {
 export interface Skin {
   name: string; logoUrl?: string | null;
   colors: { primary: string; secondary: string; background: string; surface: string; text: string; accent: string };
-  banners: { title: string; subtitle?: string; imageUrl?: string; href: string }[];
+  /** imageUrl = foto de portada (cover); art = ilustración flotante de la web (solo banners por defecto); cta = texto del botón. */
+  banners: { title: string; subtitle?: string; imageUrl?: string; href: string; art?: string; cta?: string }[];
 }
 export interface Balance { balance: string; currency: string }
 export interface LaunchResult { url: string; sessionId?: string; expiresAt?: string }
+
+/** Apuesta liquidada del feed en vivo (módulo feed). El jugador llega con alias, nunca con su id. */
+export type FeedKind = 'all' | 'high' | 'lucky';
+export interface FeedBet {
+  id: string; gameId: string; gameTitle: string; provider: string; category: string; player: string;
+  currency: string; amount: string; win: string; multiplier: number; at: string;
+  isMe?: boolean; kinds?: FeedKind[];
+}

@@ -1,4 +1,4 @@
-# Nymfo Casino — Arquitectura (Fase 1)
+# Infinite Abyss — Arquitectura (Fase 1)
 
 Documento para desarrolladores. Fuentes de verdad: `apps/api/prisma/schema.prisma` (migración `20261020190000_init`) y [contracts.md](contracts.md) (contratos REST/socket e interfaces). Si algo difiere, mandan esos dos archivos.
 
@@ -176,7 +176,7 @@ Una sala puede mostrar fichas en vez de dinero. La tasa se define en **un solo l
 
 ## 7. Cómo encajan las fases futuras
 
-- **Fase 2 — Nymfo Hub (agregador).** API seamless wallet para proveedores externos con `balance`, `bet`, `win` y `rollback`, que se mapea 1:1 a `IWalletService` (`getBalances`, `placeBet`, `settleWin`, `rollback`), con idempotencia por **id de transacción del proveedor** (`bet:<provider>:<txId>` como clave). Nuevas tablas `GameProvider` y `Game` (catálogo por operador, activación y RTP) y un importador de catálogos de agregadores externos. Sin cambios en el ledger.
+- **Fase 2 — Hub (agregador).** API seamless wallet para proveedores externos con `balance`, `bet`, `win` y `rollback`, que se mapea 1:1 a `IWalletService` (`getBalances`, `placeBet`, `settleWin`, `rollback`), con idempotencia por **id de transacción del proveedor** (`bet:<provider>:<txId>` como clave). Nuevas tablas `GameProvider` y `Game` (catálogo por operador, activación y RTP) y un importador de catálogos de agregadores externos. Sin cambios en el ledger.
 - **Fase 3 — Estudio de juegos propio.** Los juegos propios consumen `IWalletService` igual que los actuales; se añaden configuración de RTP/matemática por juego y publicación en el catálogo de `Game`.
 - **Fase 4 — CRM, remarketing y gamificación.** Bonos con rollover sobre `PLAYER_BONUS` con contrapartida `BONUS_EXPENSE` (el progreso de rollover y la conversión a CASH son asientos nuevos); VIP, misiones y torneos como módulos que escuchan eventos de apuesta/ganancia; jackpots con una cuenta nueva `JACKPOT_POOL` (se añade al enum con una migración) alimentada por un porcentaje de cada apuesta.
 - **Fase 5 — Backoffice completo.** Además: mover el refresh token a cookie `httpOnly`, credenciales de PSP por operador (hoy son globales por entorno) y retiros con doble aprobación.
@@ -190,7 +190,7 @@ Una sala puede mostrar fichas en vez de dinero. La tasa se define en **un solo l
 - Credenciales de PSP globales por entorno; si faltan, el adaptador queda deshabilitado.
 - El seed solo corre en desarrollo y no regala saldo real: usa fichas demo (`isDemo`, asiento `DEMO_CREDIT`).
 
-## 9. Módulos Nymfo (integrados sobre la Fase 1)
+## 9. Módulos Infinite Abyss (integrados sobre la Fase 1)
 
 Los módulos Hub, Studios, CRM, marketing, promociones, gamificación y backoffice-api viven en `apps/api/src/modules/**` y se montan desde `createApp` con `registerModules` (orden y puertos en [integration.md](integration.md)). No tienen Prisma propio: usan el ledger de la Fase 1 a través de puertos. Los adaptadores están en `apps/api/src/infrastructure/modules/**`.
 

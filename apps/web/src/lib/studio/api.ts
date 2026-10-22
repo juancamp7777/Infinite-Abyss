@@ -1,5 +1,5 @@
 /**
- * Cliente tipado de Nymfo Studios (/studio/v1) para las slots.
+ * Cliente tipado de Abyss Studios (/studio/v1) para las slots.
  * Montos siempre como string bigint en unidades mínimas; el cliente nunca decide resultados.
  * Comparte la sesión demo (localStorage) con el cliente de los originals.
  */

@@ -32,7 +32,7 @@ export class KeyedMutex {
 export const walletKey = (providerId: string, providerTxId: string): string => `hub:${providerId}:${providerTxId}`;
 
 /**
- * API seamless wallet entrante (proveedor externo → Nymfo).
+ * API seamless wallet entrante (proveedor externo → Infinite Abyss).
  * Reglas:
  * - Idempotencia por (providerId, transactionId): el reintento con el mismo payload devuelve la misma respuesta;
  *   con otro payload → DUPLICATE.

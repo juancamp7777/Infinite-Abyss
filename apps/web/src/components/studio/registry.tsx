@@ -1,6 +1,6 @@
 'use client';
 
-/** Registro gameId → componente del juego de Nymfo Studios (carga diferida; solo en cliente). */
+/** Registro gameId → componente del juego de Abyss Studios (carga diferida; solo en cliente). */
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 import type { StudioGameProps } from './types';

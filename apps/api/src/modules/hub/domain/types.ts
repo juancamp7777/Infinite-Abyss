@@ -1,6 +1,6 @@
 import type { GameCategory } from '../../shared/events/EventBus';
 
-/** Entidades del agregador Nymfo Hub. Montos en unidades mínimas (bigint). */
+/** Entidades del agregador Infinite Abyss Hub. Montos en unidades mínimas (bigint). */
 
 export type ProviderType = 'internal' | 'external' | 'aggregator';
 export type ProviderStatus = 'active' | 'disabled';
@@ -58,7 +58,7 @@ export interface OperatorGame {
 }
 
 export type SessionMode = 'real' | 'demo';
-/** local = billetera del operador Nymfo (WalletPort); remote = billetera de un casino externo (lado saliente). */
+/** local = billetera del operador Infinite Abyss (WalletPort); remote = billetera de un casino externo (lado saliente). */
 export type WalletKind = 'local' | 'remote' | 'demo';
 
 export interface HubSession {

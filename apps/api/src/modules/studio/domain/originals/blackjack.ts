@@ -2,7 +2,7 @@ import type { Rng } from '../fairness/Rng';
 import { GameActionError, InteractiveGame } from './types';
 
 /**
- * Nymfo Blackjack (reglas en CONFIG):
+ * Abyss Blackjack (reglas en CONFIG):
  * - Zapato de 6 mazos barajado por Fisher-Yates con el Rng provably fair; se reparte en orden P, D, P, D…
  * - El dealer se planta en todos los 17 (S17) y revisa blackjack con A o figura visible (peek).
  * - Blackjack paga 3:2, sin seguro ni rendición.
@@ -165,7 +165,7 @@ function closeHandIf21(s: BlackjackState): void {
 
 export const nymfoBlackjack: InteractiveGame<BlackjackState> = {
   id: 'nymfo-blackjack',
-  name: 'Nymfo Blackjack',
+  name: 'Abyss Blackjack',
   // RTP teórico con estrategia básica para estas reglas (6 mazos, S17, DAS, sin rendición) ≈ 99.5 %.
   rtpTarget: 0.995,
   volatility: 'low',

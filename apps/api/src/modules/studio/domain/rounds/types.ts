@@ -1,5 +1,5 @@
 /**
- * Entidades y puertos de persistencia de Nymfo Studios (rondas, semillas provably fair y config por operador).
+ * Entidades y puertos de persistencia de Abyss Studios (rondas, semillas provably fair y config por operador).
  * Montos en bigint (unidades mínimas). Los estados JSON son serializables (sin clases).
  */
 

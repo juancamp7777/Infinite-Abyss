@@ -1,4 +1,4 @@
-# Módulos de Nymfo: arquitectura
+# Módulos de Infinite Abyss: arquitectura
 
 Cada módulo vive en `apps/api/src/modules/<módulo>/` con capas `domain/` (reglas puras), `application/`
 (servicios y casos de uso) e `infrastructure/` (HTTP, Prisma, InMemory, sockets). Expone un `NymfoModule`
@@ -15,6 +15,7 @@ con `register(app, io, deps)`. Sin `deps.prisma` usa repositorios en memoria. Su
 | `marketing` | `/marketing/v1` | Campañas, journeys (presets: registro sin depósito 24 h, inactivo 7 días, cumpleaños, gran pérdida → cashback), canales (`Channel`: email HTTP, SMS/WhatsApp, push, in-app), plantillas con marca, A/B, métricas, afiliados y postbacks. Cumplimiento: opt-in por canal, exclusión de autoexcluidos, menores o con límites, y registro de envíos | `marketing`, `marketing.messaging` |
 | `gamification` | `/gamification/v1`, socket `/gamification` | VIP con puntos y rakeback, misiones, logros, racha de login, rueda diaria y torneos con leaderboard en tiempo real | `gamification.service` |
 | `backoffice-api` | `/backoffice/v1` | KPIs (GGR, NGR, depositantes, FTD, retención), skins del operador y reportes CSV con protección contra inyección de fórmulas | `skins`, `dashboard`, `reports`, `kpiRepo` |
+| `feed` | `/feed/v1`, socket `/feed` | Apuestas en vivo del lobby desde `bet.settled` (Hub y Studios): todas, grandes apostadores (`FEED_HIGH_ROLLER_MIN` por moneda) y grandes victorias (`FEED_LUCKY_MULTIPLIER`), más las del propio jugador. El jugador sale con alias HMAC (`FEED_PSEUDONYM_SECRET`), nunca con su id. Duplicados descartados; socket agrupado en lotes (`FEED_FLUSH_MS`) | `feed.service` |
 
 Frontend:
 - `apps/web/src/app/(lobby)/lobby/*`: lobby del jugador, con el tema del operador en variables `--nf-*`.

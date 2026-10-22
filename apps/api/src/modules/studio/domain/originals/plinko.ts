@@ -3,7 +3,7 @@ import type { Rng } from '../fairness/Rng';
 import { GameParamError, OriginalGameMath, resolveOriginalRtp } from './types';
 
 /**
- * Nymfo Plinko: n filas (8–16), cada clavija desvía a la derecha con p = 1/2 → casilla k ~ Binomial(n, 1/2).
+ * Abyss Plinko: n filas (8–16), cada clavija desvía a la derecha con p = 1/2 → casilla k ~ Binomial(n, 1/2).
  * Las tablas de pago son propias y se calculan para el RTP objetivo con la distribución binomial exacta:
  *   m_k = centro + (borde − centro) · (g^d − g^dmin) / (g^dmax − g^dmin),  d = |k − n/2|
  * donde centro/borde dependen del riesgo y g (convexidad) se resuelve por bisección para que Σ P(k)·m_k = RTP.
@@ -143,7 +143,7 @@ function parseParams(params: Record<string, unknown> | undefined): PlinkoParams 
 
 export const nymfoPlinko: OriginalGameMath<PlinkoConfig, PlinkoOutcome> = {
   id: 'nymfo-plinko',
-  name: 'Nymfo Plinko',
+  name: 'Abyss Plinko',
   kind: 'original',
   rtpTarget: 0.99,
   rtpRange: { min: 0.96, max: 0.99 },

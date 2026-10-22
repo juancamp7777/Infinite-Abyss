@@ -1,4 +1,4 @@
-// Nymfo Casino — esquema multi-operador con ledger de doble partida.
+// Infinite Abyss — esquema multi-operador con ledger de doble partida.
 // Todos los montos son BigInt en unidades mínimas de la moneda (ver docs/contracts.md).
 
 generator client {
@@ -460,7 +460,7 @@ model GameSession {
 
 // ───────────────────────── Módulo: hub ─────────────────────────
 
-// Nymfo Hub (agregador). Sin relaciones hacia modelos de la Fase 1: operatorId/playerId son String.
+// Infinite Abyss Hub (agregador). Sin relaciones hacia modelos de la Fase 1: operatorId/playerId son String.
 
 model HubProvider {
   id        String   @id
@@ -587,7 +587,7 @@ model HubRemoteOperator {
 
 // ───────────────────────── Módulo: studio ─────────────────────────
 
-// Nymfo Studios: rondas, semillas provably fair y configuración de juegos por operador.
+// Abyss Studios: rondas, semillas provably fair y configuración de juegos por operador.
 // Sin relaciones hacia modelos de la Fase 1: operatorId/playerId son uuid en texto.
 
 model StudioRound {
@@ -655,7 +655,7 @@ model StudioOperatorConfig {
 
 // ───────────────────────── Módulo: promotions ─────────────────────────
 
-// Módulo de promociones (Nymfo): bonos con wagering, jackpots progresivos y drops & wins.
+// Módulo de promociones (Infinite Abyss): bonos con wagering, jackpots progresivos y drops & wins.
 // Sin relaciones hacia modelos de la Fase 1: jugadores y operadores se referencian por id (String uuid).
 // Montos en unidades mínimas (BigInt); porcentajes en basis points (Int); probabilidades en ppm (Int).
 

@@ -213,7 +213,7 @@ export default function RouletteGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Nymfo Roulette" session={session} aside={aside}>
+    <GameShell title="Abyss Roulette" session={session} aside={aside}>
       <div className="space-y-3">
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-around">
           <Wheel rotation={rotation} ms={spinMs} />

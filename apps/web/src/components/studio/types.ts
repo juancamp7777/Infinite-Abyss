@@ -1,4 +1,4 @@
-/** Props comunes de todos los juegos de Nymfo Studios. */
+/** Props comunes de todos los juegos de Abyss Studios. */
 export interface StudioGameProps {
   gameId: string;
   mode: 'real' | 'demo';

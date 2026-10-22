@@ -27,8 +27,8 @@ export interface SignedRequest {
 }
 
 /**
- * Adaptador de un proveedor de juegos (lado entrante: proveedor externo → Nymfo).
- * Cada proveedor traduce su protocolo propio al protocolo seamless estándar de Nymfo (walletProtocol.ts).
+ * Adaptador de un proveedor de juegos (lado entrante: proveedor externo → Infinite Abyss).
+ * Cada proveedor traduce su protocolo propio al protocolo seamless estándar de Infinite Abyss (walletProtocol.ts).
  */
 export interface ProviderAdapter {
   readonly id: string;
@@ -38,9 +38,9 @@ export interface ProviderAdapter {
   launchDemo(ctx: DemoContext): Promise<{ url: string }>;
   syncCatalog(): Promise<GameDTO[]>;
   verifySignature(req: SignedRequest): boolean;
-  /** Formato del proveedor → cuerpo estándar Nymfo (se valida después con zod). */
+  /** Formato del proveedor → cuerpo estándar Infinite Abyss (se valida después con zod). */
   mapRequest(action: WalletAction, body: unknown): unknown;
-  /** Respuesta estándar Nymfo → formato del proveedor. */
+  /** Respuesta estándar Infinite Abyss → formato del proveedor. */
   mapResponse(action: WalletAction, res: WalletOkResponse): unknown;
   /** Error estándar → status + cuerpo en formato del proveedor. */
   mapError(action: WalletAction, err: WalletErrorResponse): { status: number; body: unknown };

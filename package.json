@@ -1,0 +1,15 @@
+{
+  "name": "nymfo-casino",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nymfo Casino: plataforma iGaming multi-operador (white-label)",
+  "scripts": {
+    "test": "npm --prefix apps/api test",
+    "dev:api": "npm --prefix apps/api run dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "db:migrate": "npm --prefix apps/api run migrate:deploy",
+    "db:seed": "npm --prefix apps/api run seed",
+    "reconcile": "npm --prefix apps/api run reconcile"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,101 @@
+# Nymfo Casino — todas las credenciales salen de .env (cp .env.example .env).
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nymfo-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB en .env}
+    # Solo para desarrollo (acceso con psql/Prisma Studio desde el host). Quitar en producción.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    container_name: nymfo-api
+    env_file: .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: "4000"
+      # Dentro de la red de compose la BD es el host "postgres".
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      # URLs públicas (vacías = mismo origen / rutas relativas; ningún default apunta a localhost).
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-}
+      BACKOFFICE_URL: ${BACKOFFICE_URL:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Host no registrado en OperatorDomain → este operador (en producción además ALLOW_DEFAULT_OPERATOR=true).
+      DEFAULT_OPERATOR_SLUG: ${DEFAULT_OPERATOR_SLUG:-nymfo}
+      ALLOW_DEFAULT_OPERATOR: ${ALLOW_DEFAULT_OPERATOR:-false}
+      # Prefijo con que el navegador llega a la API a través de la web (juego del MockProvider en el iframe).
+      HUB_PUBLIC_API_URL: ${HUB_PUBLIC_API_URL:-/api-proxy}
+      # Llamadas servidor a servidor del juego mock a /hub/v1/wallet/* (dentro del propio contenedor).
+      HUB_INTERNAL_API_URL: http://localhost:4000
+      # Dominios extra que registra el seed (vista previa): host o slug=host, separados por comas.
+      SEED_EXTRA_DOMAINS: ${SEED_EXTRA_DOMAINS:-}
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "npx prisma migrate deploy && npx tsx src/server.ts"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  web:
+    build:
+      context: ./apps/web
+      # Las NEXT_PUBLIC_* se incrustan en el build. Por defecto la web habla con la API por su propio origen:
+      # /api-proxy/* lo reescribe Next hacia API_INTERNAL_URL (red interna de compose).
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api-proxy}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-}
+        NEXT_PUBLIC_SOCKET_PATH: ${NEXT_PUBLIC_SOCKET_PATH:-/api-proxy/socket.io}
+        NEXT_PUBLIC_GAME_FRAME_ORIGINS: ${NEXT_PUBLIC_GAME_FRAME_ORIGINS:-}
+        API_INTERNAL_URL: http://api:4000
+    container_name: nymfo-web
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api-proxy}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-}
+      NEXT_PUBLIC_SOCKET_PATH: ${NEXT_PUBLIC_SOCKET_PATH:-/api-proxy/socket.io}
+      NEXT_PUBLIC_GAME_FRAME_ORIGINS: ${NEXT_PUBLIC_GAME_FRAME_ORIGINS:-}
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  backoffice:
+    build:
+      context: ./apps/backoffice
+      args:
+        # Prefijo de rutas/assets si el backoffice se sirve bajo una subruta (p. ej. /_svc/backoffice).
+        NEXT_PUBLIC_BASE_PATH: ${BACKOFFICE_BASE_PATH:-}
+        NEXT_PUBLIC_API_URL: ${BACKOFFICE_API_URL:-/api-proxy}
+        NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH: ${NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH:-false}
+        API_INTERNAL_URL: http://api:4000
+    container_name: nymfo-backoffice
+    environment:
+      PORT: "3001"
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

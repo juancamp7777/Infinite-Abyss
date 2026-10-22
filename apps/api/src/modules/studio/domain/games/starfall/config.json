@@ -1,0 +1,198 @@
+{
+  "id": "nymfo-starfall",
+  "name": "Starfall Nymphs",
+  "theme": "Cosmos y ninfas estelares: Astra, Lyra y Selene custodian la Puerta Estelar.",
+  "cols": 6,
+  "rows": 5,
+  "rtpTarget": 0.965,
+  "maxWinMultiplier": 5000,
+  "symbols": [
+    {
+      "id": "astra",
+      "name": "Astra, ninfa coronada de estrellas",
+      "kind": "pay"
+    },
+    {
+      "id": "lyra",
+      "name": "Lyra, ninfa del arpa celeste",
+      "kind": "pay"
+    },
+    {
+      "id": "selene",
+      "name": "Selene, ninfa de la luna creciente",
+      "kind": "pay"
+    },
+    {
+      "id": "orbis",
+      "name": "Orbis, planeta anillado",
+      "kind": "pay"
+    },
+    {
+      "id": "comet",
+      "name": "Cometa de cola dorada",
+      "kind": "pay"
+    },
+    {
+      "id": "nebula",
+      "name": "Gema nebulosa violeta",
+      "kind": "pay"
+    },
+    {
+      "id": "pulsar",
+      "name": "Gema púlsar turquesa",
+      "kind": "pay"
+    },
+    {
+      "id": "quark",
+      "name": "Gema quark rosa",
+      "kind": "pay"
+    },
+    {
+      "id": "meteor",
+      "name": "Fragmento de meteorito",
+      "kind": "pay"
+    },
+    {
+      "id": "portal",
+      "name": "Puerta Estelar (scatter)",
+      "kind": "scatter"
+    },
+    {
+      "id": "nova",
+      "name": "Orbe Supernova (multiplicador, solo free spins)",
+      "kind": "multiplier"
+    }
+  ],
+  "payTiers": [
+    8,
+    10,
+    12
+  ],
+  "paytable": {
+    "astra": [
+      35,
+      90,
+      190
+    ],
+    "lyra": [
+      9,
+      28,
+      70
+    ],
+    "selene": [
+      7,
+      18,
+      46
+    ],
+    "orbis": [
+      4.5,
+      9.5,
+      23
+    ],
+    "comet": [
+      2.8,
+      5.6,
+      14
+    ],
+    "nebula": [
+      2.3,
+      4.6,
+      12
+    ],
+    "pulsar": [
+      1.4,
+      2.8,
+      7
+    ],
+    "quark": [
+      1.2,
+      2.3,
+      5.8
+    ],
+    "meteor": [
+      0.7,
+      1.4,
+      3.5
+    ]
+  },
+  "weights": {
+    "note": "Peso por símbolo (mismo orden que symbols), idéntico en las 6 columnas. Los símbolos que caen en las cascadas usan estos pesos sin el scatter.",
+    "base": [
+      520,
+      640,
+      760,
+      900,
+      1050,
+      1200,
+      1400,
+      1600,
+      1800,
+      190,
+      0
+    ],
+    "freeSpins": [
+      520,
+      640,
+      760,
+      900,
+      1050,
+      1200,
+      1400,
+      1600,
+      1800,
+      200,
+      1000
+    ]
+  },
+  "scatter": {
+    "pays": {
+      "4": 2,
+      "5": 5,
+      "6": 50
+    },
+    "triggerCount": 4,
+    "freeSpins": 12,
+    "retriggerCount": 3,
+    "retriggerSpins": 4
+  },
+  "multipliers": {
+    "values": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      10,
+      12,
+      15,
+      20,
+      25,
+      50,
+      100
+    ],
+    "weights": [
+      1600,
+      1600,
+      1400,
+      1200,
+      1000,
+      750,
+      550,
+      350,
+      220,
+      140,
+      90,
+      35,
+      12
+    ]
+  },
+  "bonusBuy": {
+    "costMultiplier": 100,
+    "scatterCountWeights": {
+      "4": 8377,
+      "5": 1300,
+      "6": 323
+    }
+  }
+}

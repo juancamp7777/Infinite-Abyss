@@ -1,0 +1,13 @@
+.env
+node_modules
+.next
+dist
+coverage
+logs/
+*.log
+apps/api/prisma/.merged/
+apps/api/.local-test.sh
+apps/backoffice/node_modules
+
+# Repos de referencia (solo lectura, negocios aparte; nunca se suben)
+_source/

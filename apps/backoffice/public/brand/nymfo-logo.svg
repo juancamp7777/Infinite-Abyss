@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" role="img" aria-label="Nymfo Casino">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f5d76e"/>
+      <stop offset="1" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 0)">
+    <rect x="1" y="1" width="62" height="62" rx="14" fill="#050505"/>
+    <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="url(#g)" stroke-width="2"/>
+    <path d="M18 47V19h5l18 20V19h5v28h-5L23 27v20z" fill="url(#g)"/>
+    <path d="M32 6l4 5-4 5-4-5z" fill="url(#g)"/>
+  </g>
+  <text x="76" y="37" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700" letter-spacing="3" fill="url(#g)">NYMFO</text>
+  <text x="77" y="55" font-family="Georgia, 'Times New Roman', serif" font-size="12" letter-spacing="9" fill="#f5d76e" opacity=".85">CASINO</text>
+</svg>

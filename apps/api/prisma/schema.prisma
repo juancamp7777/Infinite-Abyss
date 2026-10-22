@@ -1,0 +1,1336 @@
+// Nymfo Casino — esquema multi-operador con ledger de doble partida.
+// Todos los montos son BigInt en unidades mínimas de la moneda (ver docs/contracts.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum OperatorStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum KycStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BackofficeRole {
+  PLATFORM_ADMIN
+  OPERATOR_ADMIN
+  OPERATOR_SUPPORT
+  OPERATOR_FINANCE
+}
+
+enum LedgerOwnerType {
+  PLAYER
+  OPERATOR
+}
+
+enum LedgerAccountType {
+  PLAYER_CASH
+  PLAYER_BONUS
+  HOUSE
+  PSP_CLEARING
+  WITHDRAWAL_PENDING
+  BONUS_EXPENSE
+  MANUAL_ADJUSTMENT
+  DEMO_FUNDING
+  JACKPOT_POOL
+  TOURNAMENT_POOL
+  CASHBACK_EXPENSE
+}
+
+enum LedgerTxType {
+  DEPOSIT
+  WITHDRAWAL_RESERVE
+  WITHDRAWAL_RELEASE
+  WITHDRAWAL_PAYOUT
+  BET
+  WIN
+  ROLLBACK
+  MANUAL_ADJUSTMENT
+  DEMO_CREDIT
+  BONUS_GRANT
+  BONUS_CONVERT
+  BONUS_FORFEIT
+  CASHBACK
+  JACKPOT_CONTRIBUTION
+  JACKPOT_PAYOUT
+  TOURNAMENT_BUYIN
+  TOURNAMENT_PRIZE
+  REFUND
+}
+
+enum PaymentProviderCode {
+  PASSIMPAY
+  WOMPI
+}
+
+enum DepositStatus {
+  CREATED
+  PENDING
+  CONFIRMED
+  FAILED
+  EXPIRED
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum AuditActorType {
+  BACKOFFICE_USER
+  PLAYER
+  SYSTEM
+}
+
+enum GameType {
+  ROULETTE
+  SLOTS
+  BLACKJACK
+  MINES
+  CRASH
+  PLINKO
+}
+
+enum GameStatus {
+  ACTIVE
+  FINISHED
+}
+
+// ───────────────────────── Tenants ─────────────────────────
+
+model Operator {
+  id                    String         @id @default(uuid()) @db.Uuid
+  slug                  String         @unique
+  name                  String
+  status                OperatorStatus @default(ACTIVE)
+  defaultCurrency       String
+  currencies            String[]
+  chipsEnabled          Boolean        @default(false)
+  // ÚNICA definición de la tasa de fichas: unidades mínimas por 1 ficha.
+  chipMinorUnitsPerChip BigInt?
+  // Configuración de límites del operador (validada en código con zod).
+  limits                Json           @default("{}")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  domains         OperatorDomain[]
+  brand           OperatorBrand?
+  users           User[]
+  backofficeUsers BackofficeUser[]
+  rgSettings      ResponsibleGamingSettings[]
+  playerSessions  PlayerSession[]
+  refreshTokens   RefreshToken[]
+  ledgerAccounts  LedgerAccount[]
+  ledgerTxs       LedgerTransaction[]
+  ledgerEntries   LedgerEntry[]
+  deposits        Deposit[]
+  withdrawals     Withdrawal[]
+  auditLogs       AuditLog[]
+  gameSessions    GameSession[]
+}
+
+model OperatorDomain {
+  id         String   @id @default(uuid()) @db.Uuid
+  host       String   @unique
+  operatorId String   @db.Uuid
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId])
+}
+
+model OperatorBrand {
+  id          String   @id @default(uuid()) @db.Uuid
+  operatorId  String   @unique @db.Uuid
+  operator    Operator @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  displayName String
+  logoUrl     String
+  faviconUrl  String?
+  // { primary, secondary, accent, background, surface, text }
+  colors      Json
+  fontFamily  String
+  // { termsUrl, privacyUrl, responsibleGamingText, licenseText, minAge }
+  legal       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ───────────────────────── Cuentas ─────────────────────────
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  operatorId      String     @db.Uuid
+  operator        Operator   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  email           String
+  emailNormalized String
+  username        String?
+  passwordHash    String
+  status          UserStatus @default(ACTIVE)
+  kycStatus       KycStatus  @default(NONE)
+  currency        String
+  isDemo          Boolean    @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  rgSettings     ResponsibleGamingSettings?
+  sessions       PlayerSession[]
+  refreshTokens  RefreshToken[]
+  gameSessions   GameSession[]
+  ledgerAccounts LedgerAccount[]
+  deposits       Deposit[]
+  withdrawals    Withdrawal[]
+
+  @@unique([operatorId, emailNormalized])
+  @@unique([operatorId, username])
+  @@index([operatorId])
+}
+
+model ResponsibleGamingSettings {
+  id                      String    @id @default(uuid()) @db.Uuid
+  userId                  String    @unique @db.Uuid
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  operatorId              String    @db.Uuid
+  operator                Operator  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  depositLimitDaily       BigInt?
+  depositLimitWeekly      BigInt?
+  depositLimitMonthly     BigInt?
+  lossLimitDaily          BigInt?
+  lossLimitWeekly         BigInt?
+  lossLimitMonthly        BigInt?
+  sessionTimeLimitMinutes Int?
+  selfExcludedUntil       DateTime?
+  selfExclusionPermanent  Boolean   @default(false)
+  coolOffUntil            DateTime?
+  // Aumentos de límite pendientes de periodo de enfriamiento.
+  pendingLimitIncrease    Json?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([operatorId])
+}
+
+model PlayerSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  operatorId String    @db.Uuid
+  operator   Operator  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  startedAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  endedAt    DateTime?
+
+  @@index([userId, startedAt])
+  @@index([operatorId])
+}
+
+model BackofficeUser {
+  id           String         @id @default(uuid()) @db.Uuid
+  email        String         @unique // normalizado (minúsculas, sin espacios)
+  passwordHash String
+  role         BackofficeRole
+  // null solo para PLATFORM_ADMIN
+  operatorId   String?        @db.Uuid
+  operator     Operator?      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  status       UserStatus     @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@index([operatorId])
+}
+
+model RefreshToken {
+  id               String          @id @default(uuid()) @db.Uuid
+  tokenHash        String          @unique
+  userId           String?         @db.Uuid
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  backofficeUserId String?         @db.Uuid
+  backofficeUser   BackofficeUser? @relation(fields: [backofficeUserId], references: [id], onDelete: Restrict)
+  operatorId       String?         @db.Uuid
+  operator         Operator?       @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  replacedById     String?         @db.Uuid
+  ip               String?
+  userAgent        String?
+  createdAt        DateTime        @default(now())
+
+  @@index([userId])
+  @@index([backofficeUserId])
+}
+
+// ───────────────────────── Ledger ─────────────────────────
+
+model LedgerAccount {
+  id         String            @id @default(uuid()) @db.Uuid
+  operatorId String            @db.Uuid
+  operator   Operator          @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  ownerType  LedgerOwnerType
+  userId     String?           @db.Uuid
+  user       User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // userId o 'OPERATOR' (evita problemas de unicidad con NULL)
+  ownerKey   String
+  type       LedgerAccountType
+  currency   String
+  // Saldo cacheado; debe ser igual a la suma de sus entradas.
+  balance    BigInt            @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  entries LedgerEntry[]
+
+  @@unique([operatorId, ownerKey, type, currency])
+  @@index([userId])
+}
+
+model LedgerTransaction {
+  id                        String       @id @default(uuid()) @db.Uuid
+  operatorId                String       @db.Uuid
+  operator                  Operator     @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  type                      LedgerTxType
+  idempotencyKey            String
+  currency                  String
+  referenceType             String?
+  referenceId               String?
+  reversesId                String?      @unique @db.Uuid
+  metadata                  Json?
+  createdByBackofficeUserId String?      @db.Uuid
+  createdAt                 DateTime     @default(now())
+
+  entries LedgerEntry[]
+
+  @@unique([operatorId, idempotencyKey])
+  @@index([operatorId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+model LedgerEntry {
+  id            String            @id @default(uuid()) @db.Uuid
+  transactionId String            @db.Uuid
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  accountId     String            @db.Uuid
+  account       LedgerAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  operatorId    String            @db.Uuid
+  operator      Operator          @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  // Con signo: débito/crédito según la convención de docs/contracts.md
+  amount        BigInt
+  currency      String
+  createdAt     DateTime          @default(now())
+
+  @@index([accountId])
+  @@index([transactionId])
+  @@index([operatorId, currency])
+}
+
+// ───────────────────────── Cajero ─────────────────────────
+
+model Deposit {
+  id                  String              @id @default(uuid()) @db.Uuid
+  operatorId          String              @db.Uuid
+  operator            Operator            @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  userId              String              @db.Uuid
+  user                User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  provider            PaymentProviderCode
+  status              DepositStatus       @default(CREATED)
+  amount              BigInt
+  currency            String
+  // orderId que enviamos al PSP
+  providerReference   String              @unique
+  externalId          String?
+  ledgerTransactionId String?             @unique @db.Uuid
+  rawCreateResponse   Json?
+  confirmedAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([provider, externalId])
+  @@index([operatorId, userId])
+}
+
+model Withdrawal {
+  id                         String              @id @default(uuid()) @db.Uuid
+  operatorId                 String              @db.Uuid
+  operator                   Operator            @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  userId                     String              @db.Uuid
+  user                       User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  provider                   PaymentProviderCode
+  status                     WithdrawalStatus    @default(REQUESTED)
+  amount                     BigInt
+  currency                   String
+  destination                Json
+  externalId                 String?
+  reserveLedgerTxId          String              @db.Uuid
+  settleLedgerTxId           String?             @db.Uuid
+  reviewedByBackofficeUserId String?             @db.Uuid
+  reviewedAt                 DateTime?
+  rejectionReason            String?
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  @@index([operatorId, status])
+  @@index([userId])
+}
+
+model WebhookEvent {
+  id             String              @id @default(uuid()) @db.Uuid
+  provider       PaymentProviderCode
+  // NULL cuando la firma es inválida (no deduplica eventos no confiables)
+  dedupeKey      String?
+  signatureValid Boolean
+  headers        Json
+  rawBody        String              @db.Text
+  parsed         Json?
+  sourceIp       String?
+  processedAt    DateTime?
+  result         String?
+  error          String?
+  receivedAt     DateTime            @default(now())
+
+  @@unique([provider, dedupeKey])
+  @@index([receivedAt])
+}
+
+model AuditLog {
+  id         String         @id @default(uuid()) @db.Uuid
+  operatorId String?        @db.Uuid
+  operator   Operator?      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  actorType  AuditActorType
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String
+  reason     String?
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime       @default(now())
+
+  @@index([operatorId, createdAt])
+  @@index([targetType, targetId])
+}
+
+// ───────────────────────── Juegos ─────────────────────────
+
+model GameSession {
+  id         String     @id @default(uuid()) @db.Uuid
+  operatorId String     @db.Uuid
+  operator   Operator   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  userId     String     @db.Uuid
+  user       User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  gameType   GameType
+  status     GameStatus @default(ACTIVE)
+  betAmount  BigInt
+  currency   String
+  state      Json // Estado específico del juego (cartas, minas, etc.)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([operatorId, userId])
+}
+
+// ═════════════════════════ Módulos (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice) ═════════════════════════
+// Sin relaciones hacia los modelos de la Fase 1: operatorId/playerId se guardan como texto (uuid) sin FK.
+
+// ───────────────────────── Módulo: hub ─────────────────────────
+
+// Nymfo Hub (agregador). Sin relaciones hacia modelos de la Fase 1: operatorId/playerId son String.
+
+model HubProvider {
+  id        String   @id
+  name      String
+  type      String // internal | external | aggregator
+  status    String   @default("active")
+  config    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  games HubGame[]
+
+  @@map("hub_providers")
+}
+
+model HubGame {
+  id             String      @id
+  providerId     String
+  provider       HubProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  externalId     String
+  title          String
+  category       String // slots | originals | live | table | other
+  mechanic       String
+  rtp            Decimal     @db.Decimal(5, 2)
+  volatility     String
+  images         Json
+  tags           String[]
+  allowedMarkets String[]
+  status         String      @default("active")
+  hasDemo        Boolean     @default(true)
+  releasedAt     DateTime
+  popularity     Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([providerId, externalId])
+  @@index([category, status])
+  @@map("hub_games")
+}
+
+model HubOperatorGame {
+  operatorId String
+  gameId     String
+  enabled    Boolean @default(true)
+  sortOrder  Int     @default(0)
+
+  @@id([operatorId, gameId])
+  @@map("hub_operator_games")
+}
+
+model HubSession {
+  id               String   @id @db.Uuid
+  token            String   @unique
+  operatorId       String
+  playerId         String
+  providerId       String
+  gameId           String
+  currency         String
+  mode             String // real | demo
+  walletKind       String // local | remote | demo
+  remoteOperatorId String?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([operatorId, playerId])
+  @@map("hub_sessions")
+}
+
+model HubRound {
+  id              String    @id @db.Uuid
+  providerId      String
+  providerRoundId String
+  operatorId      String
+  playerId        String
+  gameId          String
+  currency        String
+  sessionId       String
+  betAmount       BigInt    @default(0)
+  winAmount       BigInt    @default(0)
+  status          String    @default("open") // open | settled | rolled_back
+  createdAt       DateTime  @default(now())
+  settledAt       DateTime?
+
+  @@unique([providerId, providerRoundId])
+  @@index([createdAt, providerId])
+  @@index([operatorId, createdAt])
+  @@map("hub_rounds")
+}
+
+model HubTransaction {
+  id              String   @id @db.Uuid
+  providerId      String
+  providerTxId    String
+  type            String // BET | WIN | ROLLBACK | TOMBSTONE
+  status          String // ok | rolled_back | tombstone
+  operatorId      String
+  playerId        String
+  currency        String
+  amount          BigInt
+  providerRoundId String?
+  gameId          String?
+  sessionId       String?
+  referenceTxId   String?
+  walletTxId      String?
+  fingerprint     String
+  response        Json?
+  createdAt       DateTime @default(now())
+
+  @@unique([providerId, providerTxId])
+  @@index([operatorId, playerId, createdAt])
+  @@map("hub_transactions")
+}
+
+model HubRemoteOperator {
+  id                String   @id
+  name              String
+  walletCallbackUrl String
+  status            String   @default("active")
+  currencies        String[]
+  createdAt         DateTime @default(now())
+
+  @@map("hub_remote_operators")
+}
+
+// ───────────────────────── Módulo: studio ─────────────────────────
+
+// Nymfo Studios: rondas, semillas provably fair y configuración de juegos por operador.
+// Sin relaciones hacia modelos de la Fase 1: operatorId/playerId son uuid en texto.
+
+model StudioRound {
+  id             String   @id @db.Uuid
+  operatorId     String
+  playerId       String
+  gameId         String
+  bet            BigInt
+  baseBet        BigInt
+  win            BigInt   @default(0)
+  multiplier     Float    @default(0)
+  currency       String
+  outcome        Json?
+  state          Json?
+  params         Json
+  rtp            Float
+  rtpProfile     String?
+  bonusBuy       Boolean  @default(false)
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int
+  seedPairId     String   @db.Uuid
+  status         String // OPEN | SETTLED | ROLLED_BACK | FAILED
+  mode           String // real | demo
+  debits         Int      @default(1)
+  version        Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([operatorId, playerId, createdAt])
+  @@index([operatorId, playerId, gameId, status])
+  @@index([seedPairId])
+  @@map("studio_rounds")
+}
+
+model StudioSeedPair {
+  id             String    @id @db.Uuid
+  operatorId     String
+  playerId       String
+  serverSeed     String
+  serverSeedHash String
+  clientSeed     String
+  nonce          Int       @default(0)
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  revealedAt     DateTime?
+
+  @@index([operatorId, playerId, active])
+  @@map("studio_seed_pairs")
+}
+
+model StudioOperatorConfig {
+  operatorId String
+  gameId     String
+  rtp        Float?
+  rtpProfile String?
+  minBet     BigInt?
+  maxBet     BigInt?
+  enabled    Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+
+  @@id([operatorId, gameId])
+  @@map("studio_operator_configs")
+}
+
+// ───────────────────────── Módulo: promotions ─────────────────────────
+
+// Módulo de promociones (Nymfo): bonos con wagering, jackpots progresivos y drops & wins.
+// Sin relaciones hacia modelos de la Fase 1: jugadores y operadores se referencian por id (String uuid).
+// Montos en unidades mínimas (BigInt); porcentajes en basis points (Int); probabilidades en ppm (Int).
+
+model PromoBonusTemplate {
+  id                String    @id @default(uuid()) @db.Uuid
+  operatorId        String
+  name              String
+  type              String // deposit_match | free_spins | cashback | promo_code
+  status            String    @default("ACTIVE") // ACTIVE | INACTIVE
+  currency          String
+  code              String?
+  maxUsesTotal      Int?
+  maxUsesPerPlayer  Int?
+  usesCount         Int       @default(0)
+  validFrom         DateTime?
+  validTo           DateTime?
+  autoOnDeposit     Boolean   @default(false)
+  firstDepositOnly  Boolean   @default(false)
+  stackable         Boolean   @default(false)
+  matchBps          Int?
+  minDeposit        BigInt?
+  maxBonusAmount    BigInt?
+  fixedAmount       BigInt?
+  freeSpinGameId    String?
+  freeSpinCount     Int?
+  freeSpinValue     BigInt?
+  cashbackBps       Int?
+  wageringMultiplier Int      @default(0)
+  wageringBase      String    @default("BONUS") // BONUS | BONUS_PLUS_DEPOSIT
+  contributionBps   Json
+  excludedGameIds   String[]
+  maxBet            BigInt?
+  maxConversion     BigInt?
+  validityHours     Int       @default(168)
+  claimWindowHours  Int       @default(24)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  redemptions PromoCodeRedemption[]
+
+  @@unique([operatorId, code])
+  @@index([operatorId, type, status])
+  @@map("promo_bonus_templates")
+}
+
+model PromoCodeRedemption {
+  id         String             @id @default(uuid()) @db.Uuid
+  templateId String             @db.Uuid
+  template   PromoBonusTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  playerId   String
+  createdAt  DateTime           @default(now())
+
+  @@index([templateId, playerId])
+  @@map("promo_code_redemptions")
+}
+
+model PromoPlayerBonus {
+  id                 String    @id @default(uuid()) @db.Uuid
+  operatorId         String
+  playerId           String
+  templateId         String?   @db.Uuid
+  type               String
+  status             String // PENDING | ACTIVE | COMPLETED | FORFEITED | CANCELLED
+  phase              String    @default("WAGERING") // SPINS | WAGERING
+  currency           String
+  source             String // CODE | DEPOSIT | MANUAL | CASHBACK | SERVICE
+  sourceRef          String?
+  amount             BigInt    @default(0)
+  depositAmount      BigInt    @default(0)
+  wageringMultiplier Int       @default(0)
+  wageringBase       String    @default("BONUS")
+  wageringRequired   BigInt    @default(0)
+  wageringProgress   BigInt    @default(0)
+  contributionBps    Json
+  excludedGameIds    String[]
+  maxBet             BigInt?
+  maxConversion      BigInt?
+  freeSpinGameId     String?
+  freeSpinsTotal     Int       @default(0)
+  freeSpinsUsed      Int       @default(0)
+  freeSpinsSettled   Int       @default(0)
+  freeSpinValue      BigInt?
+  freeSpinWin        BigInt    @default(0)
+  validityHours      Int       @default(168)
+  expiresAt          DateTime?
+  grantTxId          String?
+  settlementAmount   BigInt    @default(0)
+  settlementTxId     String?
+  statusReason       String?
+  createdAt          DateTime  @default(now())
+  activatedAt        DateTime?
+  closedAt           DateTime?
+
+  rounds PromoBonusRound[]
+
+  @@unique([operatorId, sourceRef])
+  @@index([operatorId, playerId, status])
+  @@index([status, expiresAt])
+  @@map("promo_player_bonuses")
+}
+
+/// Dedupe por ronda del wagering (kind w), del consumo de giros gratis (fs) y de sus ganancias (fsw).
+model PromoBonusRound {
+  bonusId      String           @db.Uuid
+  bonus        PromoPlayerBonus @relation(fields: [bonusId], references: [id], onDelete: Cascade)
+  key          String // "<kind>:<roundId>"
+  contribution BigInt           @default(0)
+  createdAt    DateTime         @default(now())
+
+  @@id([bonusId, key])
+  @@map("promo_bonus_rounds")
+}
+
+/// Rondas liquidadas (bet.settled) para calcular el cashback por pérdida neta del periodo.
+model PromoSettledRound {
+  operatorId String
+  roundId    String
+  playerId   String
+  currency   String
+  amount     BigInt
+  win        BigInt
+  settledAt  DateTime
+
+  @@id([operatorId, roundId])
+  @@index([operatorId, currency, settledAt])
+  @@map("promo_settled_rounds")
+}
+
+model PromoJackpot {
+  id              String   @id @default(uuid()) @db.Uuid
+  operatorId      String
+  name            String
+  currency        String
+  contributionBps Int
+  minBet          BigInt   @default(0)
+  gameIds         String[]
+  categories      String[]
+  status          String   @default("ACTIVE") // ACTIVE | PAUSED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  levels PromoJackpotLevel[]
+
+  @@index([operatorId, status])
+  @@map("promo_jackpots")
+}
+
+model PromoJackpotLevel {
+  id               String       @id @default(uuid()) @db.Uuid
+  jackpotId        String       @db.Uuid
+  jackpot          PromoJackpot @relation(fields: [jackpotId], references: [id], onDelete: Cascade)
+  key              String // mini | major | mega
+  seedAmount       BigInt
+  shareBps         Int
+  triggerChancePpm Int
+  mustDropBy       BigInt?
+  dropPoint        BigInt?
+  currentAmount    BigInt
+  sortOrder        Int
+
+  @@unique([jackpotId, key])
+  @@map("promo_jackpot_levels")
+}
+
+model PromoJackpotContribution {
+  id         String   @id @default(uuid()) @db.Uuid
+  jackpotId  String   @db.Uuid
+  operatorId String
+  playerId   String
+  roundId    String
+  gameId     String
+  betAmount  BigInt
+  amount     BigInt
+  /// { "mini": "12", "major": "30", ... } (montos como string)
+  perLevel   Json
+  createdAt  DateTime @default(now())
+
+  @@unique([jackpotId, roundId])
+  @@index([jackpotId, createdAt])
+  @@map("promo_jackpot_contributions")
+}
+
+/// Dinero que la casa pone en los pozos: semilla inicial y cada reseed tras un pago.
+model PromoJackpotSeedFunding {
+  id        String   @id @default(uuid()) @db.Uuid
+  jackpotId String   @db.Uuid
+  levelKey  String
+  amount    BigInt
+  reason    String // INITIAL | RESEED
+  createdAt DateTime @default(now())
+
+  @@index([jackpotId])
+  @@map("promo_jackpot_seed_funding")
+}
+
+model PromoJackpotWin {
+  id         String    @id @default(uuid()) @db.Uuid
+  jackpotId  String    @db.Uuid
+  operatorId String
+  playerId   String
+  currency   String
+  levelKey   String
+  roundId    String
+  gameId     String
+  amount     BigInt
+  status     String    @default("PENDING") // PENDING | PAID
+  txId       String?
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+
+  @@unique([jackpotId, levelKey, roundId])
+  @@index([status])
+  @@map("promo_jackpot_wins")
+}
+
+model PromoDropCampaign {
+  id            String   @id @default(uuid()) @db.Uuid
+  operatorId    String
+  name          String
+  currency      String
+  startsAt      DateTime
+  endsAt        DateTime
+  minBet        BigInt   @default(0)
+  dropChancePpm Int
+  gameIds       String[]
+  status        String   @default("ACTIVE") // ACTIVE | PAUSED
+  createdAt     DateTime @default(now())
+
+  prizes PromoDropPrize[]
+
+  @@index([operatorId, status])
+  @@map("promo_drop_campaigns")
+}
+
+model PromoDropPrize {
+  id         String            @id @default(uuid()) @db.Uuid
+  campaignId String            @db.Uuid
+  campaign   PromoDropCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  amount     BigInt
+  quantity   Int
+  awarded    Int               @default(0)
+  sortOrder  Int
+
+  @@index([campaignId])
+  @@map("promo_drop_prizes")
+}
+
+model PromoDropAward {
+  id         String   @id @default(uuid()) @db.Uuid
+  campaignId String   @db.Uuid
+  prizeId    String   @db.Uuid
+  operatorId String
+  playerId   String
+  currency   String
+  roundId    String
+  amount     BigInt
+  status     String   @default("PENDING") // PENDING | PAID
+  txId       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, roundId])
+  @@index([status])
+  @@map("promo_drop_awards")
+}
+
+// ───────────────────────── Módulo: crm ─────────────────────────
+
+// Módulo CRM. Sin relaciones hacia la Fase 1: operatorId/playerId son String (uuid) sin FK.
+
+/// Proyección del perfil 360: `data` guarda acumulados y fechas (bigint como string).
+model CrmPlayerProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  operatorId     String
+  playerId       String
+  data           Json
+  lastActivityAt DateTime?
+  updatedAt      DateTime @updatedAt
+
+  @@unique([operatorId, playerId])
+  @@index([operatorId, lastActivityAt])
+  @@map("crm_player_profiles")
+}
+
+/// Claves de eventos ya procesados (deduplicación).
+model CrmProcessedEvent {
+  key       String   @id
+  createdAt DateTime @default(now())
+
+  @@map("crm_processed_events")
+}
+
+model CrmNote {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  playerId   String
+  authorId   String
+  text       String
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, playerId, createdAt])
+  @@map("crm_notes")
+}
+
+model CrmTimelineEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  playerId   String
+  type       String
+  title      String
+  data       Json?
+  at         DateTime
+
+  @@index([operatorId, playerId, at])
+  @@map("crm_timeline_entries")
+}
+
+model CrmTicket {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  playerId   String
+  subject    String
+  status     String   @default("open")
+  priority   String   @default("normal")
+  assignedTo String?
+  messages   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId, status, createdAt])
+  @@index([operatorId, playerId])
+  @@map("crm_tickets")
+}
+
+model CrmSegment {
+  id          String   @id @default(uuid()) @db.Uuid
+  operatorId  String
+  name        String
+  description String?
+  rule        Json
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([operatorId])
+  @@map("crm_segments")
+}
+
+// ───────────────────────── Módulo: marketing ─────────────────────────
+
+// Marketing (módulo aislado): sin relaciones a modelos de la Fase 1. Cada fila guarda el documento en 'data' + columnas de índice.
+
+model MktOperatorBrand {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_operator_brands")
+}
+
+model MktTemplate {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_templates")
+}
+
+model MktCampaign {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_campaigns")
+}
+
+model MktJourney {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_journeys")
+}
+
+model MktJourneyRun {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_journey_runs")
+}
+
+model MktAffiliate {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_affiliates")
+}
+
+model MktAttribution {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_attributions")
+}
+
+model MktPostback {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_postbacks")
+}
+
+model MktConsent {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_consents")
+}
+
+model MktSendLog {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_send_logs")
+}
+
+model MktInboxMessage {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_inbox_messages")
+}
+
+model MktPushSubscription {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_push_subscriptions")
+}
+
+model MktPlayerState {
+  id         String   @id
+  operatorId String
+  playerId   String?
+  refId      String?
+  status     String?
+  dueAt      DateTime?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([operatorId])
+  @@index([operatorId, playerId])
+  @@index([operatorId, refId])
+  @@index([status, dueAt])
+  @@map("mkt_player_states")
+}
+
+// ───────────────────────── Módulo: gamification ─────────────────────────
+
+// Módulo Gamificación (VIP, misiones, logros, rachas, rueda, torneos).
+// Almacén documental genérico: una fila por documento (colección + operador + id) con el JSON del documento.
+// Los bigint se serializan como {"$b":"123"} (ver infrastructure/DocStore.ts). Sin relaciones a modelos de la Fase 1:
+// operatorId/playerId son uuid en texto.
+model GamiRecord {
+  collection String
+  operatorId String
+  id         String
+  playerId   String?
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@id([collection, operatorId, id])
+  @@index([collection, operatorId, playerId])
+  @@index([collection, updatedAt])
+  @@map("gami_records")
+}
+
+// ───────────────────────── Módulo: backoffice ─────────────────────────
+
+// Backoffice API: proyección de KPIs por operador/día y skins. Sin relaciones hacia modelos de la Fase 1.
+
+/// Contadores diarios por operador (importes en unidades mínimas).
+model BoDayKpi {
+  operatorId        String
+  day               String // YYYY-MM-DD (UTC)
+  registrations     Int      @default(0)
+  logins            Int      @default(0)
+  activePlayers     Int      @default(0)
+  depositors        Int      @default(0)
+  bettors           Int      @default(0)
+  ftdCount          Int      @default(0)
+  ftdAmount         BigInt   @default(0)
+  depositsCount     Int      @default(0)
+  depositsAmount    BigInt   @default(0)
+  withdrawalsCount  Int      @default(0)
+  withdrawalsAmount BigInt   @default(0)
+  betCount          Int      @default(0)
+  stakePlaced       BigInt   @default(0)
+  settledCount      Int      @default(0)
+  settledStake      BigInt   @default(0)
+  settledWins       BigInt   @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@id([operatorId, day])
+  @@map("bo_day_kpis")
+}
+
+/// Marca única (jugador, día, tipo) para contar jugadores distintos y calcular retención.
+model BoPlayerDay {
+  operatorId String
+  day        String
+  playerId   String
+  active     Boolean @default(false)
+  depositor  Boolean @default(false)
+  bettor     Boolean @default(false)
+
+  @@id([operatorId, day, playerId])
+  @@index([operatorId, playerId])
+  @@map("bo_player_days")
+}
+
+/// Día de registro y de primer depósito por jugador (cohortes).
+model BoPlayer {
+  operatorId      String
+  playerId        String
+  registeredDay   String?
+  firstDepositDay String?
+
+  @@id([operatorId, playerId])
+  @@index([operatorId, registeredDay])
+  @@map("bo_players")
+}
+
+/// Eventos ya procesados (idempotencia de la proyección).
+model BoProcessedEvent {
+  key       String   @id
+  createdAt DateTime @default(now())
+
+  @@map("bo_processed_events")
+}
+
+/// Skin por operador (solo se usa si la Fase 1 no publica su propio SkinPort).
+model BoSkin {
+  operatorId String   @id
+  data       Json
+  updatedAt  DateTime @updatedAt
+
+  @@map("bo_skins")
+}

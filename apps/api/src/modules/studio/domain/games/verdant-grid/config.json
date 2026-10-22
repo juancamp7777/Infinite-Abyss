@@ -1,0 +1,56 @@
+{
+  "id": "nymfo-verdant-grid",
+  "name": "Verdant Grid",
+  "rtpTarget": 0.965,
+  "maxWinMultiplier": 5000,
+  "rows": 7,
+  "cols": 7,
+  "minCluster": 5,
+  "symbols": [
+    { "id": 0, "key": "moon-orchid", "name": "Orquídea Lunar", "kind": "high" },
+    { "id": 1, "key": "mandrake", "name": "Mandrágora Dormida", "kind": "high" },
+    { "id": 2, "key": "crystal-rose", "name": "Rosa de Cristal", "kind": "high" },
+    { "id": 3, "key": "golden-fern", "name": "Helecho Dorado", "kind": "high" },
+    { "id": 4, "key": "blue-seed", "name": "Semilla Azul", "kind": "low" },
+    { "id": 5, "key": "dew-leaf", "name": "Hoja de Rocío", "kind": "low" },
+    { "id": 6, "key": "ember-berry", "name": "Baya Ígnea", "kind": "low" },
+    { "id": 7, "key": "violet-cap", "name": "Seta Violeta", "kind": "low" },
+    { "id": 8, "key": "enchanted-fountain", "name": "Fuente Encantada (scatter)", "kind": "scatter" }
+  ],
+  "scatter": 8,
+  "weights": {
+    "base": [4, 5, 6, 7, 14, 16, 18, 20, 0.6015],
+    "baseRefill": [4, 5, 6, 7, 14, 16, 18, 20, 0],
+    "freeSpins": [5, 6, 7, 8, 20, 22, 24, 3, 0.6],
+    "freeSpinsRefill": [5, 6, 7, 8, 20, 22, 24, 3, 0]
+  },
+  "paytable": {
+    "sizes": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    "pays": [
+      [2.5, 3.75, 5, 7.5, 10, 15, 20, 30, 50, 100, 250],
+      [2, 3, 4, 6, 7.5, 11.25, 15, 22.5, 37.5, 75, 187.5],
+      [1.5, 2.25, 3, 4.5, 6, 8.75, 12.5, 17.5, 27.5, 55, 137.5],
+      [1.25, 1.75, 2.5, 3.75, 5, 7.5, 10, 15, 22.5, 45, 112.5],
+      [0.75, 1, 1.25, 1.75, 2.5, 3.5, 5, 7.5, 12.5, 25, 62.5],
+      [0.6, 0.9, 1.1, 1.5, 2, 3, 4, 6.25, 10, 20, 50],
+      [0.5, 0.75, 1, 1.25, 1.75, 2.5, 3.5, 5, 8.75, 17.5, 37.5],
+      [0.4, 0.6, 0.75, 1, 1.5, 2, 3, 4.5, 7.5, 15, 30]
+    ]
+  },
+  "positionMultipliers": {
+    "first": 2,
+    "cap": 1024
+  },
+  "scatterPays": [0, 0, 0, 0, 3, 5, 10, 25],
+  "freeSpins": {
+    "triggerCount": 3,
+    "award": 10,
+    "retriggerAward": 5,
+    "maxTotal": 30
+  },
+  "bonusBuy": {
+    "costMultiplier": 100,
+    "freeSpins": 10
+  },
+  "maxCascades": 100
+}

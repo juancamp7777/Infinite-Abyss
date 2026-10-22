@@ -1,5 +1,5 @@
 'use client';
-import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, createElement, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { socketTarget } from '../api';
 import { api } from './api';
@@ -13,13 +13,16 @@ export { EMPTY_LISTS, LIVE_MAX, formatMultiplier, mergeBatch, prepend, profitOf,
 /**
  * Apuestas en vivo del lobby: snapshot + lotes por socket (/feed). Con sesión, el socket se autentica y
  * además llegan las apuestas propias. Si el socket no conecta, carga una vez por HTTP.
- * `fresh` marca las apuestas recién llegadas (para animarlas).
+ * `fresh` marca las apuestas recién llegadas (para animarlas). `onMine` se llama (como mucho 1 vez por segundo,
+ * con llamada final) al liquidarse una apuesta propia: p. ej. para releer el saldo del ledger.
  */
-function useLiveBetsSource() {
+function useLiveBetsSource(onMine?: () => void) {
   const { ready, authenticated } = useAuthReady();
   const [lists, setLists] = useState<LiveLists>(EMPTY_LISTS);
   const [connected, setConnected] = useState(false);
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
+  const onMineRef = useRef(onMine);
+  useEffect(() => { onMineRef.current = onMine; });
 
   useEffect(() => {
     if (!ready) return;
@@ -31,6 +34,13 @@ function useLiveBetsSource() {
       path: t.path, addTrailingSlash: t.addTrailingSlash, transports: ['websocket', 'polling'], reconnectionDelayMax: 10_000,
       query: { operatorId: moduleOperatorId() }, ...(token ? { auth: { token } } : {}),
     });
+    let lastMine = 0;
+    let mineTimer: ReturnType<typeof setTimeout> | undefined;
+    const notifyMine = () => {
+      const wait = lastMine + 1000 - Date.now();
+      if (mineTimer) return;
+      mineTimer = setTimeout(() => { mineTimer = undefined; lastMine = Date.now(); if (alive) onMineRef.current?.(); }, Math.max(0, wait));
+    };
     const markFresh = (ids: string[]) => {
       setFresh(new Set(ids));
       setTimeout(() => { if (alive) setFresh(new Set()); }, 600);
@@ -48,7 +58,10 @@ function useLiveBetsSource() {
       setLists((cur) => mergeBatch(cur, batch));
       markFresh(batch.map((b) => b.id));
     });
-    s.on('feed:mine', (bet: FeedBet) => setLists((cur) => ({ ...cur, mine: prepend(cur.mine, [{ ...bet, isMe: true }]) })));
+    s.on('feed:mine', (bet: FeedBet) => {
+      setLists((cur) => ({ ...cur, mine: prepend(cur.mine, [{ ...bet, isMe: true }]) }));
+      notifyMine();
+    });
     s.on('connect_error', () => {
       if (fellBack) return;
       fellBack = true;
@@ -56,7 +69,7 @@ function useLiveBetsSource() {
         .then((rs) => { if (alive) setLists((cur) => ({ ...cur, ...Object.fromEntries(rs) })); })
         .catch(() => { /* sin feed: la tabla muestra su estado vacío */ });
     });
-    return () => { alive = false; s.close(); };
+    return () => { alive = false; if (mineTimer) clearTimeout(mineTimer); s.close(); };
   }, [ready, authenticated]);
 
   return { lists, connected, fresh };
@@ -66,8 +79,8 @@ type LiveFeed = ReturnType<typeof useLiveBetsSource>;
 const LiveFeedCtx = createContext<LiveFeed | null>(null);
 
 /** Una sola conexión al feed para toda la página (tabla de apuestas y tira de últimas ganancias). */
-export function LiveFeedProvider({ children }: { children: ReactNode }) {
-  return createElement(LiveFeedCtx.Provider, { value: useLiveBetsSource() }, children);
+export function LiveFeedProvider({ children, onMine }: { children: ReactNode; onMine?: () => void }) {
+  return createElement(LiveFeedCtx.Provider, { value: useLiveBetsSource(onMine) }, children);
 }
 
 /** Feed compartido; fuera de LiveFeedProvider lanza para no abrir sockets duplicados por error. */

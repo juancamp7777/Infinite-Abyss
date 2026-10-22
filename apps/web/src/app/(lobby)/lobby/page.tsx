@@ -121,5 +121,7 @@ function Lobby() {
 }
 
 export default function LobbyHome() {
-  return <LiveFeedProvider><Lobby /></LiveFeedProvider>;
+  const { refresh } = useLobby();
+  // Cada apuesta propia liquidada (en cualquier pestaña o dispositivo) vuelve a leer saldo y VIP.
+  return <LiveFeedProvider onMine={refresh}><Lobby /></LiveFeedProvider>;
 }

@@ -205,10 +205,14 @@ export class MockAuthClient extends BaseAuthClient {
 
 export const authClient: AuthClient = MOCK_AUTH ? new MockAuthClient() : new PasswordAuthClient();
 
+export type NavSection = "Principal" | "Jugadores" | "Marketing" | "Juegos" | "Marca";
+export const NAV_SECTIONS: NavSection[] = ["Principal", "Jugadores", "Marketing", "Juegos", "Marca"];
+
 export interface NavItem {
   href: string;
   label: string;
   roles: Role[];
+  section: NavSection;
 }
 
 const STAFF: Role[] = ["OPERATOR_SUPPORT", "OPERATOR_FINANCE", "OPERATOR_AGENT"];
@@ -216,19 +220,19 @@ const ALL: Role[] = ["PLATFORM_ADMIN", "OPERATOR_ADMIN", ...STAFF];
 const ADMINS: Role[] = ["PLATFORM_ADMIN", "OPERATOR_ADMIN"];
 
 export const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Panel", roles: ADMINS },
-  { href: "/players", label: "Jugadores", roles: ALL },
-  { href: "/tickets", label: "Tickets", roles: ALL },
-  { href: "/segments", label: "Segmentos", roles: ADMINS },
-  { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS },
-  { href: "/bonuses", label: "Bonos", roles: ADMINS },
-  { href: "/tournaments", label: "Torneos", roles: ADMINS },
-  { href: "/jackpots", label: "Jackpots", roles: ADMINS },
-  { href: "/vip", label: "VIP y misiones", roles: ADMINS },
-  { href: "/catalog", label: "Catálogo y proveedores", roles: ADMINS },
-  { href: "/studios", label: "Juegos Studios", roles: ADMINS },
-  { href: "/skin", label: "Skin del operador", roles: ADMINS },
-  { href: "/reports", label: "Reportes", roles: ADMINS },
+  { href: "/dashboard", label: "Panel", roles: ADMINS, section: "Principal" },
+  { href: "/players", label: "Jugadores", roles: ALL, section: "Jugadores" },
+  { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
+  { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
+  { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS, section: "Marketing" },
+  { href: "/bonuses", label: "Bonos", roles: ADMINS, section: "Marketing" },
+  { href: "/tournaments", label: "Torneos", roles: ADMINS, section: "Marketing" },
+  { href: "/jackpots", label: "Jackpots", roles: ADMINS, section: "Marketing" },
+  { href: "/vip", label: "VIP y misiones", roles: ADMINS, section: "Marketing" },
+  { href: "/catalog", label: "Catálogo y proveedores", roles: ADMINS, section: "Juegos" },
+  { href: "/studios", label: "Juegos Studios", roles: ADMINS, section: "Juegos" },
+  { href: "/skin", label: "Skin del operador", roles: ADMINS, section: "Marca" },
+  { href: "/reports", label: "Reportes", roles: ADMINS, section: "Principal" },
 ];
 
 export const canAccess = (role: Role | null, href: string) => !!role && NAV.some((n) => n.href === href && n.roles.includes(role));

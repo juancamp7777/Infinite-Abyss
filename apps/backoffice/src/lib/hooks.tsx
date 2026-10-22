@@ -51,33 +51,27 @@ export const useOperator = () => useContext(Ctx);
 
 const CurrencyCtx = createContext<string | undefined>(undefined);
 
-interface BrandInfo {
-  operator?: { defaultCurrency?: string };
-}
-
 /**
- * Moneda del operador activo (Operator.defaultCurrency vía /api/operator/brand). Se intenta con el id del
- * operador como slug (X-Operator-Slug) y, si no existe, con el tenant por defecto del host. Si no se puede
- * determinar queda undefined y los montos se muestran sin símbolo.
+ * Moneda del operador activo (Operator.defaultCurrency) por su id, vía /backoffice/v1/admin/operators/:id/currency.
+ * Sin operador elegido (vista consolidada de la plataforma, que puede mezclar monedas) o si no se puede determinar,
+ * queda undefined y los montos se muestran sin símbolo: nunca se asume la moneda de otro operador.
  */
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { operatorId } = useOperator();
   const [byOp, setByOp] = useState<Record<string, string>>({});
-  const key = operatorId ?? "";
   useEffect(() => {
-    if (byOp[key]) return;
+    if (!operatorId || byOp[operatorId]) return;
     let live = true;
-    const get = (headers?: Record<string, string>) => request<BrandInfo>("/api/operator/brand", { headers }).then((b) => b.operator?.defaultCurrency);
-    (operatorId ? get({ "X-Operator-Slug": operatorId.toLowerCase() }).catch(() => get()) : get())
-      .then((c) => {
-        if (live && c) setByOp((m) => ({ ...m, [key]: c }));
+    request<{ defaultCurrency: string }>(`/backoffice/v1/admin/operators/${encodeURIComponent(operatorId)}/currency`)
+      .then((r) => {
+        if (live && r.defaultCurrency) setByOp((m) => ({ ...m, [operatorId]: r.defaultCurrency }));
       })
       .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [key, operatorId, byOp]);
-  return <CurrencyCtx.Provider value={byOp[key]}>{children}</CurrencyCtx.Provider>;
+  }, [operatorId, byOp]);
+  return <CurrencyCtx.Provider value={operatorId ? byOp[operatorId] : undefined}>{children}</CurrencyCtx.Provider>;
 }
 
 /** Moneda a usar al formatear montos del operador activo (undefined si aún se desconoce). */

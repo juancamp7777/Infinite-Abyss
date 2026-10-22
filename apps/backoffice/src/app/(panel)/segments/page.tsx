@@ -107,7 +107,7 @@ export default function SegmentsPage() {
             <Field label="Descripción" htmlFor="sd"><input id="sd" className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} /></Field>
             <RuleBuilder key={formKey} rule={rule} onChange={setRule} />
             <div className="flex flex-wrap items-center gap-3">
-              <div aria-live="polite" className="rounded-md bg-violet-500/15 px-3 py-2 text-sm">
+              <div aria-live="polite" className="rounded-md bg-brand2/15 px-3 py-2 text-sm">
                 {count.loading ? "Calculando…" : count.error ? <span className="text-red-300">{count.error}</span> : <>Coinciden <strong>{int(count.value)}</strong> jugadores</>}
               </div>
               <Button onClick={save} disabled={!name.trim()}>{editing ? "Guardar cambios" : "Crear segmento"}</Button>

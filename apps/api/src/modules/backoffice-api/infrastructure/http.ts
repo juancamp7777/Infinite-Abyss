@@ -102,6 +102,18 @@ export function createBackofficeRouter(d: BackofficeRouterDeps): Router {
     }),
   );
 
+  // --- Moneda del operador (el backoffice la usa para formatear montos; cualquier rol, siempre en su alcance) ---
+  router.get(
+    '/admin/operators/:operatorId/currency',
+    auth,
+    asyncHandler(async (req, res) => {
+      const op = scopeOperator(req, parse(opId, req.params.operatorId));
+      const info = await d.deps.operators?.getCurrencyInfo(op);
+      if (!info) throw notFound('Operador desconocido');
+      sendJson(res, { operatorId: op, defaultCurrency: info.defaultCurrency, currencies: info.currencies });
+    }),
+  );
+
   // --- Reportes CSV ---
   router.get(
     '/admin/reports/:type.csv',

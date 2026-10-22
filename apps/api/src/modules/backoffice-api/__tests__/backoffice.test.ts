@@ -1,6 +1,7 @@
 import express from 'express';
 import type { AddressInfo } from 'net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { InMemoryOperators } from '../../shared/adapters/InMemoryOperators';
 import { InMemoryWallet } from '../../shared/adapters/InMemoryWallet';
 import { devToken, MockAuth } from '../../shared/adapters/MockAuth';
 import { InMemoryEventBus } from '../../shared/events/EventBus';
@@ -250,5 +251,47 @@ describe('backoffice-api: login de desarrollo', () => {
     const h = await start({ NODE_ENV: 'production' });
     expect((await h.call('POST', '/dev/login', undefined, { role: 'PLATFORM_ADMIN' })).status).toBe(404);
     await h.close();
+  });
+});
+
+describe('backoffice-api: moneda del operador', () => {
+  let base: string;
+  let close: () => Promise<void>;
+  const get = async (op: string, token?: string) => {
+    const res = await fetch(`${base}/admin/operators/${encodeURIComponent(op)}/currency`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    return { status: res.status, json: (await res.json()) as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  };
+  beforeEach(async () => {
+    const app = express();
+    const env = { NODE_ENV: 'test' };
+    const operators = new InMemoryOperators().set('op-1', { defaultCurrency: 'COP', currencies: ['COP', 'USD'] }).set('op-2', { defaultCurrency: 'USD' });
+    const deps: ModuleDeps = { wallet: new InMemoryWallet(), bus: new InMemoryEventBus(), auth: new MockAuth(env), compliance: new InMemoryPlayerCompliance(), operators, logger: silentLogger, env, services: {} };
+    app.use(BACKOFFICE_PREFIX, createBackoffice(deps, { costs, clock: () => NOW }).router);
+    const server = app.listen(0);
+    await new Promise<void>((r) => server.once('listening', () => r()));
+    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}${BACKOFFICE_PREFIX}`;
+    close = () => new Promise<void>((r) => server.close(() => r()));
+  });
+  afterEach(async () => { await close(); });
+
+  it('devuelve la moneda por id del operador a cualquier rol de su operador', async () => {
+    for (const role of ['OPERATOR_ADMIN', 'OPERATOR_AGENT'] as const) {
+      const r = await get('op-1', devToken(role, 'op-1', 'u1'));
+      expect(r.status, role).toBe(200);
+      expect(r.json).toEqual({ operatorId: 'op-1', defaultCurrency: 'COP', currencies: ['COP', 'USD'] });
+    }
+  });
+
+  it('la plataforma consulta cualquier operador y cada uno con su propia moneda', async () => {
+    const root = devToken('PLATFORM_ADMIN', '*', 'root');
+    expect((await get('op-1', root)).json.defaultCurrency).toBe('COP');
+    expect((await get('op-2', root)).json.defaultCurrency).toBe('USD');
+  });
+
+  it('exige sesión, respeta el alcance y valida el id', async () => {
+    expect((await get('op-1')).status).toBe(401);
+    expect((await get('op-2', devToken('OPERATOR_ADMIN', 'op-1', 'u1'))).status).toBe(403);
+    expect((await get('no-existe', devToken('PLATFORM_ADMIN', '*', 'root'))).status).toBe(404);
+    expect((await get('mal id!', devToken('PLATFORM_ADMIN', '*', 'root'))).status).toBe(400);
   });
 });

@@ -9,10 +9,19 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Marca Infinite Abyss: dorado (acción principal) y cian (foco, enlaces, acentos). */
+  --color-brand: #f4b73f;
+  --color-brand-hi: #ffcd63;
+  --color-brand2: #3cc8f0;
+  --color-ink: #0a0f1a;
+  --color-panel: #0b1a30;
+  --color-panel-2: #0e2240;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(900px 420px at 70% -160px, rgb(60 200 240 / .08), transparent 70%),
+    var(--background);
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -20,4 +29,12 @@ body {
 select option {
   background: #0b1a30;
   color: #fff;
+}
+
+/* Tarjeta KPI: borde de acento a la izquierda según el tono. */
+.kpi { position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--kpi, rgb(255 255 255 / .2)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation: none !important; transition: none !important; }
 }

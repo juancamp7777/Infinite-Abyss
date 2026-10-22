@@ -37,14 +37,14 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-6">
-      <h1 className="flex flex-col items-start gap-2 text-2xl font-semibold">
+      <h1 className="flex flex-col items-center gap-3 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss" className="h-10 w-auto" />
-        <span>Infinite Abyss Backoffice</span>
+        <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss" className="h-14 w-auto" />
+        <span className="text-[11px] font-semibold uppercase tracking-[.3em] text-brand">Backoffice</span>
       </h1>
       {MOCK_AUTH && <Notice tone="warn">Modo desarrollo: login simulado (NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH=true). Nunca se activa en producción.</Notice>}
       {notice && <Notice tone="warn">{notice}</Notice>}
-      <form onSubmit={submit} className="space-y-4 rounded-xl border border-white/10 bg-white/[0.04] p-5">
+      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-white/10 bg-panel/80 p-6 shadow-2xl shadow-black/40">
         {MOCK_AUTH ? (
           <>
             <Field label="Rol" htmlFor="role">

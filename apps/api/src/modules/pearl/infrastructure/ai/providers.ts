@@ -32,7 +32,7 @@ Devuelve exactamente los datos visibles, sin inventar:
 - time: hora de la operación en formato HH:MM de 24 h ("" si no aparece).
 - sender_name: titular de la cuenta ORIGEN (quien paga), nunca el destinatario. "" si no aparece.
 - sender_tax_id: CUIT/CUIL/documento del que paga ("" si no aparece).
-- receiver_account: CBU/CVU/número de cuenta o alias DESTINO tal como se ve, aunque esté parcial ("" si no aparece).
+- receiver_account: cuenta DESTINO tal como se ve, aunque esté parcial: CBU/CVU o alias (Argentina), número de cuenta, llave o celular Nequi/Daviplata (Colombia) ("" si no aparece).
 - tamper_signals: solo indicios CLAROS de edición (tipografías o alineaciones distintas en el monto o la fecha, números superpuestos, recortes sobre datos clave). Lista vacía si no hay evidencia.`;
 
 export const JUDGE_PROMPT = `Eres el juez de una caja de casino. Una regla automática quiere acreditar un depósito porque el comprobante coincide con un pago real del banco.

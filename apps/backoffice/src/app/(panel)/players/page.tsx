@@ -105,6 +105,40 @@ export default function PlayersPage() {
   );
 }
 
+/** Envío directo desde el CRM con una plantilla (push, email, SMS, WhatsApp o bandeja in-app). */
+function SendMessage({ playerId }: { playerId: string }) {
+  const { call } = useApiClient();
+  const templates = useApi<{ items: Array<{ id: string; name: string; channel: string }> }>("/marketing/v1/admin/templates");
+  const stats = useApi<{ enabled: boolean; devices: number }>("/marketing/v1/admin/push/stats");
+  const [tpl, setTpl] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const send = async () => {
+    setMsg(null);
+    try {
+      const r = await call<{ status: string; error?: string; reason?: string }>("/marketing/v1/admin/send", { method: "POST", body: { playerId, templateId: tpl } });
+      setMsg(r.status === "sent" || r.status === "delivered" ? "Enviado ✓" : `Estado: ${r.status}${r.reason ? ` · ${r.reason}` : ""}${r.error ? ` · ${r.error}` : ""}`);
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : "Error inesperado");
+    }
+  };
+  return (
+    <div className="space-y-2 rounded-lg border border-white/10 p-3">
+      <div className="flex items-center justify-between text-xs text-white/50">
+        <span className="font-semibold text-white/70">Enviar mensaje</span>
+        {stats.data && <span>{stats.data.enabled ? `Push activo · ${stats.data.devices} dispositivos en el operador` : "Push sin claves VAPID"}</span>}
+      </div>
+      <div className="flex gap-2">
+        <select className={`${inputCls} min-w-0 flex-1`} value={tpl} onChange={(e) => setTpl(e.target.value)} aria-label="Plantilla">
+          <option value="">Elige una plantilla…</option>
+          {(templates.data?.items ?? []).map((t) => <option key={t.id} value={t.id}>{t.name} · {t.channel}</option>)}
+        </select>
+        <Button disabled={!tpl} onClick={() => void send()}>Enviar</Button>
+      </div>
+      {msg && <p className="text-xs text-white/60">{msg}</p>}
+    </div>
+  );
+}
+
 function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const { call } = useApiClient();
   const d = useApi<Detail>(`/crm/v1/admin/players/${encodeURIComponent(playerId)}`);
@@ -135,6 +169,7 @@ function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => 
           <Tabs tabs={[{ id: "resumen", label: "Resumen" }, { id: "timeline", label: "Timeline" }, { id: "notas", label: "Notas" }, { id: "tickets", label: `Tickets (${d.data.tickets.length})` }]} value={tab} onChange={setTab} />
           {tab === "resumen" && (
             <div className="space-y-3 text-sm">
+              <SendMessage playerId={playerId} />
               <dl className="grid grid-cols-2 gap-2">
                 {([
                   ["LTV", money(d.data.profile.ltv, d.data.profile.currency)], ["GGR", money(d.data.profile.ggr, d.data.profile.currency)], ["Depósitos", money(d.data.profile.depositsTotal, d.data.profile.currency)], ["Retiros", money(d.data.profile.withdrawalsTotal, d.data.profile.currency)],

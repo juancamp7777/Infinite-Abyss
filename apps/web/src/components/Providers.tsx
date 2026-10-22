@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteFooter } from "./SiteFooter";
+import { AgeGate } from "./AgeGate";
+import { PushPrompt } from "./PushPrompt";
 
 /** Rutas que exigen sesión de jugador. /admin tiene su propio login de backoffice. */
 const PROTECTED = ["/lobby/vip", "/slots", "/roulette", "/blackjack", "/mines", "/crash", "/plinko", "/cashier", "/account"];
@@ -60,6 +62,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <Guard>{children}</Guard>
         </div>
         <SiteFooter />
+        <PushPrompt />
+        <AgeGate />
       </AuthProvider>
     </ThemeProvider>
   );

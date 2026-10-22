@@ -3,7 +3,7 @@ import type { Server as SocketIOServer } from 'socket.io';
 import type { DomainEvents, EventBus } from '../../shared/events/EventBus';
 import type { ModuleDeps } from '../../shared/module';
 import type { SegmentPort } from '../../shared/ports/SegmentPort';
-import { buildChannels, type ChannelRegistry, type FetchLike } from '../infrastructure/channels';
+import { buildChannels, resolveVapid, type ChannelRegistry, type FetchLike } from '../infrastructure/channels';
 import { createInMemoryRepos, createPrismaRepos, type MarketingRepos } from '../infrastructure/stores';
 import { AffiliateService } from './AffiliateService';
 import { CampaignService } from './CampaignService';
@@ -30,6 +30,8 @@ export interface MarketingRuntime {
   state: PlayerStateService;
   config: MessagingConfig;
   production: boolean;
+  /** Clave pública VAPID para suscribir navegadores (null = push desactivado). */
+  vapidPublicKey: string | null;
   /** Procesa campañas programadas, journeys vencidos/temporales y reintentos de postbacks. */
   tick(now?: Date): Promise<void>;
   start(intervalMs?: number): void;
@@ -58,8 +60,9 @@ export function createRuntime(deps: ModuleDeps, opts: RuntimeOptions = {}): Mark
     linkAllowlist: list(env.MKT_LINK_ALLOWLIST),
     defaultConversionWindowDays: Number(env.MKT_CONVERSION_WINDOW_DAYS ?? 7),
   };
+  const vapid = resolveVapid(env, logger);
   const channels =
-    opts.channels ?? buildChannels({ env, inbox: repos.inbox, pushSubs: repos.pushSubs, io: opts.io, clock, logger, fetchFn: opts.fetchFn });
+    opts.channels ?? buildChannels({ env, inbox: repos.inbox, pushSubs: repos.pushSubs, vapid, io: opts.io, clock, logger, fetchFn: opts.fetchFn });
   const services = () => deps.services;
   const messaging = new MessagingService({ repos, channels, compliance: deps.compliance, clock, config, logger, services });
   const state = new PlayerStateService(repos, clock);
@@ -116,6 +119,7 @@ export function createRuntime(deps: ModuleDeps, opts: RuntimeOptions = {}): Mark
   };
 
   return {
+    vapidPublicKey: vapid?.publicKey ?? null,
     repos, messaging, consent, campaigns, journeys, affiliates, state, config, production, tick, subscribe,
     start(intervalMs = Number(env.MKT_TICK_INTERVAL_MS ?? 60_000)) {
       if (timer) return;

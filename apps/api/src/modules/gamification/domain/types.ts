@@ -203,7 +203,7 @@ export function defaultLevels(operatorId: string, currency: string = DEV_FALLBAC
     ['gold', 'Gold', 5000n, 1500, 2500n, 'Misiones exclusivas'],
     ['platinum', 'Platinum', 20000n, 2000, 10000n, 'Gestor de cuenta y retiros prioritarios'],
     ['diamond', 'Diamond', 100000n, 2500, 50000n, 'Eventos y regalos exclusivos'],
-    ['elite', 'Nymfo Elite', 500000n, 3500, 250000n, 'Atención 24/7 y beneficios a medida'],
+    ['elite', 'Abyss Elite', 500000n, 3500, 250000n, 'Atención 24/7 y beneficios a medida'],
   ];
   return rows.map(([id, name, pointsRequired, rakebackBps, levelUpBonus, benefits], i) => ({
     id,

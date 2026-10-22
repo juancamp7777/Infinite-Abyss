@@ -110,7 +110,7 @@ export default function DiceGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Nymfo Dice" session={session} aside={aside}>
+    <GameShell title="Abyss Dice" session={session} aside={aside}>
       <div className="space-y-4">
         <div className="rounded-2xl bg-slate-900 p-4 sm:p-8">
           <div className="mb-6 text-center" aria-live="polite">

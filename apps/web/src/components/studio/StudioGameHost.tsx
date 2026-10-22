@@ -18,7 +18,7 @@ export default function StudioGameHost(props: StudioGameProps) {
         <div>
           <h1 className="mb-2 text-xl font-bold">Juego no disponible</h1>
           <p className="mb-4 text-sm text-slate-400">
-            No existe el juego «{props.gameId}» en Nymfo Studios.
+            No existe el juego «{props.gameId}» en Abyss Studios.
           </p>
           <Link href="/" className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold hover:bg-slate-700">
             Volver al lobby

@@ -4,7 +4,7 @@ import type { JwtService } from '../../auth/JwtService';
 import type { AuthPort, Principal, Role } from '../../../modules/shared/ports/AuthPort';
 
 /**
- * Mapeo de roles de backoffice de la Fase 1 a los roles de los módulos Nymfo.
+ * Mapeo de roles de backoffice de la Fase 1 a los roles de los módulos Infinite Abyss.
  * SUPPORT y FINANCE operan como agentes (lectura de jugadores, tickets, reportes) sin permisos de administración.
  */
 export const BACKOFFICE_ROLE_MAP: Record<BackofficeRoleName, Role> = {

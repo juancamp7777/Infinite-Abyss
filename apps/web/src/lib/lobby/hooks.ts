@@ -85,7 +85,7 @@ export function useJackpots() {
   const [connected, setConnected] = useState(false);
   useEffect(() => {
     const t = socketTarget('/promotions');
-    const s: Socket = io(t.url, { path: t.path, query: { operatorId: moduleOperatorId() }, transports: ['websocket', 'polling'], reconnectionDelayMax: 8000 });
+    const s: Socket = io(t.url, { path: t.path, addTrailingSlash: t.addTrailingSlash, query: { operatorId: moduleOperatorId() }, transports: ['websocket', 'polling'], reconnectionDelayMax: 8000 });
     s.on('connect', () => setConnected(true));
     s.on('disconnect', () => setConnected(false));
     s.on('jackpot:update', (p: Jackpot[] | { jackpots: Jackpot[] }) => setLive(Array.isArray(p) ? p : p.jackpots ?? []));
@@ -104,7 +104,7 @@ export function useLiveLeaderboard(id: string) {
     const token = playerBearer();
     if (!token) return;
     const t = socketTarget('/gamification');
-    const s: Socket = io(t.url, { path: t.path, auth: { token }, transports: ['websocket', 'polling'], reconnectionDelayMax: 8000 });
+    const s: Socket = io(t.url, { path: t.path, addTrailingSlash: t.addTrailingSlash, auth: { token }, transports: ['websocket', 'polling'], reconnectionDelayMax: 8000 });
     const sub = () => s.emit('tournament:subscribe', { id }, (r: { ok?: boolean; leaderboard?: Leaderboard }) => { if (r?.ok && r.leaderboard) setLive(r.leaderboard); });
     s.on('connect', () => { setConnected(true); sub(); });
     s.on('disconnect', () => setConnected(false));

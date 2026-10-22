@@ -64,7 +64,7 @@ export default function JackpotsPage() {
             noun="jackpot"
             listPath={`${P}/jackpots`}
             template={{
-              name: "Nymfo Progressive",
+              name: "Abyss Progressive",
               currency: cur,
               contributionBps: 100,
               minBet: sampleMinor(0.1, cur),

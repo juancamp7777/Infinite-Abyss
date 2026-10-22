@@ -142,7 +142,7 @@ export default function MinesGame(props: StudioGameProps) {
 
   const won = last ? BigInt(last.win) > BigInt(0) : null;
   return (
-    <GameShell title="Nymfo Mines" session={session} aside={aside}>
+    <GameShell title="Abyss Mines" session={session} aside={aside}>
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Multiplicador" value={`${(view?.currentMultiplier ?? 1).toFixed(2)}×`} tone={playing ? 'win' : undefined} />

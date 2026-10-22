@@ -1,7 +1,7 @@
 import type { GameMath } from '../GameMath';
 
 /**
- * Registro de matemáticas de juegos de Nymfo Studios (slots y originals).
+ * Registro de matemáticas de juegos de Abyss Studios (slots y originals).
  * Lo llena la integración importando cada juego y llamando a registerGame.
  */
 export const GAMES: Record<string, GameMath<any, any>> = {};

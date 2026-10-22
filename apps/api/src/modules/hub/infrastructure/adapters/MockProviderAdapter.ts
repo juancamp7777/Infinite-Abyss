@@ -25,7 +25,7 @@ export const MOCK_GAMES: GameDTO[] = [
 ];
 
 /**
- * Proveedor simulado completo: habla el protocolo seamless estándar de Nymfo con firma HMAC,
+ * Proveedor simulado completo: habla el protocolo seamless estándar de Infinite Abyss con firma HMAC,
  * expone catálogo y, si HUB_MOCK_PROVIDER=1, un mini servidor de juego en /hub/mock-provider/game/:gameId
  * (ver infrastructure/http/mockProviderServer.ts) que llama a nuestra billetera para hacer bet y win.
  * Acepta wins sin apuesta previa solo si traen `bonus.type = 'free_rounds'`.

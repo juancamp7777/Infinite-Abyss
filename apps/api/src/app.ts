@@ -61,7 +61,7 @@ import { PlayPlinkoUseCase } from './application/use-cases/plinko/PlayPlinkoUseC
 import { CrashGameEngine } from './domain/entities/CrashGame';
 import { SocketServer } from './infrastructure/sockets/SocketServer';
 
-// Módulos Nymfo (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice-api)
+// Módulos Infinite Abyss (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice-api)
 import { registerModules, captureRawBody } from './modules';
 import { InMemoryEventBus } from './modules/shared/events/EventBus';
 import { buildModuleDeps, Phase1GameEvents } from './infrastructure/modules';
@@ -258,7 +258,7 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
     });
     // Evita un unhandledRejection: el error se propaga a las peticiones (next(e)) y a quien espere `ready`.
     readyPromise.catch((e: unknown) =>
-      logger.error('Nymfo modules failed to mount', { event: 'MODULES_MOUNT_ERROR', error: String(e) }),
+      logger.error('Infinite Abyss modules failed to mount', { event: 'MODULES_MOUNT_ERROR', error: String(e) }),
     );
   }
 

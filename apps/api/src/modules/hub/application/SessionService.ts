@@ -119,7 +119,7 @@ export class SessionService {
     }
     const game: Game | null = await this.catalog.findGame(input.gameId);
     if (!game || game.providerId !== 'nymfo-studios' || game.status !== 'active') {
-      throw hubError('GAME_NOT_FOUND', 'Solo se distribuyen juegos activos de Nymfo Studios');
+      throw hubError('GAME_NOT_FOUND', 'Solo se distribuyen juegos activos de Abyss Studios');
     }
     const adapter = this.adapters.get('nymfo-studios');
     if (!adapter) throw hubError('GAME_UNAVAILABLE', 'Studios no disponible');

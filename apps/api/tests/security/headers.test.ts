@@ -12,6 +12,7 @@ const PROD_ENV = {
   // Valores de PRUEBA (no reales): la config de producción exige secretos de ≥ 32 caracteres.
   MKT_UNSUBSCRIBE_SECRET: 'test-only-mkt-unsubscribe-0123456789abcdef',
   PROMO_DROPS_SECRET: 'test-only-promo-drops-0123456789abcdef-xx',
+  FEED_PSEUDONYM_SECRET: 'test-only-feed-pseudonym-0123456789abcdef',
   CORS_ORIGINS: 'https://casino.example.com, https://otra.example.com/ruta',
   PUBLIC_WEB_URL: 'https://web.example.com/lobby',
   BACKOFFICE_URL: 'https://bo.example.com/_svc/backoffice',

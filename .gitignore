@@ -11,3 +11,6 @@ apps/backoffice/node_modules
 
 # Repos de referencia (solo lectura, negocios aparte; nunca se suben)
 _source/
+
+# Configuración local de Claude Code (vista previa)
+.claude/

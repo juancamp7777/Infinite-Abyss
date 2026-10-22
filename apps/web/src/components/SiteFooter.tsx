@@ -7,7 +7,7 @@ import { useTheme } from "@/lib/theme";
 export function BrandLogo({ className = "h-8" }: { className?: string }) {
   const { brand, operator } = useTheme();
   const name = brand.displayName || operator.name;
-  return <img src={brand.logoUrl || "/brand/nymfo-logo.svg"} alt={`Logotipo de ${name}`} className={`${className} w-auto`} />;
+  return <img src={brand.logoUrl || "/brand/infinite-abyss-logo.svg"} alt={`Logotipo de ${name}`} className={`${className} w-auto`} />;
 }
 
 export function SiteFooter() {
@@ -36,7 +36,7 @@ export function SiteFooter() {
         )}
         <p>Juega con responsabilidad. Solo mayores de 18 años.</p>
         <p className="text-gray-400">
-          © {new Date().getFullYear()} {name} · Plataforma Nymfo
+          © {new Date().getFullYear()} {name} · Plataforma Infinite Abyss
         </p>
       </div>
     </footer>

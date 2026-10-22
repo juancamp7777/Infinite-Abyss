@@ -3,7 +3,7 @@ import type { Rng } from '../fairness/Rng';
 import { floor4, GameActionError, GameParamError, InteractiveGame, OriginalGameMath, resolveOriginalRtp } from './types';
 
 /**
- * Nymfo Mines: grilla 5x5 (celdas 0–24) con 1–24 minas colocadas por Fisher-Yates con el Rng provably fair
+ * Abyss Mines: grilla 5x5 (celdas 0–24) con 1–24 minas colocadas por Fisher-Yates con el Rng provably fair
  * (las primeras `mines` posiciones de la permutación). Tras r diamantes descubiertos:
  *   P(supervivencia) = Π_{i<r} (25 − minas − i) / (25 − i),   multiplicador = floor4(RTP / P).
  * Retirar con 0 descubiertos no está permitido; el cierre forzado sin descubrir devuelve la apuesta (1x).
@@ -84,7 +84,7 @@ for (let m = 1; m <= 24; m++) for (let r = 1; r <= 25 - m; r++) maxWin = Math.ma
 
 export const nymfoMines: OriginalGameMath<MinesConfig, MinesOutcome> = {
   id: 'nymfo-mines',
-  name: 'Nymfo Mines',
+  name: 'Abyss Mines',
   kind: 'original',
   rtpTarget: 0.99,
   rtpRange: { min: 0.96, max: 0.99 },
@@ -120,7 +120,7 @@ function minesView(s: MinesState): Record<string, unknown> {
 
 export const nymfoMinesInteractive: InteractiveGame<MinesState> = {
   id: 'nymfo-mines',
-  name: 'Nymfo Mines',
+  name: 'Abyss Mines',
   rtpTarget: nymfoMines.rtpTarget,
   rtpRange: nymfoMines.rtpRange,
   volatility: 'high',

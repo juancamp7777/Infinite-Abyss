@@ -217,7 +217,7 @@ export default function CrashGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Nymfo Crash" session={session} aside={aside}>
+    <GameShell title="Abyss Crash" session={session} aside={aside}>
       <div className="space-y-3">
         <div className="relative">
           <canvas ref={canvasRef} width={800} height={420} role="img" aria-label="Curva de multiplicador de Crash" className="aspect-[40/21] w-full rounded-2xl border border-white/10" />

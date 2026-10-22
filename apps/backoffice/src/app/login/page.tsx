@@ -39,8 +39,8 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-6">
       <h1 className="flex flex-col items-start gap-2 text-2xl font-semibold">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${BASE_PATH}/brand/nymfo-logo.svg`} alt="Nymfo Casino" className="h-10 w-auto" />
-        <span>Nymfo Backoffice</span>
+        <img src={`${BASE_PATH}/brand/infinite-abyss-logo.svg`} alt="Infinite Abyss" className="h-10 w-auto" />
+        <span>Infinite Abyss Backoffice</span>
       </h1>
       {MOCK_AUTH && <Notice tone="warn">Modo desarrollo: login simulado (NEXT_PUBLIC_BACKOFFICE_MOCK_AUTH=true). Nunca se activa en producción.</Notice>}
       {notice && <Notice tone="warn">{notice}</Notice>}

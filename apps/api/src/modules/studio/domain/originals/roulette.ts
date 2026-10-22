@@ -3,7 +3,7 @@ import type { Rng } from '../fairness/Rng';
 import { GameParamError, isRecord, OriginalGameMath } from './types';
 
 /**
- * Nymfo Roulette: ruleta europea (0–36, una sola cero). Pago (incluida la apuesta) = 36 / números cubiertos,
+ * Abyss Roulette: ruleta europea (0–36, una sola cero). Pago (incluida la apuesta) = 36 / números cubiertos,
  * por lo que todas las apuestas tienen RTP 36/37 ≈ 97.297 % (fijo, no configurable).
  * Apuestas: straight, split, street, corner, line, dozen, column, red, black, odd, even, low, high.
  * params.bets = [{ type, numbers?, value?, amount }]; amount en unidades mínimas (string) y la suma
@@ -131,7 +131,7 @@ export function rouletteTotal(params: Record<string, unknown> | undefined): bigi
 
 export const nymfoRoulette: OriginalGameMath<RouletteConfig, RouletteOutcome> = {
   id: 'nymfo-roulette',
-  name: 'Nymfo Roulette',
+  name: 'Abyss Roulette',
   kind: 'original',
   rtpTarget: 36 / 37,
   volatility: 'medium',

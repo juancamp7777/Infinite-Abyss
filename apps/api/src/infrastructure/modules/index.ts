@@ -28,7 +28,7 @@ export interface ModuleIntegrationInput {
 }
 
 /**
- * Adaptadores reales de la Fase 1 para los módulos Nymfo (lo que dev-server.ts sustituye por InMemoryWallet/MockAuth):
+ * Adaptadores reales de la Fase 1 para los módulos Infinite Abyss (lo que dev-server.ts sustituye por InMemoryWallet/MockAuth):
  * billetera y fondos de bono sobre el ledger Prisma, auth sobre los JWT, cumplimiento y betGuard sobre juego responsable.
  * Devuelve los deps listos para `registerModules`.
  */

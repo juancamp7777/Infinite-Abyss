@@ -45,7 +45,7 @@ interface OperatorSeed {
 export const SEED_OPERATORS: OperatorSeed[] = [
   {
     slug: 'nymfo',
-    name: 'Nymfo Casino',
+    name: 'Infinite Abyss',
     defaultCurrency: 'COP',
     currencies: ['COP', 'USD'],
     chipsEnabled: false,
@@ -58,15 +58,15 @@ export const SEED_OPERATORS: OperatorSeed[] = [
       betPresets: { COP: ['50000', '100000', '200000', '500000', '1000000', '5000000'] },
     },
     brand: {
-      displayName: 'Nymfo Casino',
-      logoUrl: '/brand/nymfo-logo.svg',
+      displayName: 'Infinite Abyss',
+      logoUrl: '/brand/infinite-abyss-logo.svg',
       colors: {
-        primary: '#d4af37',
-        secondary: '#1a1a1a',
-        accent: '#f5d76e',
-        background: '#050505',
-        surface: '#121212',
-        text: '#f5f5f5',
+        primary: '#f4b73f',
+        secondary: '#3cc8f0',
+        accent: '#ffd978',
+        background: '#050d1c',
+        surface: '#0b1a30',
+        text: '#e8eef8',
       },
       fontFamily: 'Inter, system-ui, sans-serif',
       legal: {

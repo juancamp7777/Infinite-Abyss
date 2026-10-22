@@ -94,7 +94,7 @@ describe('módulo promotions montado (HTTP + bus)', () => {
 
   it('jackpots: configuración, endpoint público, contribución por bus y reporte', async () => {
     const created = await call('POST', '/admin/jackpots', admin, {
-      name: 'Nymfo Triple', currency: CUR, contributionBps: 100,
+      name: 'Abyss Triple', currency: CUR, contributionBps: 100,
       levels: [
         { key: 'mini', seedAmount: '1000', shareBps: 7000, triggerChancePpm: 50 },
         { key: 'mega', seedAmount: '50000', shareBps: 3000, triggerChancePpm: 1 },

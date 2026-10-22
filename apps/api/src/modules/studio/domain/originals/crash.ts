@@ -3,7 +3,7 @@ import type { Rng } from '../fairness/Rng';
 import { GameActionError, GameParamError, InteractiveGame, OriginalGameMath, resolveOriginalRtp } from './types';
 
 /**
- * Nymfo Crash. Punto de crash provably fair derivado del HMAC de la ronda:
+ * Abyss Crash. Punto de crash provably fair derivado del HMAC de la ronda:
  *   f = primer float del Rng,  v = RTP / (1 − f),  punto = floor(100·v)/100  (1.00 = crash instantáneo, tope 1 000 000x).
  * Así P(punto ≥ c) = RTP / c para todo c ≥ 1.01 y cualquier retiro en c devuelve exactamente RTP (edge = 1 − RTP).
  * Se gana si el retiro c ≤ punto. El retiro mínimo es 1.01x y el máximo 10 000x.
@@ -58,7 +58,7 @@ export function parseCashout(value: unknown, field = 'autoCashout'): number {
 
 export const nymfoCrash: OriginalGameMath<CrashConfig, CrashOutcome> = {
   id: 'nymfo-crash',
-  name: 'Nymfo Crash',
+  name: 'Abyss Crash',
   kind: 'original',
   rtpTarget: 0.99,
   rtpRange: { min: 0.96, max: 0.99 },
@@ -106,7 +106,7 @@ function resolveByClock(s: CrashState, now: number): { state: CrashState; multip
 /** Crash en vivo de un jugador (start → cashout) con la curva medida por el reloj del servidor. */
 export const nymfoCrashLive: InteractiveGame<CrashState> = {
   id: 'nymfo-crash',
-  name: 'Nymfo Crash',
+  name: 'Abyss Crash',
   rtpTarget: nymfoCrash.rtpTarget,
   rtpRange: nymfoCrash.rtpRange,
   volatility: 'very_high',

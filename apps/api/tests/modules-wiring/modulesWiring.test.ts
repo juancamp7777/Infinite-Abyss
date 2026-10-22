@@ -45,7 +45,7 @@ const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
 describe('cableado de módulos en createApp', () => {
   it('monta las rutas de los módulos y publica sus servicios', async () => {
     const mods = created.services.modules;
-    for (const key of ['hub.catalog', 'promotions', 'crm.crmSegments', 'marketing', 'gamification.service', 'backoffice.dashboard']) {
+    for (const key of ['hub.catalog', 'promotions', 'crm.crmSegments', 'marketing', 'gamification.service', 'backoffice.dashboard', 'feed.service']) {
       expect(mods[key], key).toBeDefined();
     }
     expect(mods['wallet.bonusFunds']).toBeDefined();
@@ -164,6 +164,40 @@ describe('cableado de módulos en createApp', () => {
     const names = seen.filter((e) => e.payload.playerId === user.id).map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['player.registered', 'login', 'session.started']));
     expect(seen.find((e) => e.name === 'player.registered')!.payload.operatorId).toBe(opA.id);
+  });
+
+  it('feed: bet.settled del bus real llega al feed público con alias y sin el id del jugador', async () => {
+    const player = await createTestPlayer(opA.id);
+    const other = await createTestPlayer(opA.id);
+    const roundId = randomUUID();
+    await created.services.bus.publish('bet.settled', {
+      operatorId: opA.id, playerId: player.id, at: new Date().toISOString(), amount: 500n, win: 6000n, currency: 'USD',
+      gameId: 'feed-wiring-game', provider: 'studio', category: 'originals', roundId, multiplier: 12,
+    });
+    await created.services.bus.drain();
+
+    const pub = await request(created.app).get(`/feed/v1/bets?operatorId=${opA.id}&kind=lucky`);
+    expect(pub.status).toBe(200);
+    const bet = pub.body.bets.find((b: { id: string }) => b.id === `studio:${roundId}`);
+    expect(bet).toMatchObject({ amount: '500', win: '6000', multiplier: 12, currency: 'USD', isMe: false });
+    expect(bet.player).toMatch(/^Jugador·[2-9A-Z]{6}$/);
+    expect(JSON.stringify(pub.body)).not.toContain(player.id);
+
+    // Otro operador no ve la apuesta.
+    const foreign = await request(created.app).get(`/feed/v1/bets?operatorId=${opB.id}`);
+    expect(foreign.body.bets.some((b: { id: string }) => b.id === `studio:${roundId}`)).toBe(false);
+
+    // El dueño la ve marcada como suya; otro jugador del mismo operador no.
+    const mineTok = jwt.signAccess({ sub: player.id, op: opA.id, typ: 'player' });
+    const own = await request(created.app).get('/feed/v1/bets?kind=lucky').set(bearer(mineTok));
+    expect(own.body.bets.find((b: { id: string }) => b.id === `studio:${roundId}`).isMe).toBe(true);
+    const mine = await request(created.app).get('/feed/v1/bets/mine').set(bearer(mineTok));
+    expect(mine.body.bets.map((b: { id: string }) => b.id)).toContain(`studio:${roundId}`);
+    const otherTok = jwt.signAccess({ sub: other.id, op: opA.id, typ: 'player' });
+    const notOwn = await request(created.app).get('/feed/v1/bets?kind=lucky').set(bearer(otherTok));
+    expect(notOwn.body.bets.find((b: { id: string }) => b.id === `studio:${roundId}`).isMe).toBe(false);
+    // Un jugador no puede leer el feed de otro operador.
+    expect((await request(created.app).get(`/feed/v1/bets?operatorId=${opB.id}`).set(bearer(mineTok))).status).toBe(403);
   });
 });
 

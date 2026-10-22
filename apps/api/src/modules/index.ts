@@ -11,6 +11,7 @@ import { crmModule } from './crm';
 import { marketingModule } from './marketing';
 import { gamificationModule } from './gamification';
 import { backofficeModule } from './backoffice-api';
+import { feedModule } from './feed';
 
 export { captureRawBody } from './hub';
 export type { ModuleDeps, NymfoModule } from './shared/module';
@@ -24,6 +25,7 @@ export const ALL_MODULES: NymfoModule[] = [
   marketingModule,
   gamificationModule,
   backofficeModule,
+  feedModule,
 ];
 
 export type RegisterModulesDeps = Omit<ModuleDeps, 'services' | 'catalog' | 'betGuard' | 'segments'> & {
@@ -46,7 +48,7 @@ function first<T>(services: Record<string, unknown>, ...keys: string[]): T | und
 }
 
 /**
- * Monta todos los módulos de Nymfo (Hub, Studio, promociones, CRM, marketing, gamificación, backoffice)
+ * Monta todos los módulos de Infinite Abyss (Hub, Studio, promociones, CRM, marketing, gamificación, backoffice)
  * sobre la app Express y el servidor socket.io de la Fase 1.
  *
  * Los servicios publicados por cada módulo quedan con su clave original y también como `<módulo>.<clave>`
@@ -100,7 +102,7 @@ export async function registerModules(
       services[prefixed] = value;
       if (services[key] === undefined) services[key] = value;
     }
-    base.logger.info(`Módulo Nymfo montado: ${mod.name}`, { services: Object.keys(published ?? {}) });
+    base.logger.info(`Módulo montado: ${mod.name}`, { services: Object.keys(published ?? {}) });
   }
   return services;
 }

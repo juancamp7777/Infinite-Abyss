@@ -1,5 +1,5 @@
 /**
- * Ember Lines 20 — slot clásica 5x3 de Nymfo Studios (tema: farolillos y brasas).
+ * Ember Lines 20 — slot clásica 5x3 de Abyss Studios (tema: farolillos y brasas).
  *
  * Reglas (datos en config.json):
  *  - 20 líneas fijas, pagan de izquierda a derecha desde el rodillo 1 con 3+ símbolos (solo el mayor premio por línea).

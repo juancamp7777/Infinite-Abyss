@@ -108,7 +108,7 @@ beforeAll(async () => {
     new PassimpayProvider(PASSIMPAY, fakeFetch),
     new WompiProvider(WOMPI, fakeFetch),
   ]);
-  // Sin módulos Nymfo: esta prueba audita la lista blanca de rutas de dinero de la Fase 1; el cableado de los
+  // Sin módulos Infinite Abyss: esta prueba audita la lista blanca de rutas de dinero de la Fase 1; el cableado de los
   // módulos se prueba en tests/modules-wiring y el flujo completo con módulos en tests/e2e/modulesFullFlow.test.ts.
   created = createApp(getConfig(), { registry, bcryptCost: 4, rateLimit: { disabled: true } as any, modules: false });
   await new Promise<void>((r) => created.httpServer.listen(0, '127.0.0.1', r));

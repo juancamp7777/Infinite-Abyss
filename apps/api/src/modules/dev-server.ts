@@ -1,5 +1,5 @@
 /**
- * Servidor de desarrollo de los módulos Nymfo SIN la Fase 1 (billetera en memoria, MockAuth, eventos en memoria).
+ * Servidor de desarrollo de los módulos Infinite Abyss SIN la Fase 1 (billetera en memoria, MockAuth, eventos en memoria).
  * Sirve para probar el lobby (apps/web) y el backoffice (apps/backoffice) de punta a punta en local.
  *
  *   npm run dev:modules          # http://localhost:4000 (PORT para cambiarlo)
@@ -46,7 +46,8 @@ async function main(): Promise<void> {
   });
   app.use(cors({ origin: origins, credentials: true }));
   const server = http.createServer(app);
-  const io = new Server(server, { cors: { origin: origins } });
+  // addTrailingSlash: false como en SocketServer (el proxy /api-proxy de Next quita la barra final).
+  const io = new Server(server, { cors: { origin: origins }, addTrailingSlash: false });
 
   await registerModules(app, io, {
     wallet,
@@ -58,7 +59,7 @@ async function main(): Promise<void> {
   });
   app.get('/health', (_req, res) => { res.json({ ok: true }); });
 
-  server.listen(port, () => logger.info(`Nymfo módulos (dev) en http://localhost:${port}`));
+  server.listen(port, () => logger.info(`Infinite Abyss módulos (dev) en http://localhost:${port}`));
 }
 
 main().catch((err) => {

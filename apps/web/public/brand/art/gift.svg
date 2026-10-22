@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Regalo">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset=".4" stop-color="#f4b73f"/><stop offset="1" stop-color="#a8650f"/></linearGradient><linearGradient id="goldH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b9771a"/><stop offset=".5" stop-color="#ffe08a"/><stop offset="1" stop-color="#b9771a"/></linearGradient><radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#3cc8f0" stop-opacity=".55"/><stop offset="1" stop-color="#3cc8f0" stop-opacity="0"/></radialGradient><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".45"/></filter><linearGradient id="box" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f8ff0"/><stop offset="1" stop-color="#0b2f6b"/></linearGradient><linearGradient id="side" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c5fb8"/><stop offset="1" stop-color="#081f4a"/></linearGradient></defs>
+<ellipse cx="100" cy="112" rx="88" ry="78" fill="url(#glow)"/>
+<ellipse cx="100" cy="176" rx="62" ry="9" fill="#000" opacity=".35"/>
+<g filter="url(#soft)">
+<path d="M38 92h124v74a8 8 0 0 1-8 8H46a8 8 0 0 1-8-8z" fill="url(#box)"/>
+<path d="M138 92h24v74a8 8 0 0 1-8 8h-16z" fill="url(#side)" opacity=".8"/>
+<rect x="88" y="92" width="24" height="82" fill="url(#goldH)"/>
+<rect x="30" y="72" width="140" height="28" rx="7" fill="url(#box)"/>
+<rect x="30" y="72" width="140" height="10" rx="5" fill="#fff" opacity=".18"/>
+<rect x="86" y="72" width="28" height="28" fill="url(#goldH)"/>
+<path d="M100 72c-10-22-46-30-44-10 2 14 30 12 44 10z" fill="url(#gold)" stroke="#7a4a0c" stroke-width="2"/>
+<path d="M100 72c10-22 46-30 44-10-2 14-30 12-44 10z" fill="url(#gold)" stroke="#7a4a0c" stroke-width="2"/>
+<circle cx="100" cy="70" r="9" fill="url(#gold)" stroke="#7a4a0c" stroke-width="2"/>
+</g>
+<g transform="translate(160 46)"><path d="M0-9 2.2-2.2 9 0 2.2 2.2 0 9-2.2 2.2-9 0-2.2-2.2z" fill="#fffbe8"/></g><g transform="translate(40 128) scale(.6)"><path d="M0-9 2.2-2.2 9 0 2.2 2.2 0 9-2.2 2.2-9 0-2.2-2.2z" fill="#fffbe8"/></g><g transform="translate(150 140) scale(.5)"><path d="M0-9 2.2-2.2 9 0 2.2 2.2 0 9-2.2 2.2-9 0-2.2-2.2z" fill="#fffbe8"/></g>
+</svg>

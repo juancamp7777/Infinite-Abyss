@@ -48,18 +48,20 @@ const schema = z.object({
   BACKOFFICE_URL: optionalStr,
   RECONCILIATION_INTERVAL_MINUTES: intFromStr(60),
 
-  // Módulos Nymfo (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice-api)
+  // Módulos Infinite Abyss (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice-api)
   MODULES_ENABLED: strWithDefault('true').pipe(z.enum(['true', 'false'])),
   /** Firma de los enlaces de baja de marketing. Obligatorio en producción. */
   MKT_UNSUBSCRIBE_SECRET: optionalStr,
   /** Semilla HMAC de las tiradas de drops de promociones. Obligatorio en producción. */
   PROMO_DROPS_SECRET: optionalStr,
+  /** Clave HMAC de los alias públicos del feed de apuestas en vivo. Obligatorio en producción. */
+  FEED_PSEUDONYM_SECRET: optionalStr,
   /** URL pública con la que los proveedores llaman al Hub (/hub/v1/wallet). Por defecto PUBLIC_API_URL. */
   HUB_PUBLIC_API_URL: optionalStr,
 }).superRefine((e, ctx) => {
   if (e.NODE_ENV !== 'production' || e.MODULES_ENABLED !== 'true') return;
   // En producción no hay secretos efímeros ni por defecto para los módulos.
-  for (const key of ['MKT_UNSUBSCRIBE_SECRET', 'PROMO_DROPS_SECRET'] as const) {
+  for (const key of ['MKT_UNSUBSCRIBE_SECRET', 'PROMO_DROPS_SECRET', 'FEED_PSEUDONYM_SECRET'] as const) {
     const v = e[key];
     if (!v || v.length < 32) ctx.addIssue({ code: 'custom', path: [key], message: `${key} is required in production (min 32 chars)` });
   }

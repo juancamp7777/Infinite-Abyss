@@ -34,7 +34,7 @@ describe('jackpots: reparto de la contribución', () => {
 
   it('las contribuciones registradas suman exactamente el crecimiento de los pools', async () => {
     const env = jackpotEnv();
-    const j = await env.service.create({ operatorId: OP, name: 'Nymfo Mega', currency: CUR, contributionBps: 150, levels: LEVELS });
+    const j = await env.service.create({ operatorId: OP, name: 'Abyss Mega', currency: CUR, contributionBps: 150, levels: LEVELS });
     const bets = [333n, 1n, 999n, 12345n, 70n, 101n, 5000n];
     for (const b of bets) await env.service.onBetPlaced(bet('p1', b));
     const expected = bets.reduce((s, b) => s + (b * 150n) / 10000n, 0n);

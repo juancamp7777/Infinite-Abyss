@@ -94,7 +94,7 @@ export async function createHub(deps: ModuleDeps, repos?: HubRepositories) {
 }
 
 /**
- * Nymfo Hub: catálogo unificado, seamless wallet entrante (/hub/v1/wallet/*), adaptadores de proveedores,
+ * Infinite Abyss Hub: catálogo unificado, seamless wallet entrante (/hub/v1/wallet/*), adaptadores de proveedores,
  * lado saliente (/hub/v1/outbound/*) y reportes. Ver apps/api/src/modules/hub/.env.example.
  */
 export const hubModule: NymfoModule = {

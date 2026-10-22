@@ -1,5 +1,5 @@
 /**
- * Simulador de RTP/volatilidad de Nymfo Studios.
+ * Simulador de RTP/volatilidad de Abyss Studios.
  *   npm run sim -- --game <id> [--spins 10000000] [--seed n] [--bonus-buy] [--workers n] [--profile 96.5] [--params '{"mines":3}'] [--json]
  * Busca el juego en el registro (GAMES) y, si no está, en los juegos de prueba (dummy-coin, dummy-bonus).
  */
@@ -93,7 +93,7 @@ function printTable(r: SimReport, game: GameMath<any, any>): void {
     ['Duración', `${(r.durationMs / 1000).toFixed(2)} s`],
   ];
   const w = Math.max(...rows.map(([k]) => k.length));
-  console.log('\n=== Nymfo Studios · Simulación ===');
+  console.log('\n=== Abyss Studios · Simulación ===');
   rows.forEach(([k, v]) => console.log(`${k.padEnd(w)}  ${v}`));
   console.log('\nDistribución de ganancias (x apuesta):');
   console.log(`${'Bucket'.padEnd(12)}${'Rondas'.padStart(14)}${'% rondas'.padStart(12)}${'% del RTP'.padStart(12)}`);

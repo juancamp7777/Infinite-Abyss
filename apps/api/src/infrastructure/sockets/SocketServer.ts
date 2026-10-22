@@ -61,6 +61,8 @@ export class SocketServer {
   constructor(private readonly deps: SocketServerDeps) {
     this.io = new Server(deps.server, {
       cors: { origin: deps.corsOrigins },
+      // Acepta /socket.io y /socket.io/: los proxys (p. ej. el rewrite /api-proxy de Next) quitan la barra final.
+      addTrailingSlash: false,
       connectionStateRecovery: {
         maxDisconnectionDuration: 2 * 60 * 1000,
         // Re-ejecutar la autenticación también al recuperar la sesión

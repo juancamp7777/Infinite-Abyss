@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 178 64" role="img" aria-label="Infinite Abyss">
+  <defs>
+    <linearGradient id="ia-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe8a3"/>
+      <stop offset=".45" stop-color="#f4b73f"/>
+      <stop offset="1" stop-color="#b9771a"/>
+    </linearGradient>
+    <radialGradient id="ia-glow" cx=".5" cy=".46" r=".6">
+      <stop offset="0" stop-color="#1d6f8f"/>
+      <stop offset=".55" stop-color="#0a2340"/>
+      <stop offset="1" stop-color="#050d1c"/>
+    </radialGradient>
+    <radialGradient id="ia-eye" cx=".5" cy=".5" r=".55">
+      <stop offset="0" stop-color="#01040a"/>
+      <stop offset=".6" stop-color="#0b2a55"/>
+      <stop offset="1" stop-color="#14508a"/>
+    </radialGradient>
+  </defs>
+  <linearGradient id="ia-cyan" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8ff0ff"/>
+    <stop offset="1" stop-color="#1f73d6"/>
+  </linearGradient>
+  <g transform="translate(-4 2)"><path d="M32 30C26.5 20.5 9 19.5 9 30s17.5 9.5 23 0 23-10.5 23 0-17.5 9.5-23 0z" fill="none" stroke="#1a0d02" stroke-width="9" stroke-linejoin="round"/>
+  <ellipse cx="19.5" cy="30" rx="7.6" ry="4.6" fill="url(#ia-eye)"/>
+  <ellipse cx="44.5" cy="30" rx="7.6" ry="4.6" fill="url(#ia-eye)"/>
+  <ellipse cx="19.5" cy="30" rx="4.2" ry="2.3" fill="none" stroke="#3cc8f0" stroke-opacity=".7" stroke-width=".7"/>
+  <ellipse cx="44.5" cy="30" rx="4.2" ry="2.3" fill="none" stroke="#3cc8f0" stroke-opacity=".7" stroke-width=".7"/>
+  <path d="M32 30C26.5 20.5 9 19.5 9 30s17.5 9.5 23 0 23-10.5 23 0-17.5 9.5-23 0z" fill="none" stroke="url(#ia-gold)" stroke-width="5.6" stroke-linejoin="round"/>
+  <path d="M32 30C26.5 20.5 9 19.5 9 30s17.5 9.5 23 0 23-10.5 23 0-17.5 9.5-23 0z" fill="none" stroke="#fff3cf" stroke-opacity=".75" stroke-width=".7"/>
+  <path d="M53.5 15.5l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#fffbe8"/></g>
+  <text x="64" y="27" font-family="Cinzel, 'Trajan Pro', Georgia, 'Times New Roman', serif" font-size="15" font-weight="700" letter-spacing="4.2" fill="url(#ia-gold)" stroke="#1a0d02" stroke-width=".6" paint-order="stroke">INFINITE</text>
+  <text x="63" y="54" font-family="Cinzel, 'Trajan Pro', Georgia, 'Times New Roman', serif" font-size="26" font-weight="900" letter-spacing="2.4" fill="url(#ia-cyan)" stroke="#f4b73f" stroke-width="1.1" paint-order="stroke">ABYSS</text>
+</svg>

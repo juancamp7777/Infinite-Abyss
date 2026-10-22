@@ -99,6 +99,7 @@ export class CasinoSDK {
     const target = socketTarget();
     const socket = io(target.url, {
       path: target.path,
+      addTrailingSlash: target.addTrailingSlash,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
       // websocket primero con respaldo a polling (proxies que no pasan Upgrade).

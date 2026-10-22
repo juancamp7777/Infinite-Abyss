@@ -89,6 +89,17 @@ Base: módulo `crm` (perfil 360, segmentos, timeline, tickets). Se porta de Magi
 - **Bot IA de soporte y caja** con atajo de FAQs por embeddings antes del LLM, herramientas acotadas (consultar saldo, crear jugador, aplicar bono) y consumo medido. Toda acción con dinero pasa por el ledger y queda auditada.
 - **SLA de respuesta y presencia de agentes**: demoras escaladas, pausas, inactividad e incidentes.
 
+#### Abyss Flows: constructor de flujos propio (tipo n8n)
+
+Una herramienta visual para que el operador diseñe, sin programar, cómo responden los bots (webchat, caja, soporte) y las automatizaciones. Reemplaza el n8n externo que usan los sistemas actuales ("Obrero principal") y parte del motor `Automation::Flow` de Magik y del bot cajero de RoboBeast.
+
+- **Canvas de nodos** con versiones (borrador → publicado → historial) y ejecución paso a paso inspeccionable.
+- **Disparadores**: mensaje entrante (por canal), evento del casino (registro, depósito, retiro, inactividad), horario y webhook firmado.
+- **Nodos**: condición, esperar, responder (texto, botones, plantillas), clasificar intención con IA, FAQ por embeddings, leer comprobante (OCR), consultar saldo, crear jugador, aplicar bono, pasar a un agente humano, HTTP saliente firmado y subflujo.
+- **Dinero seguro por diseño**: los nodos que mueven dinero llaman al ledger con clave de idempotencia y, si el resultado es incierto (p. ej. comprobante dudoso), el flujo queda **en espera de aprobación humana**. Nunca hay acreditación directa desde un prompt.
+- **Ejecución robusta**: outbox idempotente, reintentos con backoff, anti-loop, límites por conversación y registro auditable de cada paso.
+- **Plantillas listas**: bienvenida + registro, depósito con comprobante, retiro, recuperación de inactivos y soporte con IA.
+
 ### 3.4 Retención, marketing y automatización
 
 Base: módulos `marketing` y `promotions`. Se porta:
@@ -146,10 +157,11 @@ Cada fase es un PR independiente contra `main`, con CI en verde (typecheck, migr
 |---|---|---|---|
 | 1 | Arquitectura (este documento) | Visión, mapa de módulos, roadmap | Todos |
 | 2 | Marca Infinite Abyss + shell estilo Stake | Rebrand, layout del jugador (sidebar, header, lobby, carruseles, apuestas en vivo), tema oscuro, responsive | Grand Sovereign |
+| 2b | Backoffice estilo dashboard | Marca y layout pro del backoffice: tarjetas KPI con tendencia, resumen financiero (hoy, histórico, neto), actividad reciente, turnos activos, navegación por secciones | Grand Sovereign, Strike |
 | 3 | Hub: agregadores reales | Adaptadores API-Matic y API-Slots, firma anti-replay, allowlist, free spins, inventario oficial/clone, conciliación de rondas; esqueletos Pragmatic/Evolution documentados para rellenar | Astroclub |
 | 4 | Más originals | Limbo, Keno, HiLo, Wheel, Tower y Video Poker con provably fair y pruebas de RTP | Grand Sovereign |
 | 5 | Inbox omnicanal + webchat | Chats, agentes, funnels, WhatsApp Cloud API, Telegram, widget embebible con wallet y push | Magik, Beast |
-| 6 | Retención y automatizaciones | Motor de reglas, segmentos de valor, lifecycle, canvas de automatizaciones, campañas masivas, cashback por tiers | Magik, Strike |
+| 6 | Abyss Flows + retención | Constructor de flujos tipo n8n para bots (webchat, caja, soporte) con nodos de IA, OCR y dinero con aprobación humana; motor de reglas, segmentos de valor, lifecycle, campañas masivas, cashback por tiers | Magik, RoboBeast, Strike |
 | 7 | Workforce | Turnos, nómina, tareas, caja, checklists, avisos, academia | Strike, Beast |
 | 8 | Gamificación de staff y jugador | XP/ligas/insignias de staff, temporadas y retos de jugador, minijuegos | Strike, Magik |
 | 9 | Concursos de fichas | Módulo `contests`, escrow, reparto, puerto de feed deportivo (con feed simulado) | BetBattle |

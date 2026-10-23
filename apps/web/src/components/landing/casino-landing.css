@@ -119,7 +119,7 @@
 .cx-feature-icon { position: absolute; top: 1.6rem; right: 1.6rem; width: 4.5rem; height: 4.5rem; color: var(--cx-gold-2); opacity: .9; filter: drop-shadow(0 0 20px rgb(244 183 63 / .5)); }
 
 .cx-footer { border-top: 1px solid var(--cx-line); padding-block: 2.5rem; color: var(--cx-muted); font-size: .85rem; }
-.cx-footer-grid { display: grid; gap: 2rem; grid-template-columns: 1.5fr repeat(2, 1fr); }
+.cx-footer-grid { display: grid; gap: 2rem; grid-template-columns: 1.5fr repeat(3, 1fr); }
 @media (max-width: 700px) { .cx-footer-grid { grid-template-columns: 1fr 1fr; } .cx-footer-grid > :first-child { grid-column: 1 / -1; } }
 .cx-footer h4 { color: var(--cx-ink); font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .8rem; }
 .cx-footer li + li { margin-top: .45rem; }

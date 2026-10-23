@@ -6,6 +6,7 @@ import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../sha
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
 import type { Attachment } from '../../inbox/domain/types';
+import type { BotConfigService } from '../application/BotConfigService';
 import type { PearlAi } from '../application/PearlAi';
 import type { PearlService } from '../application/PearlService';
 
@@ -25,7 +26,7 @@ const extracted = z.object({
 const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_info', 'rejected', 'duplicate', 'error'] as const;
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
-export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger }): Router {
+export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
   const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
@@ -77,6 +78,27 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     await d.pearl.deleteFeed(op(req), parse(idParams, req.params).id);
     sendJson(res, { ok: true });
   }));
+
+  /* ─── Cajero IA: borrador → publicar, historial y plantillas ─── */
+  const bot = () => {
+    if (!d.bot) throw new HttpError(503, 'UNAVAILABLE', 'Cajero IA no disponible');
+    return d.bot;
+  };
+  r.get('/admin/bot', ...admin, asyncHandler(async (req, res) => sendJson(res, await bot().view(op(req)))));
+  r.put('/admin/bot/draft', ...admin, asyncHandler(async (req, res) => sendJson(res, await bot().saveDraft(op(req), req.body, getPrincipal(req).userId))));
+  r.post('/admin/bot/preset', ...admin, asyncHandler(async (req, res) => {
+    const b = parse(z.object({ country: z.enum(['CO', 'MX', 'AR']) }), req.body);
+    sendJson(res, await bot().applyPreset(op(req), b.country, getPrincipal(req).userId));
+  }));
+  r.post('/admin/bot/publish', ...admin, asyncHandler(async (req, res) => {
+    const b = parse(z.object({ note: z.string().max(200).default('') }), req.body ?? {});
+    sendJson(res, await bot().publish(op(req), getPrincipal(req).userId, b.note));
+  }));
+  r.post('/admin/bot/rollback', ...admin, asyncHandler(async (req, res) => {
+    const b = parse(z.object({ version: z.number().int().min(1) }), req.body);
+    sendJson(res, await bot().rollback(op(req), b.version, getPrincipal(req).userId));
+  }));
+  r.post('/admin/bot/discard', ...admin, asyncHandler(async (req, res) => sendJson(res, await bot().discardDraft(op(req), getPrincipal(req).userId))));
 
   /* ─── IA (la clave nunca se devuelve) ─── */
   r.get('/admin/ai', ...admin, asyncHandler(async (req, res) => {

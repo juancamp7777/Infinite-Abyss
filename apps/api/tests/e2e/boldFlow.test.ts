@@ -20,7 +20,7 @@ const LINK = `LNK_${randomUUID().slice(0, 8).toUpperCase()}`;
 const fakeFetch: FetchLike = async (url, init) => {
   calls.push({ url, auth: init?.headers?.Authorization, body: init?.body });
   const body = url.endsWith('/online/link/v1')
-    ? { payload: { payment_link: LINK, url: `https://checkout.bold.co/payment/${LINK}` }, errors: [] }
+    ? (() => { const n = calls.filter((c) => c.url.endsWith('/online/link/v1')).length; const id = n === 1 ? LINK : `${LINK}${n}`; return { payload: { payment_link: id, url: `https://checkout.bold.co/payment/${id}` }, errors: [] }; })()
     : { id: LINK, status: linkStatus, total: 50000 };
   return { ok: true, status: 200, text: async () => JSON.stringify(body) };
 };
@@ -104,5 +104,15 @@ describe('Bold: PSE, Nequi y tarjetas en la caja', () => {
     // Reenvío del mismo aviso: sin efecto.
     expect((await hook(ok)).body.result).toBe('duplicate');
     expect(await cash()).toBe(before + 5_000_000n);
+
+    // Si el aviso nunca llega, el barrido consulta a Bold: lo pagado se acredita y lo no pagado sigue pendiente.
+    const lost = await api.post('/api/cashier/deposits').set(auth).send({ provider: 'BOLD', amount: '1000000', currency: 'COP' }).expect(201);
+    linkStatus = 'ACTIVE';
+    expect(await created.services.handleWebhook.sweepPending('BOLD')).toBe(0);
+    expect((await prisma.deposit.findUniqueOrThrow({ where: { id: lost.body.depositId } })).status).toBe('PENDING');
+    linkStatus = 'PAID';
+    expect(await created.services.handleWebhook.sweepPending('BOLD')).toBe(1);
+    expect(await cash()).toBe(before + 6_000_000n);
+    expect(await created.services.handleWebhook.sweepPending('BOLD')).toBe(0);
   });
 });

@@ -70,6 +70,8 @@ import { buildModuleDeps, Phase1GameEvents } from './infrastructure/modules';
 
 export interface AppOverrides {
   prisma?: PrismaClient;
+  /** Cada cuánto se consultan al PSP los depósitos pendientes (respaldo del webhook). 0 = apagado. */
+  depositSweepMs?: number;
   /** fetch inyectable para los adaptadores de PSP (tests). */
   fetch?: FetchLike;
   /** Registro de PSP completo (proveedores falsos). Tiene prioridad sobre `fetch`. */
@@ -96,6 +98,8 @@ export interface AppServices {
   bus: InMemoryEventBus;
   /** Servicios publicados por los módulos (clave original y '<módulo>.<clave>'). Se llena cuando `ready` resuelve. */
   modules: Record<string, unknown>;
+  /** Webhooks de PSP y su barrido de respaldo. */
+  handleWebhook: HandleWebhookUseCase;
 }
 
 export interface CreatedApp {
@@ -164,6 +168,20 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
     logger,
   });
   const createDeposit = new CreateDepositUseCase({ prisma, registry, responsibleGaming: rgPolicy });
+  // Respaldo del webhook de Bold: si un aviso no llega, el pago confirmado se acredita igual en el siguiente barrido.
+  const depositSweepMs = overrides.depositSweepMs ?? Number(process.env.DEPOSIT_SWEEP_MS ?? (process.env.NODE_ENV === 'test' ? 0 : 120_000));
+  let sweeping = false;
+  const depositSweep = depositSweepMs > 0
+    ? setInterval(() => {
+        if (sweeping) return;
+        sweeping = true;
+        void handleWebhook.sweepPending('BOLD')
+          .then((n) => (n ? logger.info?.('Depósitos confirmados por barrido', { provider: 'BOLD', count: n }) : undefined))
+          .catch((e) => logger.error('Barrido de depósitos', { error: e instanceof Error ? e.message : String(e) }))
+          .finally(() => { sweeping = false; });
+      }, depositSweepMs)
+    : undefined;
+  depositSweep?.unref?.();
   const requestWithdrawal = new RequestWithdrawalUseCase({
     prisma,
     wallet: walletService,
@@ -294,8 +312,10 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
       tenantResolver,
       bus,
       modules: moduleServices,
+      handleWebhook,
     },
     async close() {
+      if (depositSweep) clearInterval(depositSweep);
       await readyPromise.catch(() => undefined);
       stopModules(moduleServices);
       await bus.drain().catch(() => undefined);

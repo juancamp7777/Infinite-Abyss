@@ -43,6 +43,10 @@
 	handle_path /api-proxy/* {
 		reverse_proxy api:4000
 	}
+	# Avisos de pasarelas (Bold, Wompi…) con la ruta tal cual: https://dominio/api/webhooks/<pasarela>.
+	handle /api/webhooks/* {
+		reverse_proxy api:4000
+	}
 	handle {
 		reverse_proxy web:3000
 	}

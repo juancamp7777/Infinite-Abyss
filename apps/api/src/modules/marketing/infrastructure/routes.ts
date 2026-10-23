@@ -8,6 +8,8 @@ import type { ModuleDeps } from '../../shared/module';
 import { isAllowedRedirect, UnsafeUrlError } from '../domain/urlSafety';
 import { verifyUnsubscribeToken } from '../domain/unsubscribe';
 import { JOURNEY_PRESETS, presetDraft } from '../domain/presets';
+import { PUSH_AUDIENCES } from '../domain/audiences';
+import type { Rule } from '../../shared/ports/SegmentPort';
 import { CHANNEL_KINDS, type Affiliate, type Campaign, type Journey, type Template } from '../domain/types';
 import { endpointId } from '../infrastructure/channels';
 import type { MarketingRuntime } from '../application/MarketingRuntime';
@@ -230,15 +232,53 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
     sendJson(res, { enabled: !!rt.vapidPublicKey, devices: subs.length, players: new Set(subs.map((s) => s.playerId)).size });
   }));
 
+  /** Segmentos del CRM (publicado por el módulo crm; se busca al momento porque se monta antes que marketing). */
+  type CrmSegments = { match(operatorId: string, rule: Rule): Promise<{ playerId: string }[]>; list(operatorId: string): Promise<{ id: string; name: string; rule: Rule }[]> };
+  const crmSegments = () => (deps.services['crm.crmSegments'] ?? deps.services.crmSegments) as CrmSegments | undefined;
+
+  /** Jugadores con push activo que entran en la audiencia (tipo de jugador o segmento propio del CRM). */
+  const audiencePlayers = async (operatorId: string, players: string[], sel: { audience?: string; segmentId?: string }): Promise<string[]> => {
+    let rule: Rule | null = null;
+    if (sel.segmentId) {
+      const crm = crmSegments();
+      const seg = crm && (await crm.list(operatorId)).find((s) => s.id === sel.segmentId);
+      if (!seg) throw notFound('Segmento no encontrado');
+      rule = seg.rule;
+    } else {
+      const a = PUSH_AUDIENCES.find((x) => x.key === (sel.audience ?? 'all'));
+      if (!a) throw badRequest('Tipo de jugador desconocido');
+      rule = a.rule;
+    }
+    if (!rule) return players;
+    const crm = crmSegments();
+    if (!crm) throw new HttpError(503, 'CRM_UNAVAILABLE', 'El CRM no está disponible para filtrar jugadores');
+    const inRule = new Set((await crm.match(operatorId, rule)).map((v) => v.playerId));
+    return players.filter((p) => inRule.has(p));
+  };
+
+  /** Tipos de jugador y segmentos propios, con cuántos jugadores con push activo hay en cada uno. */
+  admin.get('/push/audiences', asyncHandler(async (req, res) => {
+    const operatorId = op(req);
+    const players = [...new Set((await rt.repos.pushSubs.list({ operatorId })).filter((s) => !s.dead).map((s) => s.playerId))];
+    const crm = crmSegments();
+    const items = await Promise.all(PUSH_AUDIENCES.map(async (a) => ({
+      key: a.key, label: a.label, hint: a.hint,
+      players: a.rule === null ? players.length : crm ? (await audiencePlayers(operatorId, players, { audience: a.key })).length : null,
+    })));
+    const segments = crm ? await Promise.all((await crm.list(operatorId)).map(async (s) => ({ id: s.id, name: s.name, players: (await audiencePlayers(operatorId, players, { segmentId: s.id })).length }))) : [];
+    sendJson(res, { items, segments });
+  }));
+
   /**
-   * Push a todos los jugadores con notificaciones activas: crea la plantilla (queda en el historial y las métricas) y
+   * Push a los jugadores con notificaciones activas del tipo elegido: crea la plantilla (queda en el historial y las métricas) y
    * envía en segundo plano respetando el consentimiento de marketing de cada jugador.
    */
   admin.post('/push/broadcast', asyncHandler(async (req, res) => {
     const operatorId = op(req);
-    const b = parse(z.object({ title: z.string().trim().min(1).max(80), body: z.string().trim().min(1).max(300), push: pushDesign.default({}) }), req.body);
-    const subs = (await rt.repos.pushSubs.list({ operatorId })).filter((s) => !s.dead);
-    const players = [...new Set(subs.map((s) => s.playerId))];
+    const b = parse(z.object({ title: z.string().trim().min(1).max(80), body: z.string().trim().min(1).max(300), push: pushDesign.default({}), audience: z.string().max(40).optional(), segmentId: z.string().max(100).optional() }), req.body);
+    const all = (await rt.repos.pushSubs.list({ operatorId })).filter((s) => !s.dead);
+    const players = await audiencePlayers(operatorId, [...new Set(all.map((s) => s.playerId))], b);
+    const subs = all.filter((s) => players.includes(s.playerId));
     const t: Template = { id: randomUUID(), operatorId, name: `Push · ${b.title}`.slice(0, 120), channel: 'push', kind: 'marketing', subject: b.title, body: b.body, push: b.push, createdAt: now(), updatedAt: now() };
     await rt.repos.templates.put(t);
     void (async () => {

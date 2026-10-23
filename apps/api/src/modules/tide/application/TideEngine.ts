@@ -33,6 +33,8 @@ const BREAKER = 5;
  * - Un agente que responde o se asigna la conversación detiene el bot; cerrar la conversación borra la sesión.
  * - Límite de pasos por turno (bucles) y cortacircuitos: 5 fallos seguidos desactivan el flujo.
  */
+const WELCOME_AUTO = 'Bienvenida (automático)';
+
 export class TideEngine {
   private readonly locks = new Map<string, Promise<void>>();
   private readonly failures = new Map<string, number>();
@@ -99,7 +101,8 @@ export class TideEngine {
     const text = ` ${normalize(body)} `;
     const candidates: Array<{ flow: TideFlow; keyword: boolean }> = [];
     let flows = await this.repo.listFlows(conv.operatorId);
-    if (!flows.length) flows = [await this.provisionWelcome(conv.operatorId)];
+    // Sin ningún flujo activo (aunque haya borradores) y sin la bienvenida de fábrica creada antes: se activa una vez.
+    if (!flows.some((f) => f.enabled && f.publishedVersion) && !flows.some((f) => f.name === WELCOME_AUTO)) flows = [...flows, await this.provisionWelcome(conv.operatorId)];
     for (const f of flows) {
       if (!f.enabled || !f.publishedVersion) continue;
       const v = await this.repo.findVersion(f.id, f.publishedVersion);
@@ -114,12 +117,12 @@ export class TideEngine {
   }
 
   /**
-   * Un casino recién creado no queda mudo: si el operador nunca creó un flujo, se publica y activa la plantilla de
+   * Un casino recién creado no queda mudo: si el operador no tiene ningún flujo activo, se publica y activa la plantilla de
    * bienvenida (saludo, menú, recargas, retiros, FAQ y paso a humano). Desde Tide se edita o se desactiva.
    */
   private async provisionWelcome(operatorId: string): Promise<TideFlow> {
     const now = this.now();
-    const flow = await this.repo.saveFlow({ id: randomUUID(), operatorId, name: 'Bienvenida (automático)', enabled: true, draft: welcomeTemplate(), publishedVersion: 1, createdAt: now, updatedAt: now });
+    const flow = await this.repo.saveFlow({ id: randomUUID(), operatorId, name: WELCOME_AUTO, enabled: true, draft: welcomeTemplate(), publishedVersion: 1, createdAt: now, updatedAt: now });
     await this.repo.saveVersion({ flowId: flow.id, version: 1, graph: welcomeTemplate(), publishedBy: 'system', createdAt: now });
     this.opts.logger.info(`[tide] flujo de bienvenida activado de fábrica para el operador ${operatorId}`);
     return flow;

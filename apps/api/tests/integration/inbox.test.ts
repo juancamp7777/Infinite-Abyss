@@ -27,8 +27,8 @@ beforeAll(async () => {
   const player = await createTestPlayer(opId);
   playerId = player.id;
   pToken = playerToken(player.id, opId);
-  // Estas pruebas miden el inbox sin bot: un flujo apagado evita que Tide active la bienvenida de fábrica.
-  await prisma.tideFlow.create({ data: { id: randomUUID(), operatorId: opId, name: 'Apagado', enabled: false, draft: { nodes: [], edges: [] }, updatedAt: new Date() } });
+  // Estas pruebas miden el inbox sin bot: la bienvenida de fábrica apagada a propósito: Tide la respeta y no habla.
+  await prisma.tideFlow.create({ data: { id: randomUUID(), operatorId: opId, name: 'Bienvenida (automático)', enabled: false, draft: { nodes: [], edges: [] }, updatedAt: new Date() } });
 });
 
 afterAll(async () => {

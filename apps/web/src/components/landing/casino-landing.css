@@ -1,0 +1,149 @@
+/* Landing del casino (jugadores): negro profundo, morado y oro, cristal y luz. Todo con CSS + un canvas. */
+.cx {
+  --cx-bg: #05040b;
+  --cx-violet: #8b5cf6;
+  --cx-violet-2: #c084fc;
+  --cx-gold: #f4b73f;
+  --cx-gold-2: #ffd978;
+  --cx-ink: #f4f1ff;
+  --cx-muted: rgb(244 241 255 / .62);
+  --cx-line: rgb(255 255 255 / .08);
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  min-height: 100vh;
+  color: var(--cx-ink);
+  background: var(--cx-bg);
+  font-family: var(--font-inter), var(--font-geist-sans), system-ui, sans-serif;
+}
+.cx :focus-visible { outline: 2px solid var(--cx-gold); outline-offset: 3px; border-radius: 8px; }
+.cx-wrap { width: min(1240px, 100%); margin-inline: auto; padding-inline: clamp(1rem, 4vw, 2.5rem); }
+
+/* Navegación */
+.cx-nav { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--cx-line); background: rgb(5 4 11 / .72); backdrop-filter: blur(14px) saturate(1.4); }
+.cx-nav-in { display: flex; align-items: center; gap: 1.5rem; height: 68px; }
+.cx-brand { display: flex; align-items: center; gap: .6rem; font-family: var(--font-display), Georgia, serif; font-weight: 700; letter-spacing: .14em; font-size: .95rem; white-space: nowrap; }
+.cx-brand b { color: var(--cx-gold); }
+.cx-links { display: flex; gap: .25rem; margin-left: .5rem; }
+.cx-links a { padding: .5rem .8rem; border-radius: 999px; font-size: .88rem; font-weight: 600; color: var(--cx-muted); transition: color .2s, background .2s; }
+.cx-links a:hover { color: var(--cx-ink); background: rgb(255 255 255 / .06); }
+.cx-auth { margin-left: auto; display: flex; gap: .5rem; }
+@media (max-width: 900px) { .cx-links { display: none; } }
+
+/* Botones */
+.cx-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 999px; padding: .75rem 1.35rem; font-weight: 700; font-size: .95rem; transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease; white-space: nowrap; }
+.cx-btn-sm { padding: .55rem 1rem; font-size: .85rem; }
+.cx-btn-gold { color: #1a0f00; background: linear-gradient(135deg, var(--cx-gold-2), var(--cx-gold) 55%, #d08f1e); box-shadow: 0 10px 34px -10px rgb(244 183 63 / .75), inset 0 1px 0 rgb(255 255 255 / .5); }
+.cx-btn-gold:hover { transform: translateY(-2px); box-shadow: 0 18px 48px -10px rgb(244 183 63 / .9), inset 0 1px 0 rgb(255 255 255 / .5); }
+.cx-btn-ghost { border: 1px solid rgb(255 255 255 / .16); background: rgb(255 255 255 / .03); }
+.cx-btn-ghost:hover { border-color: var(--cx-violet-2); background: rgb(139 92 246 / .12); }
+
+/* Hero */
+.cx-hero { position: relative; min-height: calc(100svh - 68px); display: grid; align-items: center; padding-block: clamp(2.5rem, 6vw, 5rem); }
+.cx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.cx-hero::after { content: ""; position: absolute; inset: auto 0 0; height: 30%; z-index: -1; background: linear-gradient(transparent, var(--cx-bg)); pointer-events: none; }
+.cx-hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; gap: clamp(2rem, 5vw, 4rem); }
+@media (max-width: 900px) { .cx-hero-grid { grid-template-columns: 1fr; text-align: center; } .cx-hero .cx-cta, .cx-proof { justify-content: center; } }
+.cx-chip { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 999px; border: 1px solid rgb(192 132 252 / .35); background: rgb(139 92 246 / .1); font-size: .78rem; font-weight: 600; color: var(--cx-violet-2); }
+.cx-chip i { width: .45rem; height: .45rem; border-radius: 50%; background: #34d399; box-shadow: 0 0 10px #34d399; animation: cx-blink 2s ease-in-out infinite; }
+@keyframes cx-blink { 50% { opacity: .35; } }
+.cx-h1 { margin: 1.1rem 0 1rem; font-family: var(--font-montserrat), var(--font-inter), sans-serif; font-weight: 900; font-size: clamp(2.8rem, 7.4vw, 6rem); line-height: .95; letter-spacing: -.035em; }
+.cx-h1 em { font-style: normal; background: linear-gradient(100deg, var(--cx-gold-2), var(--cx-gold) 35%, var(--cx-violet-2) 75%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cx-lead { max-width: 34rem; color: var(--cx-muted); font-size: clamp(1rem, 1.5vw, 1.15rem); line-height: 1.6; }
+@media (max-width: 900px) { .cx-lead { margin-inline: auto; } }
+.cx-cta { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.cx-proof { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 2.2rem; color: var(--cx-muted); font-size: .85rem; }
+.cx-proof span { display: inline-flex; align-items: center; gap: .45rem; }
+.cx-proof svg { color: var(--cx-gold); }
+
+/* Anillo de cristal con el jackpot */
+.cx-ring { position: relative; width: min(440px, 82vw); aspect-ratio: 1; margin-inline: auto; display: grid; place-items: center; }
+.cx-ring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 2px; background: conic-gradient(from var(--cx-a, 0deg), var(--cx-gold), var(--cx-violet), transparent 40%, var(--cx-violet-2), var(--cx-gold)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: cx-spin 9s linear infinite; filter: drop-shadow(0 0 18px rgb(139 92 246 / .6)); }
+.cx-ring::after { content: ""; position: absolute; inset: 9%; border-radius: 50%; background: radial-gradient(circle at 30% 25%, rgb(255 255 255 / .16), transparent 45%), radial-gradient(circle, rgb(139 92 246 / .25), rgb(5 4 11 / .2) 70%); border: 1px solid rgb(255 255 255 / .12); backdrop-filter: blur(16px); box-shadow: inset 0 0 60px rgb(139 92 246 / .35), 0 30px 80px -20px rgb(0 0 0 / .8); }
+@property --cx-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes cx-spin { to { --cx-a: 360deg; } }
+.cx-ring-in { position: relative; z-index: 1; text-align: center; padding: 1rem; }
+.cx-ring-in small { display: block; font-size: .72rem; letter-spacing: .3em; font-weight: 700; color: var(--cx-gold-2); }
+.cx-ring-in strong { display: block; margin: .4rem 0; font-family: var(--font-montserrat), sans-serif; font-weight: 900; font-size: clamp(1.8rem, 4.6vw, 3rem); letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-shadow: 0 0 30px rgb(244 183 63 / .45); }
+.cx-ring-in span { color: var(--cx-muted); font-size: .85rem; }
+.cx-orbit { position: absolute; inset: -6%; border-radius: 50%; border: 1px dashed rgb(255 255 255 / .08); animation: cx-rot 60s linear infinite; }
+.cx-orbit::before { content: ""; position: absolute; top: 12%; left: 8%; width: 10px; height: 10px; border-radius: 50%; background: var(--cx-gold); box-shadow: 0 0 18px var(--cx-gold); }
+@keyframes cx-rot { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { .cx-orbit { display: none; } }
+
+/* Cinta de ganadores */
+.cx-winners { border-block: 1px solid var(--cx-line); background: rgb(255 255 255 / .02); overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.cx-winners-track { display: flex; gap: 2.5rem; width: max-content; padding: .9rem 0; animation: cx-marquee 45s linear infinite; }
+.cx-winners:hover .cx-winners-track { animation-play-state: paused; }
+.cx-win { display: inline-flex; align-items: center; gap: .45rem; font-size: .88rem; color: var(--cx-muted); white-space: nowrap; }
+.cx-win b { color: #34d399; }
+.cx-win strong { color: var(--cx-ink); }
+@keyframes cx-marquee { to { transform: translateX(-50%); } }
+
+/* Secciones */
+.cx-section { padding-block: clamp(3.5rem, 8vw, 6.5rem); }
+.cx-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--cx-violet-2); }
+.cx-h2 { margin: .6rem 0 0; font-family: var(--font-montserrat), sans-serif; font-weight: 900; font-size: clamp(1.9rem, 4.2vw, 3.2rem); letter-spacing: -.03em; line-height: 1.05; }
+.cx-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+
+/* Jackpots */
+.cx-jps { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.cx-jp { position: relative; overflow: hidden; border-radius: 1.25rem; padding: 1.4rem; border: 1px solid var(--cx-line); background: linear-gradient(160deg, rgb(255 255 255 / .06), rgb(255 255 255 / .01)); }
+.cx-jp::after { content: ""; position: absolute; inset: -40% -10% auto auto; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, var(--c, rgb(139 92 246 / .35)), transparent 65%); pointer-events: none; }
+.cx-jp small { font-size: .72rem; font-weight: 800; letter-spacing: .22em; color: var(--cx-muted); }
+.cx-jp strong { display: block; margin-top: .4rem; font-family: var(--font-montserrat), sans-serif; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 900; font-variant-numeric: tabular-nums; }
+.cx-jp-top { border-color: rgb(244 183 63 / .45); --c: rgb(244 183 63 / .4); }
+.cx-jp-top strong { color: var(--cx-gold-2); text-shadow: 0 0 24px rgb(244 183 63 / .4); }
+
+/* Lobby */
+.cx-tabs { display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none; padding-bottom: .25rem; }
+.cx-tabs::-webkit-scrollbar { display: none; }
+.cx-tab { padding: .55rem 1rem; border-radius: 999px; border: 1px solid var(--cx-line); background: rgb(255 255 255 / .03); font-size: .85rem; font-weight: 700; color: var(--cx-muted); white-space: nowrap; transition: all .2s; }
+.cx-tab[aria-selected="true"] { color: #1a0f00; border-color: transparent; background: linear-gradient(135deg, var(--cx-gold-2), var(--cx-gold)); }
+.cx-games { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(46%, 11rem), 1fr)); margin-top: 1.5rem; }
+.cx-game { position: relative; display: block; border-radius: 1rem; overflow: hidden; background: #110d1f; border: 1px solid var(--cx-line); transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+.cx-game:hover, .cx-game:focus-visible { transform: translateY(-5px); border-color: rgb(244 183 63 / .55); box-shadow: 0 20px 40px -18px rgb(139 92 246 / .7); }
+.cx-game img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.cx-game-meta { position: absolute; inset: auto 0 0; padding: 2.5rem .8rem .75rem; background: linear-gradient(transparent, rgb(5 4 11 / .95)); }
+.cx-game-meta b { display: block; font-size: .9rem; line-height: 1.2; }
+.cx-game-meta span { font-size: .72rem; color: var(--cx-muted); }
+.cx-badge { position: absolute; top: .6rem; left: .6rem; padding: .2rem .5rem; border-radius: .4rem; font-size: .62rem; font-weight: 800; letter-spacing: .08em; background: var(--cx-gold); color: #1a0f00; }
+.cx-skel { aspect-ratio: 3 / 4; border-radius: 1rem; background: linear-gradient(90deg, #110d1f, #1b1530, #110d1f); background-size: 200% 100%; animation: cx-shine 1.4s linear infinite; }
+@keyframes cx-shine { to { background-position: -200% 0; } }
+
+/* Destacados (torneos, VIP) */
+.cx-duo { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.cx-feature { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 18rem; padding: 2rem; border-radius: 1.5rem; border: 1px solid var(--cx-line); background: radial-gradient(120% 90% at 100% 0%, var(--c1), transparent 60%), linear-gradient(160deg, #120d22, #08060f); transition: transform .3s ease, border-color .3s ease; }
+.cx-feature:hover { transform: translateY(-4px); border-color: rgb(255 255 255 / .2); }
+.cx-feature h3 { font-family: var(--font-montserrat), sans-serif; font-weight: 900; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; }
+.cx-feature p { margin: .6rem 0 1.3rem; color: var(--cx-muted); max-width: 26rem; }
+.cx-feature-icon { position: absolute; top: 1.6rem; right: 1.6rem; width: 4.5rem; height: 4.5rem; color: var(--cx-gold-2); opacity: .9; filter: drop-shadow(0 0 20px rgb(244 183 63 / .5)); }
+
+/* Confianza */
+.cx-trust { display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); border-radius: 1.25rem; overflow: hidden; border: 1px solid var(--cx-line); background: var(--cx-line); }
+.cx-trust div { padding: 1.6rem; background: var(--cx-bg); }
+.cx-trust svg { color: var(--cx-gold); }
+.cx-trust b { display: block; margin-top: .8rem; font-size: 1.05rem; }
+.cx-trust p { margin-top: .3rem; color: var(--cx-muted); font-size: .92rem; }
+
+/* Para operadores */
+.cx-b2b { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.5rem 1.8rem; border-radius: 1.25rem; border: 1px dashed rgb(192 132 252 / .35); background: rgb(139 92 246 / .06); }
+.cx-b2b p { color: var(--cx-muted); }
+.cx-b2b strong { color: var(--cx-ink); }
+
+.cx-footer { border-top: 1px solid var(--cx-line); padding-block: 2.5rem; color: var(--cx-muted); font-size: .85rem; }
+.cx-footer-grid { display: grid; gap: 2rem; grid-template-columns: 1.5fr repeat(2, 1fr); }
+@media (max-width: 700px) { .cx-footer-grid { grid-template-columns: 1fr 1fr; } .cx-footer-grid > :first-child { grid-column: 1 / -1; } }
+.cx-footer h4 { color: var(--cx-ink); font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .8rem; }
+.cx-footer li + li { margin-top: .45rem; }
+.cx-footer a:hover { color: var(--cx-ink); }
+.cx-18 { display: inline-flex; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 2px solid currentColor; font-weight: 800; font-size: .75rem; margin-right: .6rem; }
+
+/* Aparición al hacer scroll */
+.cx-reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); transition-delay: calc(var(--i, 0) * 80ms); }
+.cx-in .cx-reveal, .cx-reveal.cx-in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cx *, .cx *::before, .cx *::after { animation: none !important; transition: none !important; }
+  .cx-reveal { opacity: 1; transform: none; }
+}

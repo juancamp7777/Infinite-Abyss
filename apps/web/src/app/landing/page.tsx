@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { Landing } from "@/components/landing/Landing";
-import { landingLinks } from "@/lib/landing";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: { absolute: "Infinite Abyss · Plataforma de casino online todo en uno" },
-  description: "Casino con tu marca, cajero con IA, CRM omnicanal, bots, equipo y un operador IA 24/7. Lánzate en días.",
-};
-
+/** La landing comercial ahora vive en /plataforma; la raíz del dominio es el casino. */
 export default function LandingPage() {
-  return <Landing {...landingLinks()} />;
+  redirect("/plataforma");
 }

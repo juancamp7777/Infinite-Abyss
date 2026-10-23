@@ -258,6 +258,7 @@ export const NAV: NavItem[] = [
   { href: "/skin", label: "Skin clásica", roles: ADMINS, section: "Marca" },
   { href: "/reports", label: "Reportes", roles: ADMINS, section: "Principal" },
   { href: "/integrations", label: "Integraciones", roles: ADMINS, section: "Principal" },
+  { href: "/nautilus", label: "Nautilus · Operador IA", roles: ADMINS, section: "Principal" },
   { href: "/security", label: "Mi seguridad", roles: ALL, section: "Principal" },
 ];
 

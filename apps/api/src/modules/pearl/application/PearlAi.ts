@@ -41,14 +41,20 @@ export class PearlAi {
     private readonly pearl: PearlService,
     private readonly inbox: InboxPort,
     private readonly box: SecretBox,
-    private readonly opts: { logger: ModuleLogger; envKey?: string; factory?: AiClientFactory; ensurePlayer?: () => ((conv: Conversation, name: string) => Promise<{ playerId: string }>) | undefined },
+    private readonly opts: { logger: ModuleLogger; envKey?: string; keyResolver?: (operatorId: string, provider: AiProviderName) => Promise<string | undefined>; factory?: AiClientFactory; ensurePlayer?: () => ((conv: Conversation, name: string) => Promise<{ playerId: string }>) | undefined },
   ) {
     pearl.setJudge((ctx) => this.judge(ctx));
   }
 
   async config(operatorId: string): Promise<AiConfigView> {
     const c = await this.stored(operatorId);
-    return { enabled: c.enabled, provider: c.provider, readerModel: c.readerModel, judgeModel: c.judgeModel, hasKey: !!c.keyEnc || this.envKeyApplies(c), keyFromEnv: !c.keyEnc && this.envKeyApplies(c) };
+    const shared = !c.keyEnc && !!(await this.sharedKey(operatorId, c.provider));
+    return { enabled: c.enabled, provider: c.provider, readerModel: c.readerModel, judgeModel: c.judgeModel, hasKey: !!c.keyEnc || shared || this.envKeyApplies(c), keyFromEnv: !c.keyEnc && (shared || this.envKeyApplies(c)) };
+  }
+
+  /** Llave conectada en Integraciones (del casino o de la plataforma) para este proveedor de IA. */
+  private async sharedKey(operatorId: string, provider: AiProviderName): Promise<string | undefined> {
+    return this.opts.keyResolver?.(operatorId, provider).catch(() => undefined);
   }
 
   async saveConfig(operatorId: string, patch: { enabled?: boolean; provider?: AiProviderName; readerModel?: string; judgeModel?: string; apiKey?: string | null }): Promise<AiConfigView> {
@@ -148,7 +154,7 @@ export class PearlAi {
   private async client(operatorId: string): Promise<PearlAiClient | null> {
     const c = await this.stored(operatorId);
     if (!c.enabled) return null;
-    const key = c.keyEnc ? this.box.open<string>(c.keyEnc) : this.envKeyApplies(c) ? this.opts.envKey! : null;
+    const key = c.keyEnc ? this.box.open<string>(c.keyEnc) : (await this.sharedKey(operatorId, c.provider)) ?? (this.envKeyApplies(c) ? this.opts.envKey! : null);
     return key ? (this.opts.factory ?? defaultFactory)(c.provider, key, { reader: c.readerModel, judge: c.judgeModel }) : null;
   }
 }

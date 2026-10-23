@@ -7,7 +7,9 @@ import { SeamlessWalletService } from './application/SeamlessWalletService';
 import { SessionService } from './application/SessionService';
 import type { HubRepositories } from './domain/repositories';
 import { envKey, HubSession, RemoteOperator } from './domain/types';
-import { buildAdapters } from './infrastructure/adapters/registry';
+import { buildAdapters, buildExternalAdapters } from './infrastructure/adapters/registry';
+import { InMemoryNonceStore } from './domain/replayGuard';
+import type { HubProvidersControl, IntegrationsPort } from '../shared/ports/IntegrationsPort';
 import { createHubRouter } from './infrastructure/http/router';
 import { createMockProviderServer } from './infrastructure/http/mockProviderServer';
 import { createInMemoryRepositories } from './infrastructure/persistence/InMemoryRepositories';
@@ -48,16 +50,54 @@ export function resolveHubUrls(env: NodeJS.ProcessEnv): { webUrl: string; public
 
 /** Ensambla el Hub sin montarlo (útil para pruebas). */
 export async function createHub(deps: ModuleDeps, repos?: HubRepositories) {
-  const env = deps.env;
+  // Los proveedores conectados desde Integraciones se suman al entorno (lo guardado en pantalla manda sobre el .env).
+  const integrations = deps.services['integrations.service'] as IntegrationsPort | undefined;
+  const overlay = (await integrations?.envOverlay().catch(() => ({}))) ?? {};
+  const env: NodeJS.ProcessEnv = { ...deps.env, ...overlay };
   const r = repos ?? (isHubPrismaClient(deps.prisma) ? createPrismaRepositories(deps.prisma) : createInMemoryRepositories());
-  const adapters = buildAdapters(env, { logger: deps.logger });
+  const nonces = new InMemoryNonceStore();
+  const adapters = buildAdapters(env, { logger: deps.logger, nonces });
   const catalog = new CatalogService(r.catalog);
   await seedCatalog(catalog, { mock: Boolean(adapters.mock) });
   // Los agregadores configurados existen en el catálogo (sus juegos llegan con POST /admin/providers/:id/sync).
-  const known = new Set((await catalog.listProviders(true)).map((p) => p.id));
-  for (const a of adapters.aggregators) {
-    if (!known.has(a.id)) await catalog.upsertProvider({ id: a.id, name: a.name, type: 'aggregator', config: {} });
-  }
+  const ensureAggregators = async (list: Array<{ id: string; name: string }>) => {
+    const known = new Set((await catalog.listProviders(true)).map((p) => p.id));
+    for (const a of list) {
+      if (!known.has(a.id)) await catalog.upsertProvider({ id: a.id, name: a.name, type: 'aggregator', config: {} });
+    }
+  };
+  await ensureAggregators(adapters.aggregators);
+
+  // Recarga en vivo de los proveedores externos al conectarlos o quitarlos en Integraciones.
+  let externalIds = adapters.registry.list().map((a) => a.id).filter((id) => id !== adapters.studios.id && id !== adapters.mock?.id);
+  const providers: HubProvidersControl = {
+    async reload(next) {
+      try {
+        const built = buildExternalAdapters({ ...deps.env, ...next }, { logger: deps.logger, nonces });
+        for (const id of externalIds) adapters.registry.unregister(id);
+        for (const a of built.adapters) adapters.registry.register(a);
+        externalIds = built.adapters.map((a) => a.id);
+        await ensureAggregators(built.aggregators);
+        return { active: externalIds, errors: [] };
+      } catch (e) {
+        return { active: externalIds, errors: [e instanceof Error ? e.message : String(e)] };
+      }
+    },
+    async test(providerId, candidate) {
+      try {
+        const built = buildExternalAdapters({ ...deps.env, ...candidate }, { logger: deps.logger, nonces: new InMemoryNonceStore() });
+        const a = built.adapters.find((x) => x.id === providerId);
+        if (!a) return { ok: false, message: 'Faltan datos para activar este proveedor' };
+        const games = await Promise.race([
+          a.syncCatalog(),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('El proveedor no respondió a tiempo')), 15000)),
+        ]);
+        return { ok: true, message: `Conectado: el proveedor devolvió ${games.length} juegos` };
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message.slice(0, 300) : 'No se pudo conectar con el proveedor' };
+      }
+    },
+  };
 
   const remoteWallets = new Map<string, RemoteSeamlessWallet>();
   const remoteFactory = (remote: RemoteOperator, session: HubSession) => {
@@ -95,7 +135,7 @@ export async function createHub(deps: ModuleDeps, repos?: HubRepositories) {
   );
   const wallet = new SeamlessWalletService(r.txs, sessions, catalog, deps.bus, deps.logger, deps.betGuard);
   const reports = new ReportService(r.txs, catalog);
-  return { repos: r, adapters, catalog, sessions, wallet, reports, publicApiUrl, internalApiUrl };
+  return { repos: r, adapters, providers, catalog, sessions, wallet, reports, publicApiUrl, internalApiUrl };
 }
 
 /**
@@ -132,6 +172,7 @@ export const hubModule: NymfoModule = {
       walletForSession: (ref: string | { sessionId: string }) => hub.sessions.walletForSession(ref),
     };
     return {
+      'hub.providers': hub.providers,
       catalog: hub.catalog,
       hubReports: hub.reports,
       sessions: sessionsApi,

@@ -275,7 +275,7 @@ function Config() {
             </Field>
             <Field label="Modelo lector" htmlFor="ai-r"><input id="ai-r" className={`${inputCls} w-full`} placeholder={aiCfg.data.readerModel} value={aiForm.readerModel ?? ""} onChange={(e) => setAiForm({ ...aiForm, readerModel: e.target.value })} /></Field>
             <Field label="Modelo juez" htmlFor="ai-j"><input id="ai-j" className={`${inputCls} w-full`} placeholder={aiCfg.data.judgeModel} value={aiForm.judgeModel ?? ""} onChange={(e) => setAiForm({ ...aiForm, judgeModel: e.target.value })} /></Field>
-            <Field label={aiCfg.data.hasKey ? (aiCfg.data.keyFromEnv ? "API key (del servidor)" : "API key guardada ✓") : "API key"} htmlFor="ai-k">
+            <Field label={aiCfg.data.hasKey ? (aiCfg.data.keyFromEnv ? "API key (de Integraciones o del servidor)" : "API key guardada ✓") : "API key"} htmlFor="ai-k">
               <input id="ai-k" type="password" autoComplete="off" className={`${inputCls} w-full`} placeholder={aiCfg.data.hasKey ? "•••••• (vacío = mantener)" : "Pega la clave del proveedor"} value={aiForm.apiKey ?? ""} onChange={(e) => setAiForm({ ...aiForm, apiKey: e.target.value })} />
             </Field>
             <div className="flex items-end gap-2">

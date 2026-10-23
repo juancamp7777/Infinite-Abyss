@@ -37,6 +37,7 @@ export interface BankAccount {
   bank?: string;
   country?: string;
   holderDocument?: string;
+  bankName?: string;
   active: boolean;
   createdAt: Date;
 }

@@ -100,6 +100,41 @@ export function createLedgerAdminRouter(deps: LedgerAdminDeps): Router {
     }),
   );
 
+  /** Ficha de caja del jugador (panel del chat): saldos, retiros en curso, última carga y últimos movimientos. */
+  router.get(
+    '/api/backoffice/players/:id/wallet',
+    requireBackoffice(['PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_FINANCE', 'OPERATOR_SUPPORT'], opts),
+    handle(async (req, res) => {
+      const bo = req.backoffice!;
+      const playerId = z.uuid().parse(req.params.id);
+      const player = await prisma.user.findUnique({ where: { id: playerId } });
+      if (!player || (bo.operatorId && player.operatorId !== bo.operatorId)) throw AppError.notFound('Jugador no encontrado');
+      const [balances, pending, cash] = await Promise.all([
+        walletService.getBalances({ operatorId: player.operatorId, userId: player.id }),
+        prisma.withdrawal.aggregate({ where: { userId: player.id, status: { in: ['REQUESTED', 'APPROVED', 'PROCESSING'] } }, _sum: { amount: true }, _count: true }),
+        prisma.ledgerAccount.findFirst({ where: { operatorId: player.operatorId, ownerKey: player.id, type: 'PLAYER_CASH', currency: player.currency } }),
+      ]);
+      const entries = cash
+        ? await prisma.ledgerEntry.findMany({ where: { accountId: cash.id }, orderBy: { createdAt: 'desc' }, take: 30, include: { transaction: { select: { type: true, metadata: true } } } })
+        : [];
+      const LOADS = new Set(['DEPOSIT', 'MANUAL_ADJUSTMENT']);
+      const last = entries.find((e) => e.amount > 0n && LOADS.has(e.transaction.type));
+      res.json(toJsonSafe({
+        playerId: player.id,
+        email: player.email,
+        username: player.username,
+        status: player.status,
+        kycStatus: player.kycStatus,
+        currency: balances.currency,
+        cash: balances.cash,
+        bonus: balances.bonus,
+        pendingWithdrawals: { count: pending._count, amount: pending._sum.amount ?? 0n },
+        lastLoad: last ? { amount: last.amount, at: last.createdAt, type: last.transaction.type } : null,
+        movements: entries.slice(0, 10).map((e) => ({ type: e.transaction.type, amount: e.amount, at: e.createdAt, reason: (e.transaction.metadata as { reason?: string } | null)?.reason ?? null })),
+      }));
+    }),
+  );
+
   router.get(
     '/api/backoffice/stats',
     requireBackoffice(['PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_SUPPORT', 'OPERATOR_FINANCE'], opts),

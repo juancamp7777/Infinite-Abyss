@@ -5,6 +5,7 @@ import { CrewService } from './application/CrewService';
 import type { InboxService } from '../inbox/application/InboxService';
 import type { PearlService } from '../pearl/application/PearlService';
 import { buildCrewRouter } from './http/routes';
+import { TeamMetrics } from './application/TeamMetrics';
 
 export const CREW_PREFIX = '/crew/v1';
 
@@ -29,7 +30,7 @@ export function createCrewModule(opts: { tickMs?: number } = {}): NymfoModule {
       // KPIs reales: tiempo de primera respuesta (Sonar) y cargas aprobadas por cajeros (Pearl).
       (deps.services['inbox.service'] as InboxService | undefined)?.onEvent((e) => ascend.onInboxEvent(e).catch(() => undefined), 100);
       (deps.services['pearl.service'] as PearlService | undefined)?.onReviewed((r) => (r.reviewerId ? ascend.recordForUser(r.operatorId, r.reviewerId, 'deposit_approved', r.id) : Promise.resolve(false)));
-      app.use(CREW_PREFIX, buildCrewRouter({ auth: deps.auth, crew, ascend, logger: deps.logger }));
+      app.use(CREW_PREFIX, buildCrewRouter({ auth: deps.auth, crew, ascend, metrics: new TeamMetrics(db), logger: deps.logger }));
       const tickMs = opts.tickMs ?? Number(deps.env.CREW_TICK_MS ?? 300_000);
       if (Number.isFinite(tickMs) && tickMs > 0) {
         const t = setInterval(() => void crew.autoCloseTick().catch((e) => deps.logger.error('[crew] cierre automático', { error: (e as Error).message })), tickMs);

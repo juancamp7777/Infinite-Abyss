@@ -7,6 +7,7 @@ import { useApiClient } from "@/lib/hooks";
 import { connectSocket } from "@/lib/socket";
 import { Badge, Button, Empty, ErrorBox, inputCls, NeedOperator, PageHeader, Spinner, Tabs } from "@/components/ui";
 import { AuthImage } from "@/components/AuthImage";
+import { ChatCashPanel } from "@/components/ChatCashPanel";
 
 type Status = "open" | "pending" | "closed";
 type Stage = "new_lead" | "client" | "vip" | "deposit_review" | "withdraw" | "support";
@@ -401,7 +402,17 @@ function Thread({ thread, me, replies, onBack, onPatch, onSent, send, retry }: {
 
 function Details({ c, me, call, onChange }: { c: Conversation; me: string | null; call: ReturnType<typeof useApiClient>["call"]; onChange(c: Conversation): void }) {
   const [playerId, setPlayerId] = useState("");
+  const [found, setFound] = useState<Array<{ playerId: string; email?: string }> | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const search = async () => {
+    setMsg(null);
+    try {
+      const r = await call<{ items: Array<{ playerId: string; email?: string }> }>("/crm/v1/admin/players", { query: { q: playerId.trim(), limit: 5 } });
+      setFound(r.items);
+    } catch (e) {
+      setMsg(errMsg(e));
+    }
+  };
   const linkPlayer = async (body: { create: true } | { playerId: string }) => {
     setMsg(null);
     try {
@@ -432,13 +443,24 @@ function Details({ c, me, call, onChange }: { c: Conversation; me: string | null
       {!c.playerId && (
         <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
           <Button className="w-full" onClick={() => void linkPlayer({ create: true })}>Crear cuenta de casino</Button>
-          <div className="flex gap-2">
-            <input className={`${inputCls} min-w-0 flex-1`} placeholder="Id de jugador existente" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label="Id de jugador existente" />
-            <Button variant="ghost" disabled={!playerId.trim()} onClick={() => void linkPlayer({ playerId: playerId.trim() })}>Vincular</Button>
-          </div>
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+            <input className={`${inputCls} min-w-0 flex-1`} placeholder="Correo, usuario o id" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label="Buscar jugador existente" />
+            <Button type="submit" variant="ghost" disabled={playerId.trim().length < 3}>Buscar</Button>
+          </form>
+          {found && (found.length === 0 ? <p className="text-xs text-white/45">Sin resultados.</p> : (
+            <ul className="space-y-1">
+              {found.map((p) => (
+                <li key={p.playerId} className="flex items-center justify-between gap-2 rounded bg-white/[.03] px-2 py-1 text-xs">
+                  <span className="min-w-0 truncate">{p.email ?? p.playerId.slice(0, 12)}</span>
+                  <Button variant="ghost" className="!px-2 !py-0.5 text-xs" onClick={() => void linkPlayer({ playerId: p.playerId })}>Vincular</Button>
+                </li>
+              ))}
+            </ul>
+          ))}
           <p className="text-[11px] text-white/35">Vincula una cuenta existente solo si verificaste la identidad del contacto.</p>
         </div>
       )}
+      {c.playerId && <ChatCashPanel key={c.playerId} playerId={c.playerId} contactName={c.contactName} />}
       {c.playerId && (
         <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
           <p className="text-xs text-white/45">Identidad (KYC): necesaria para retirar. Verifícala con el documento que envíe el contacto.</p>

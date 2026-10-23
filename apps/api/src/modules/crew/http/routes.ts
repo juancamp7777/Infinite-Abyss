@@ -2,11 +2,12 @@ import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
 import { getPrincipal, requireAuth, requireRole, scopeOperator } from '../../shared/http/auth';
-import { asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
 import type { AscendService } from '../application/AscendService';
 import type { CrewService } from '../application/CrewService';
+import type { TeamMetrics } from '../application/TeamMetrics';
 
 const opQuery = z.object({ operatorId: z.string().min(1).max(100).optional() });
 const idParams = z.object({ id: z.string().uuid() });
@@ -18,7 +19,7 @@ const date = z.coerce.date();
  * Montado en /crew/v1.
  * /me/*: cualquier persona del equipo (su usuario de backoffice vinculado). /admin/*: administradores del operador.
  */
-export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; ascend: AscendService; logger?: ModuleLogger }): Router {
+export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; ascend: AscendService; metrics?: TeamMetrics; logger?: ModuleLogger }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
   const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
@@ -27,6 +28,15 @@ export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; ascend: 
     const operatorId = op(req);
     return { operatorId, member: await d.crew.me(operatorId, getPrincipal(req).userId) };
   };
+
+  /** Métricas del equipo: cargas, descargas, comprobantes, retiros, mensajes, tiempo de respuesta y horas por persona, y pulso por hora. */
+  r.get('/admin/metrics', ...admin, asyncHandler(async (req, res) => {
+    if (!d.metrics) throw new HttpError(503, 'UNAVAILABLE', 'Métricas no disponibles');
+    const q = parse(z.object({ from: date, to: date, tz: z.string().max(60).default('UTC') }).refine((v) => v.to > v.from && v.to.getTime() - v.from.getTime() <= 92 * 86_400_000, 'Rango inválido (máximo 92 días)'), req.query);
+    let tz = q.tz;
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); } catch { tz = 'UTC'; }
+    sendJson(res, await d.metrics.report(op(req), q.from, q.to, tz));
+  }));
 
   r.post('/me/join', ...admin, asyncHandler(async (req, res) => sendJson(res, await d.crew.joinSelf(op(req), getPrincipal(req).userId), 201)));
 

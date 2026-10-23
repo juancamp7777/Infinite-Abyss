@@ -87,7 +87,7 @@ export function BottomNav({ onMenu, onSearch, menuOpen }: { onMenu: () => void; 
   return (
     <nav aria-label={t("Navegación móvil")} className="flex items-stretch px-1 pb-[env(safe-area-inset-bottom)]">
       <button type="button" onClick={onMenu} aria-expanded={menuOpen} aria-controls="nf-drawer" className={cls}>
-        <Menu aria-hidden className="h-5 w-5" />Menú
+        <Menu aria-hidden className="h-5 w-5" />{t("Menú")}
       </button>
       {BOTTOM.map(({ label, href, icon: Icon }) => {
         const on = isActive(path, href);
@@ -98,7 +98,7 @@ export function BottomNav({ onMenu, onSearch, menuOpen }: { onMenu: () => void; 
         );
       })}
       <button type="button" onClick={onSearch} className={cls}>
-        <Search aria-hidden className="h-5 w-5" />Buscar
+        <Search aria-hidden className="h-5 w-5" />{t("Buscar")}
       </button>
     </nav>
   );

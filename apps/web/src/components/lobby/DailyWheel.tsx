@@ -31,7 +31,7 @@ export function DailyWheel({ status, onSpun }: { status: WheelStatus; onSpun: ()
       </div>
       <ul className="flex flex-wrap justify-center gap-1 text-[11px] opacity-80">{prizes.map((p) => <li key={p.id} className="rounded bg-white/10 px-1.5 py-0.5">{p.label}</li>)}</ul>
       {!status.enabled ? <p className="text-sm opacity-70">{t("La rueda no está disponible.")}</p>
-        : <button type="button" className="nf-btn nf-btn-primary" disabled={!status.canSpin || spinning} onClick={spin}>{spinning ? 'Girando…' : status.canSpin ? 'Girar rueda diaria' : 'Vuelve más tarde'}</button>}
+        : <button type="button" className="nf-btn nf-btn-primary" disabled={!status.canSpin || spinning} onClick={spin}>{spinning ? t("Girando…") : status.canSpin ? t("Girar rueda diaria") : t("Vuelve más tarde")}</button>}
       {!status.canSpin && next && <p className="text-xs opacity-70">Próximo giro: {next}</p>}
       <p role="status" className="min-h-5 text-sm font-semibold">{result}</p>
       {err && <p role="alert" className="text-sm text-red-400">{err}</p>}

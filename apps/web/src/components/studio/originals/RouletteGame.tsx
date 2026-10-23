@@ -204,7 +204,7 @@ export default function RouletteGame(props: StudioGameProps) {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={single} aria-label={t("Girar la ruleta")}>
-            {busy ? 'Girando…' : 'Girar'}
+            {busy ? t("Girando…") : t("Girar")}
           </PrimaryButton>
           <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={auto} aria-label={t("Iniciar autoplay")}>
             Auto

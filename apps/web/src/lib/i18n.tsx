@@ -51,15 +51,18 @@ export function useT(): Ctx {
   return useContext(I18nCtx) ?? { lang: "es", setLang: () => undefined, t: (k, vars) => fill(k, vars) };
 }
 
-/** Selector compacto de idioma (ES · EN · PT) para cabeceras y pies. */
-export function LanguageSwitcher({ className = "" }: { className?: string }) {
+/**
+ * Selector de idioma. `compact` (cabeceras): solo "🌐 EN", angosto para que no empuje nada en el celular.
+ * `className` reemplaza la visibilidad por defecto (p. ej. "hidden sm:inline-flex").
+ */
+export function LanguageSwitcher({ className = "inline-flex items-center", compact = false }: { className?: string; compact?: boolean }) {
   const { lang, setLang, t } = useT();
   return (
-    <label className={`inline-flex items-center ${className}`}>
+    <label className={`shrink-0 ${className}`}>
       <span className="sr-only">{t("Idioma")}</span>
       <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} aria-label={t("Idioma")}
-        className="cursor-pointer rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/85 hover:border-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
-        {LANGS.map((l) => <option key={l.id} value={l.id} className="bg-[#0b0817] text-white">{`🌐 ${l.short} · ${l.label}`}</option>)}
+        className={`cursor-pointer rounded-full border border-white/15 bg-white/5 font-bold text-white/85 hover:border-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 ${compact ? "w-[4.6rem] px-2 py-1.5 text-xs" : "px-3 py-1.5 text-xs"}`}>
+        {LANGS.map((l) => <option key={l.id} value={l.id} className="bg-[#0b0817] text-white">{compact ? `🌐 ${l.short}` : `🌐 ${l.short} · ${l.label}`}</option>)}
       </select>
     </label>
   );

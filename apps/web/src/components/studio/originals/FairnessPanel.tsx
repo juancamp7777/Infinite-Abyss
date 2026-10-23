@@ -134,7 +134,7 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
               className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950 px-2 py-1.5 font-mono text-xs outline-none focus:border-emerald-400"
             />
             <button type="button" disabled={busy || !seedInput.trim() || seedInput === view?.clientSeed} onClick={saveSeed} className="rounded-lg bg-slate-800 px-3 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
-              Guardar
+              {t("Guardar")}
             </button>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
             {t("Rotar semilla")}
           </button>
           <button type="button" disabled={busy || !revealed} onClick={verify} className="flex-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
-            Verificar
+            {t("Verificar")}
           </button>
         </div>
         {revealed && (

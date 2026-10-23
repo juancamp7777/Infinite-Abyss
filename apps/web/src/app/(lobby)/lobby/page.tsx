@@ -70,7 +70,7 @@ function SideCards() {
         <PromoCard title={vip ? `VIP ${vip.level.name}` : t("Club VIP")} href="/lobby/vip" cta={t("Mis recompensas")} art="/brand/art/crown.svg" tone="gold">
           {vip ? (
             <span className="block space-y-1.5">
-              <span className="block">{vip.next ? `Faltan ${formatInt(vip.pointsToNext)} pts para ${vip.next.name}` : t("Nivel máximo alcanzado")}</span>
+              <span className="block">{vip.next ? t("Faltan {n} pts para {level}", { n: formatInt(vip.pointsToNext), level: vip.next.name }) : t("Nivel máximo alcanzado")}</span>
               <span className="nf-bar block max-w-40" role="progressbar" aria-label={t("Progreso VIP")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vip.progressPct)}>
                 <span className="block h-full" style={{ width: `${Math.max(0, Math.min(100, vip.progressPct))}%`, background: 'linear-gradient(90deg,var(--nf-primary),var(--nf-accent))' }} />
               </span>
@@ -82,7 +82,7 @@ function SideCards() {
           {t("Club VIP con rakeback, misiones diarias y torneos desde el primer día.")}
         </PromoCard>
       )}
-      <PromoCard title={t("Rueda diaria")} href="/lobby/vip" cta={authed ? 'Girar' : t("Ver premios")} art="/brand/art/wheel.svg" tone="cyan">
+      <PromoCard title={t("Rueda diaria")} href="/lobby/vip" cta={authed ? t("Girar") : t("Ver premios")} art="/brand/art/wheel.svg" tone="cyan">
         {t("Un giro gratis cada día con premios en puntos y bonos.")}
       </PromoCard>
     </div>

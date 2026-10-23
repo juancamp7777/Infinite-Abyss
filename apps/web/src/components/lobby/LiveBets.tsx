@@ -58,16 +58,16 @@ export function LiveBets() {
             <button
               key={tv.id} id={`${base}-tab-${tv.id}`} type="button" role="tab" aria-selected={current === tv.id}
               aria-controls={`${base}-panel`} tabIndex={current === tv.id ? 0 : -1} onClick={() => setTab(tv.id)} onKeyDown={onKey} className="nf-tab"
-            >{tv.label}</button>
+            >{t(tv.label)}</button>
           ))}
         </div>
       </div>
       <div id={`${base}-panel`} role="tabpanel" aria-labelledby={`${base}-tab-${current}`} className="overflow-x-auto">
         {rows.length === 0 ? (
-          <p className="nf-panel py-8 text-center text-sm text-[var(--nf-muted)]">{meta.empty}</p>
+          <p className="nf-panel py-8 text-center text-sm text-[var(--nf-muted)]">{t(meta.empty)}</p>
         ) : (
           <table className="nf-table">
-            <caption className="sr-only">{meta.label}</caption>
+            <caption className="sr-only">{t(meta.label)}</caption>
             <thead>
               <tr>
                 <th scope="col">{t("Juego")}</th>

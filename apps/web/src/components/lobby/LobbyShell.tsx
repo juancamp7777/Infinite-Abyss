@@ -111,7 +111,7 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex items-center gap-2 md:ml-0 md:flex-1 md:justify-center"><WalletChip /></div>
             <div className="flex items-center gap-2">
               <div className="hidden xl:block"><VipProgressBar vip={vip} compact /></div>
-              <LanguageSwitcher className="hidden sm:inline-flex" />
+              <LanguageSwitcher compact className="hidden items-center sm:inline-flex" />
               <AccountMenu />
             </div>
           </div>
@@ -138,6 +138,7 @@ function Shell({ children }: { children: ReactNode }) {
               <button type="button" onClick={closeDrawer} className="nf-square-btn" aria-label={t("Cerrar menú")}><X aria-hidden className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-2"><SideNav onNavigate={closeDrawer} /></div>
+            <div className="flex items-center justify-between gap-2 border-t border-[var(--nf-border)] px-4 py-3 text-sm"><span className="text-[var(--nf-muted)]">{t("Idioma")}</span><LanguageSwitcher /></div>
             {vip && <div className="border-t border-[var(--nf-border)] p-3"><VipProgressBar vip={vip} /></div>}
           </div>
         </div>

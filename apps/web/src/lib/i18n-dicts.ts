@@ -183,6 +183,16 @@ const MORE: Record<string, [string, string]> = {
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
   "Modo": ["Mode", "Modo"], "Siguiente": ["Next", "Próximo"],
+  "Faltan {n} pts para {level}": ["{n} pts to reach {level}", "Faltam {n} pts para {level}"], "Girar": ["Spin", "Girar"], "Girando…": ["Spinning…", "Girando…"],
+  "Girar rueda diaria": ["Spin daily wheel", "Girar roda diária"], "Vuelve más tarde": ["Come back later", "Volte mais tarde"], "Vuelve más tarde.": ["Come back later.", "Volte mais tarde."],
+  "Auto": ["Auto", "Auto"], "Guardar": ["Save", "Salvar"], "Verificar": ["Verify", "Verificar"], "Saltar animación": ["Skip animation", "Pular animação"], "Buscar": ["Search", "Buscar"],
+  "Aún no tienes apuestas. ¡Elige un juego y empieza!": ["You have no bets yet. Pick a game and start!", "Você ainda não tem apostas. Escolha um jogo e comece!"],
+  "Todavía no hay apuestas en vivo.": ["No live bets yet.", "Ainda não há apostas ao vivo."], "Sin apuestas grandes por ahora.": ["No high rollers yet.", "Sem grandes apostas por enquanto."],
+  "Sin grandes victorias por ahora.": ["No big wins yet.", "Sem grandes vitórias por enquanto."],
+  "Pendiente": ["Pending", "Pendente"], "Confirmado": ["Confirmed", "Confirmado"], "Completado": ["Completed", "Concluído"], "Fallido": ["Failed", "Falhou"],
+  "Rechazado": ["Rejected", "Rejeitado"], "Aprobado": ["Approved", "Aprovado"], "Solicitado": ["Requested", "Solicitado"],
+  "Casino, cajero con IA, CRM, bots, equipo y marca propia en una sola plataforma. Lánzate en días, no en meses. Baja y mira hasta dónde llega.": ["Casino, AI cashier, CRM, bots, team tools and your own brand in one platform. Launch in days, not months. Scroll down and see how deep it goes.", "Cassino, caixa com IA, CRM, bots, equipe e marca própria em uma só plataforma. Lance em dias, não em meses. Desça e veja até onde vai."],
+  "Un operador con inteligencia artificial que mira tu casino sin parpadear: detecta fraude y abuso de bonos, responde a jugadores, avisa caídas y te manda el resumen del día. Lo que mueve dinero, siempre te lo pregunta.": ["An AI operator that watches your casino without blinking: it detects fraud and bonus abuse, answers players, warns about outages and sends you the daily summary. Anything that moves money, it always asks you first.", "Um operador com inteligência artificial que vigia seu cassino sem piscar: detecta fraude e abuso de bônus, responde jogadores, avisa quedas e manda o resumo do dia. O que movimenta dinheiro, sempre pergunta a você."],
   "Pagado": ["Payout", "Pago"],
   "Multiplicador objetivo": ["Target multiplier", "Multiplicador alvo"],
   "Probabilidad": ["Chance", "Probabilidade"],

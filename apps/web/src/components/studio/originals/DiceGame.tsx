@@ -103,7 +103,7 @@ export default function DiceGame(props: StudioGameProps) {
             {busy ? 'Lanzando…' : 'Apostar'}
           </PrimaryButton>
           <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={auto} aria-label={t("Iniciar autoplay")}>
-            Auto
+            {t("Auto")}
           </PrimaryButton>
         </div>
       )}

@@ -29,6 +29,8 @@ export interface SendRequest {
   refType?: 'campaign' | 'journey';
   variant?: string;
   vars?: Record<string, unknown>;
+  /** Envío manual del operador desde el panel: respeta cumplimiento y opt-in, pero no el límite de frecuencia automático. */
+  manual?: boolean;
 }
 
 export interface MessagingDeps {
@@ -66,13 +68,14 @@ export class MessagingService {
   }
 
   /** GUARD CENTRAL de marketing: cumplimiento + opt-in del canal + límite de frecuencia. */
-  async checkEligibility(operatorId: string, playerId: string, channel: ChannelKind): Promise<Eligibility> {
+  async checkEligibility(operatorId: string, playerId: string, channel: ChannelKind, opts: { manual?: boolean } = {}): Promise<Eligibility> {
     const comp = await this.checkCompliance(operatorId, playerId);
     if (!comp.ok) return comp;
     const consent = await this.d.repos.consents.get(`${operatorId}:${playerId}:${channel}`);
     // Push: aceptar las notificaciones en el navegador ES el permiso del canal; una baja explícita siempre manda.
     const pushPermission = !consent && channel === 'push' && (await this.d.repos.pushSubs.list({ operatorId, playerId })).some((s) => !s.dead);
     if (!consent?.optIn && !pushPermission) return { ok: false, reason: 'NO_OPT_IN' };
+    if (opts.manual) return comp;
     const since = this.d.clock().getTime() - this.d.config.frequencyCapHours * 3_600_000;
     const recent = await this.d.repos.sends.list({ operatorId, playerId, status: 'sent' });
     const count = recent.filter((s) => s.kind === 'marketing' && new Date(s.at).getTime() >= since).length;
@@ -110,7 +113,7 @@ export class MessagingService {
   async sendMarketing(req: SendRequest): Promise<SendLog> {
     const tpl = await this.loadTemplate(req);
     if (tpl.kind !== 'marketing') throw new Error('Plantilla no es de marketing: usa sendTransactional');
-    const elig = await this.checkEligibility(req.operatorId, req.playerId, tpl.channel);
+    const elig = await this.checkEligibility(req.operatorId, req.playerId, tpl.channel, { manual: req.manual });
     if (!elig.ok) return this.logExcluded(req, tpl, elig.reason);
     return this.deliver(req, tpl, elig.compliance);
   }

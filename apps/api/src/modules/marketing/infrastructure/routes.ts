@@ -243,7 +243,7 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
     await rt.repos.templates.put(t);
     void (async () => {
       for (const playerId of players) {
-        await rt.messaging.sendMarketing({ operatorId, playerId, templateId: t.id }).catch(() => undefined);
+        await rt.messaging.sendMarketing({ operatorId, playerId, templateId: t.id, manual: true }).catch(() => undefined);
       }
     })();
     sendJson(res, { templateId: t.id, audience: players.length, devices: subs.length }, 202);

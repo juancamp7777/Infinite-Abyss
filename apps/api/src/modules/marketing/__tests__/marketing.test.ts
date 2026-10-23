@@ -161,6 +161,11 @@ describe('guard de cumplimiento (NUNCA se envía)', () => {
     expect(c.channels.email.sent[0].headers?.['List-Unsubscribe']).toContain('/marketing/v1/unsubscribe');
     const b = await c.rt.messaging.sendMarketing({ operatorId: OP, playerId: 'p1', templateId: t.id });
     expect(b.reason).toBe('FREQUENCY_CAP');
+    // El envío manual desde el panel no lo frena el límite automático; el cumplimiento sí aplica.
+    expect((await c.rt.messaging.sendMarketing({ operatorId: OP, playerId: 'p1', templateId: t.id, manual: true })).status).toBe('sent');
+    c.compliance.set(OP, 'p1', { selfExcluded: true });
+    expect((await c.rt.messaging.sendMarketing({ operatorId: OP, playerId: 'p1', templateId: t.id, manual: true })).reason).toBe('SELF_EXCLUDED');
+    c.compliance.set(OP, 'p1', { selfExcluded: false });
     c.clock.now = new Date(T0.getTime() + 25 * HOUR);
     expect((await c.rt.messaging.sendMarketing({ operatorId: OP, playerId: 'p1', templateId: t.id })).status).toBe('sent');
   });

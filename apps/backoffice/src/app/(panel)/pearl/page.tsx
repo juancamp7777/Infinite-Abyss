@@ -39,7 +39,7 @@ const REASONS: Record<string, string> = {
   pago_no_encontrado: "El pago no apareció en el banco",
 };
 const reasonText = (r?: string) => (r ? REASONS[r] ?? r : "");
-interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean; usdtRate?: string | null }
+interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean; usdtRate?: string | null; fxRates?: Record<string, string> | null }
 interface Feed { id: string; type: string; name: string; enabled: boolean; lastEventAt?: string }
 interface AiView { enabled: boolean; provider: "anthropic" | "gemini" | "deepseek"; readerModel: string; judgeModel: string; hasKey: boolean; keyFromEnv: boolean }
 const PROVIDER_LABEL = { anthropic: "Claude (Anthropic)", gemini: "Gemini (Google)", deepseek: "DeepSeek" } as const;
@@ -233,10 +233,21 @@ function Config() {
           <Field label="Depósito mínimo (unidades mínimas)" htmlFor="min"><input id="min" className={`${inputCls} w-full`} value={s.minAmount} onChange={(e) => setForm({ ...form, minAmount: e.target.value.replace(/\D/g, "") })} /></Field>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.autoRegisterLeads ?? true} onChange={(e) => setForm({ ...form, autoRegisterLeads: e.target.checked })} /> Crear la cuenta del lead con su primer comprobante</label>
           <Field label="Esperar al banco (minutos)" htmlFor="wait"><input id="wait" type="number" className={`${inputCls} w-full`} value={s.waitBankMinutes} onChange={(e) => setForm({ ...form, waitBankMinutes: Number(e.target.value) })} /></Field>
-          <Field label={`Tasa USDT (${s.currency} por 1 USDT)`} htmlFor="usdt-rate">
-            <input id="usdt-rate" inputMode="decimal" className={`${inputCls} w-full`} placeholder="Ej. 3950" value={s.usdtRate ?? ""} onChange={(e) => setForm({ ...form, usdtRate: e.target.value.replace(/[^\d.]/g, "") || null })} />
-            <span className="mt-1 block text-xs text-white/45">Con esta tasa se acreditan los depósitos en USDT. Actualízala cuando cambie el precio.</span>
-          </Field>
+          <fieldset className="rounded-xl border border-white/10 p-3">
+            <legend className="px-1 text-sm font-semibold">Tasas de cambio ({s.currency} por 1 unidad)</legend>
+            <div className="grid grid-cols-3 gap-2">
+              <Field label="USDT" htmlFor="rate-usdt">
+                <input id="rate-usdt" inputMode="decimal" className={`${inputCls} w-full`} placeholder="3950" value={s.usdtRate ?? ""} onChange={(e) => setForm({ ...form, usdtRate: e.target.value.replace(/[^\d.]/g, "") || null })} />
+              </Field>
+              {["ARS", "MXN"].filter((c) => c !== s.currency).map((c) => (
+                <Field key={c} label={c} htmlFor={`rate-${c}`}>
+                  <input id={`rate-${c}`} inputMode="decimal" className={`${inputCls} w-full`} placeholder={c === "ARS" ? "4.2" : "215"} value={s.fxRates?.[c] ?? ""}
+                    onChange={(e) => setForm({ ...form, fxRates: { ...(s.fxRates ?? {}), [c]: e.target.value.replace(/[^\d.]/g, "") } })} />
+                </Field>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-white/45">Los pagos en otra moneda (a tus cuentas de Argentina o México, o en USDT) se acreditan en {s.currency} con estas tasas. Actualízalas cuando cambie el precio; sin tasa, el pago queda en revisión.</p>
+          </fieldset>
           <Button className="w-full" onClick={() => void run(() => call("/pearl/v1/admin/settings", { method: "PUT", body: form }), "Reglas guardadas")}>Guardar reglas</Button>
         </div>
       </Card>

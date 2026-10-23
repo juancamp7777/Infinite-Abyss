@@ -182,6 +182,7 @@ const MORE: Record<string, [string, string]> = {
 };
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
+  "Paga en {cur} y te acreditamos el equivalente en {local} a la tasa del día.": ["Pay in {cur} and we credit the equivalent in {local} at today’s rate.","Pague em {cur} e creditamos o equivalente em {local} pela cotação do dia."],
   "Moneda": ["Currency","Moeda"],
   "Otras": ["Other","Outras"],
   "Envía USDT y te acreditamos el equivalente en tu moneda a la tasa del día.": ["Send USDT and we credit the equivalent in your currency at today’s rate.","Envie USDT e creditamos o equivalente na sua moeda pela cotação do dia."],

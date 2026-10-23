@@ -192,6 +192,14 @@ function SendMessage({ playerId }: { playerId: string }) {
   );
 }
 
+/** Estados de identidad en palabras del panel. */
+const KYC_STATE: Record<string, { label: string; tone: "good" | "warn" | "bad" | "neutral" }> = {
+  VERIFIED: { label: "Verificada", tone: "good" },
+  PENDING: { label: "En revisión", tone: "warn" },
+  REJECTED: { label: "Rechazada", tone: "bad" },
+  NONE: { label: "Sin verificar", tone: "neutral" },
+};
+
 function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const { call } = useApiClient();
   const session = useSession();
@@ -200,7 +208,17 @@ function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => 
   const [note, setNote] = useState("");
   const [newTag, setNewTag] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [kycMsg, setKycMsg] = useState<string | null>(null);
+  // Estado de identidad (lo trae la ficha de caja del jugador).
+  const wallet = useApi<{ kycStatus?: string }>(`/api/backoffice/players/${encodeURIComponent(playerId)}/wallet`);
   const base = `/crm/v1/admin/players/${encodeURIComponent(playerId)}`;
+
+  async function reviewKyc(status: "VERIFIED" | "REJECTED") {
+    setKycMsg(null);
+    await act(() => call(`/api/backoffice/players/${encodeURIComponent(playerId)}/kyc`, { method: "PUT", body: { status, reason: status === "VERIFIED" ? "Verificado desde Jugadores" : "Rechazado desde Jugadores" } }));
+    wallet.reload();
+    setKycMsg(status === "VERIFIED" ? "Identidad verificada: ya puede retirar." : "Verificación rechazada.");
+  }
 
   async function act(fn: () => Promise<unknown>) {
     setErr(null);
@@ -225,9 +243,10 @@ function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => 
             <div className="space-y-3 text-sm">
               {session && CAN_ADJUST.has(session.role) && <AdjustBalance playerId={playerId} currency={d.data.profile.currency} onDone={d.reload} />}
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 p-3">
-                <span className="mr-auto text-sm"><b>Identidad (KYC)</b><span className="block text-xs text-white/50">Necesaria para retirar y para recibir publicidad.</span></span>
-                <Button variant="ghost" onClick={() => void act(() => call(`/api/backoffice/players/${encodeURIComponent(playerId)}/kyc`, { method: "PUT", body: { status: "VERIFIED", reason: "Verificado desde Jugadores" } }))}>Verificar identidad</Button>
-                <Button variant="danger" onClick={() => void act(() => call(`/api/backoffice/players/${encodeURIComponent(playerId)}/kyc`, { method: "PUT", body: { status: "REJECTED", reason: "Rechazado desde Jugadores" } }))}>Rechazar</Button>
+                <span className="mr-auto text-sm"><b>Identidad (KYC)</b> {wallet.data?.kycStatus && <Badge tone={KYC_STATE[wallet.data.kycStatus]?.tone ?? "neutral"}>{KYC_STATE[wallet.data.kycStatus]?.label ?? wallet.data.kycStatus}</Badge>}<span className="block text-xs text-white/50">Necesaria para retirar. La publicidad llega a quien declaró ser mayor de 18 al registrarse.</span></span>
+                {wallet.data?.kycStatus !== "VERIFIED" && <Button variant="ghost" onClick={() => void reviewKyc("VERIFIED")}>Verificar identidad</Button>}
+                {wallet.data?.kycStatus !== "REJECTED" && <Button variant="danger" onClick={() => void reviewKyc("REJECTED")}>Rechazar</Button>}
+                {kycMsg && <p role="status" className="w-full text-xs text-emerald-300">{kycMsg}</p>}
               </div>
               <SendMessage playerId={playerId} />
               <dl className="grid grid-cols-2 gap-2">

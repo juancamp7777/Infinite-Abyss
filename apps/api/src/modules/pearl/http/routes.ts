@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
 import { getPrincipal, requireAuth, requirePlayer, requireRole, scopeOperator } from '../../shared/http/auth';
 import { HttpError, asyncHandler, badRequest, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { accountCurrency } from '../domain/fx';
 import { ACCOUNT_COUNTRIES, ACCOUNT_METHODS, accountMethod, checkAccount, cleanAccountNumber } from '../domain/accountMethods';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
@@ -27,8 +28,6 @@ const extracted = z.object({
 const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_info', 'rejected', 'duplicate', 'error'] as const;
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
-const COUNTRY_BY_CURRENCY: Record<string, string> = { COP: 'CO', MXN: 'MX', ARS: 'AR' };
-const CURRENCY_BY_COUNTRY: Record<string, string> = { CO: 'COP', MX: 'MXN', AR: 'ARS' };
 
 export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger; sealSecret?: (v: unknown) => string }): Router {
   const r = Router();
@@ -48,16 +47,16 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
   r.get('/player/accounts', player, asyncHandler(async (req, res) => {
     const { operatorId } = requirePlayer(req);
     const currency = (await d.pearl.settings(operatorId)).currency;
-    const country = COUNTRY_BY_CURRENCY[currency];
+    // Todas las cuentas activas: el jugador elige la moneda en la que paga (ARS y USDT se convierten con la tasa).
     const items = (await d.pearl.listAccounts(operatorId))
-      .filter((a) => a.active && (!a.country || !country || a.country === country || accountMethod(a.bank)?.country === '*'))
+      .filter((a) => a.active)
       .map((a) => {
         const m = accountMethod(a.bank);
         return {
           id: a.id, method: m?.label ?? a.bank ?? 'Transferencia', numberLabel: m?.numberLabel ?? 'Cuenta', number: a.accountNumber, holderName: m?.walletOnly ? undefined : a.holderName,
           alias: m?.keyLike ? undefined : a.alias, bankName: a.bankName, accountType: a.accountType, network: m?.walletOnly ? 'USDT · TRON (TRC20)' : undefined,
           // Binance recibe USDT; el resto, la moneda local del país de la cuenta.
-          currency: m?.key.startsWith('binance') ? 'USDT' : (a.country && CURRENCY_BY_COUNTRY[a.country]) || currency,
+          currency: accountCurrency(a, currency),
         };
       });
     sendJson(res, { items });
@@ -75,6 +74,8 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     const b = parse(z.object({
       mode: z.enum(['auto', 'review_all']).optional(), currency: z.string().regex(/^[A-Z]{3,5}$/).optional(), autoMaxAmount: money.optional(), minAmount: money.optional(),
       maxAgeHours: z.number().int().min(1).max(720).optional(), waitBankMinutes: z.number().int().min(1).max(1440).optional(), utcOffsetMinutes: z.number().int().min(-720).max(840).optional(), autoRegisterLeads: z.boolean().optional(),
+      fxRates: z.record(z.string().regex(/^[A-Z]{3}$/), z.string().trim().regex(/^(\d{1,9}(\.\d{1,6})?)?$/, 'Tasa inválida: unidades de la moneda del casino por 1, p. ej. 4.2'))
+        .transform((r) => Object.fromEntries(Object.entries(r).filter(([, v]) => v !== ''))).optional(),
       usdtRate: z.string().trim().regex(/^\d{1,9}(\.\d{1,6})?$/, 'Tasa USDT inválida: pesos por 1 USDT, p. ej. 3950').nullable().optional(),
     }), req.body);
     sendJson(res, await d.pearl.updateSettings(op(req), b));

@@ -23,7 +23,7 @@ const UNKNOWN_PLAYER: PlayerComplianceStatus = {
  * - selfExcluded: autoexclusión temporal o permanente, cool-off vigente, o cuenta SUSPENDED/CLOSED.
  *   Marketing y CRM no contactan a estos jugadores y el betGuard les impide apostar.
  * - hasActiveLimits: cualquier límite de depósito, pérdida o tiempo de sesión configurado.
- * - ageVerified: KYC verificado (la verificación de identidad incluye la mayoría de edad).
+ * - ageVerified: declaró 18+ al registrarse o tiene el KYC verificado (el KYC es obligatorio solo para retirar).
  * - isMinor: la Fase 1 no registra menores (el registro exige mayoría de edad), siempre false.
  */
 export class Phase1PlayerCompliance implements PlayerCompliancePort {
@@ -40,7 +40,7 @@ export class Phase1PlayerCompliance implements PlayerCompliancePort {
     if (!isUuid(operatorId) || !isUuid(playerId)) return { ...UNKNOWN_PLAYER };
     const user = await this.prisma.user.findUnique({
       where: { id: playerId },
-      select: { operatorId: true, status: true, kycStatus: true, email: true },
+      select: { operatorId: true, status: true, kycStatus: true, ageDeclaredAt: true, email: true },
     });
     if (!user || user.operatorId !== operatorId) return { ...UNKNOWN_PLAYER };
 
@@ -67,7 +67,8 @@ export class Phase1PlayerCompliance implements PlayerCompliancePort {
     return {
       selfExcluded: excludedByRg || user.status !== 'ACTIVE',
       hasActiveLimits,
-      ageVerified: user.kycStatus === 'VERIFIED',
+      // Publicidad: basta la declaración de mayoría de edad del registro o el KYC verificado.
+      ageVerified: user.kycStatus === 'VERIFIED' || user.ageDeclaredAt !== null,
       isMinor: false,
       email: user.email,
     };

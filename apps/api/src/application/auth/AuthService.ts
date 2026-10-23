@@ -87,7 +87,7 @@ export class AuthService {
 
   async register(
     tenant: TenantContext,
-    input: { email: string; password: string; username?: string },
+    input: { email: string; password: string; username?: string; adult?: boolean },
     meta: RequestMeta = {},
   ): Promise<PlayerAuthResult> {
     const passwordHash = await bcrypt.hash(input.password, this.cost);
@@ -99,6 +99,7 @@ export class AuthService {
           email: input.email.trim(),
           emailNormalized: normalizeEmail(input.email),
           username: input.username ?? null,
+          ageDeclaredAt: input.adult ? new Date() : null,
           passwordHash,
           currency: tenant.defaultCurrency,
           rgSettings: { create: { operatorId: tenant.operatorId } },

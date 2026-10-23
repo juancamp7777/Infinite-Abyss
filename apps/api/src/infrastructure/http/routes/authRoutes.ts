@@ -17,6 +17,8 @@ export interface AuthRoutesDeps extends HttpGuards {
 
 const registerSchema = z.object({
   email: emailSchema,
+  /** Casilla «tengo 18 años o más y acepto los términos» del registro. */
+  adult: z.boolean().optional(),
   password: passwordSchema,
   username: z
     .string()

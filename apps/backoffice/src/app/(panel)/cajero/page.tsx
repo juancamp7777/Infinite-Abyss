@@ -18,7 +18,7 @@ export interface BotConfig {
   hours: { timezone: string; noCharge: "off" | "always" | "schedule"; windows: TimeWindow[] };
   automation: { autoCredit: boolean; createUsers: boolean; giveBankData: "never" | "on_request" | "new_leads"; takeWithdrawals: boolean; handoffOnPassword: boolean; handoffOnUnmatchedReceipt: boolean; naturalHandoff: boolean; replyDelaySeconds: number };
   routing: { support: Stage; pendingCredit: Stage; vip: Stage; withdraw: Stage };
-  bonuses: { housePct: number; houseMin: string | null; houseMax: string | null; welcomePct: number; happyHourPct: number; happyHours: TimeWindow[]; promos: Promo[] };
+  bonuses: { housePct: number; houseMin: string | null; houseMax: string | null; welcomePct: number; happyHourPct: number; happyHours: TimeWindow[]; promos: Promo[]; wageringMultiplier: number };
 }
 interface View {
   currency: string;
@@ -193,6 +193,10 @@ export default function CajeroPage() {
               <Field label="Desde (opcional)" htmlFor="bo-min"><MoneyInput id="bo-min" currency={cur} value={cfg.bonuses.houseMin} onChange={(houseMin) => set("bonuses", { houseMin })} placeholder="Sin mínimo" /></Field>
               <Field label="Hasta (opcional)" htmlFor="bo-max"><MoneyInput id="bo-max" currency={cur} value={cfg.bonuses.houseMax} onChange={(houseMax) => set("bonuses", { houseMax })} placeholder="Sin máximo" /></Field>
               <Field label="Bono de bienvenida (1ª carga)" htmlFor="bo-wel"><PctInput id="bo-wel" value={cfg.bonuses.welcomePct} onChange={(welcomePct) => set("bonuses", { welcomePct })} /></Field>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="Rollover de los bonos (veces)" hint="0 = fichas directas, como las salas de Magik. 1 o más = el jugador debe apostar el bono esas veces antes de retirarlo." htmlFor="bo-wag"><input id="bo-wag" type="number" min={0} max={60} className={`${inputCls} w-28`} value={cfg.bonuses.wageringMultiplier} onChange={(e) => set("bonuses", { wageringMultiplier: Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))) })} /></Field>
+              <p className="self-end text-xs text-white/50">En cada carga se aplica el <b>mayor</b> bono que corresponda: casa, happy hour, bienvenida o la promo que el jugador activó. No se suman.</p>
             </div>
           </Card>
           <Card title="Happy hour">

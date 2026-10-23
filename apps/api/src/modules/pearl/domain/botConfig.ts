@@ -88,7 +88,9 @@ export const botConfigSchema = z.object({
     happyHourPct: pct.default(0),
     happyHours: z.array(windowSchema).max(10).default([]),
     promos: z.array(promoSchema).max(30).default([]),
-  }).default({ housePct: 0, houseMin: null, houseMax: null, welcomePct: 0, happyHourPct: 0, happyHours: [], promos: [] }),
+    /** Rollover de los bonos pagados (0 = fichas directas, como las salas de Magik). */
+    wageringMultiplier: z.number().int().min(0).max(60).default(0),
+  }).default({ housePct: 0, houseMin: null, houseMax: null, welcomePct: 0, happyHourPct: 0, happyHours: [], promos: [], wageringMultiplier: 0 }),
 });
 export type BotConfig = z.infer<typeof botConfigSchema>;
 

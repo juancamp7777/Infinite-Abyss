@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import type { ReactNode } from 'react';
 import { AlertTriangle, Inbox } from 'lucide-react';
 
@@ -5,8 +6,9 @@ export function Skeleton({ className = '' }: { className?: string }) {
   return <div aria-hidden className={`nf-skeleton ${className}`} />;
 }
 export function CardSkeletons({ n = 8 }: { n?: number }) {
+  const { t } = useT();
   return (
-    <div role="status" aria-label="Cargando" className="nf-grid">
+    <div role="status" aria-label={t("Cargando")} className="nf-grid">
       {Array.from({ length: n }, (_, i) => <Skeleton key={i} className="aspect-[3/2]" />)}
     </div>
   );
@@ -22,11 +24,12 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
   );
 }
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useT();
   return (
     <div role="alert" className="nf-panel flex flex-col items-center gap-2 py-8 text-center">
       <AlertTriangle aria-hidden className="h-8 w-8 text-red-400" />
       <p className="text-sm">{message}</p>
-      {onRetry && <button type="button" className="nf-btn" onClick={onRetry}>Reintentar</button>}
+      {onRetry && <button type="button" className="nf-btn" onClick={onRetry}>{t("Reintentar")}</button>}
     </div>
   );
 }

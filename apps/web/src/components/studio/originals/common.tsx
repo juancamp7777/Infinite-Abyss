@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Minus, Plus, Zap } from 'lucide-react';
@@ -164,10 +165,11 @@ export function useOpenRound(props: StudioGameProps, session: StudioSession, ena
 }
 
 export function OpenRoundNotice({ state }: { state: ReturnType<typeof useOpenRound> }) {
+  const { t } = useT();
   if (!state.open) return null;
   return (
     <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-950/50 p-3 text-sm text-amber-200">
-      <p>Tienes una ronda abierta de una visita anterior. Ciérrala para continuar (se liquida con el resultado actual del servidor).</p>
+      <p>{t("Tienes una ronda abierta de una visita anterior. Ciérrala para continuar (se liquida con el resultado actual del servidor).")}</p>
       <button type="button" disabled={state.closing} onClick={state.close} className="mt-2 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 disabled:opacity-50">
         {state.closing ? 'Cerrando…' : 'Cerrar ronda abierta'}
       </button>
@@ -189,19 +191,20 @@ export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 /* ───────────── UI compartida ───────────── */
 
 export function GameShell({ title, session, children, aside }: { title: string; session: StudioSession; children: ReactNode; aside?: ReactNode }) {
+  const { t } = useT();
   return (
     <section aria-label={title} className="mx-auto w-full max-w-6xl rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-100 shadow-xl sm:p-5">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold tracking-wide sm:text-xl">{title}</h2>
-        <div className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm" aria-live="polite" aria-label="Saldo">
-          <span className="text-slate-400">Saldo: </span>
+        <div className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm" aria-live="polite" aria-label={t("Saldo")}>
+          <span className="text-slate-400">{t("Saldo:")} </span>
           <span className="font-mono font-semibold text-emerald-400">{session.ready ? formatMinor(session.balance, session.currency) : 'Cargando…'}</span>
         </div>
       </header>
       {session.error && (
         <div role="alert" className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-rose-500/40 bg-rose-950/60 px-3 py-2 text-sm text-rose-200">
           <span>{session.error}</span>
-          <button type="button" onClick={() => session.setError(null)} className="shrink-0 text-xs underline" aria-label="Cerrar aviso de error">
+          <button type="button" onClick={() => session.setError(null)} className="shrink-0 text-xs underline" aria-label={t("Cerrar aviso de error")}>
             Cerrar
           </button>
         </div>
@@ -215,6 +218,7 @@ export function GameShell({ title, session, children, aside }: { title: string; 
 }
 
 export function BetInput({ value, onChange, disabled, label = 'Apuesta' }: { value: string; onChange: (v: string) => void; disabled?: boolean; label?: string }) {
+  const { t } = useT();
   const cur = operatorCurrency();
   const raw = toMinorUnits(value);
   const parsed = raw !== null && raw > BigInt(0) ? raw : null;
@@ -230,7 +234,7 @@ export function BetInput({ value, onChange, disabled, label = 'Apuesta' }: { val
   return (
     <div>
       <label htmlFor="bet-amount" className="mb-1 block text-xs font-medium uppercase tracking-wider text-slate-400">
-        {label}
+        {t(label)}
       </label>
       <div className="flex items-stretch gap-1">
         <input
@@ -243,14 +247,14 @@ export function BetInput({ value, onChange, disabled, label = 'Apuesta' }: { val
           aria-describedby="bet-amount-hint"
           className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-emerald-400 disabled:opacity-50"
         />
-        <button type="button" disabled={disabled} onClick={() => scale(0.5)} aria-label="Reducir apuesta a la mitad" className="rounded-lg bg-slate-800 px-3 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
+        <button type="button" disabled={disabled} onClick={() => scale(0.5)} aria-label={t("Reducir apuesta a la mitad")} className="rounded-lg bg-slate-800 px-3 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
           ½
         </button>
-        <button type="button" disabled={disabled} onClick={() => scale(2)} aria-label="Duplicar apuesta" className="rounded-lg bg-slate-800 px-3 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
+        <button type="button" disabled={disabled} onClick={() => scale(2)} aria-label={t("Duplicar apuesta")} className="rounded-lg bg-slate-800 px-3 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
           2×
         </button>
       </div>
-      <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="Montos rápidos">
+      <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label={t("Montos rápidos")}>
         {quick.map((q) => (
           <button key={q} type="button" disabled={disabled} onClick={() => onChange(fromMinorInput(BigInt(q)))} className="rounded-md bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50">
             {formatMinor(q)}
@@ -291,13 +295,14 @@ export function NumberField({
   disabled?: boolean;
   suffix?: string;
 }) {
+  const { t } = useT();
   const clamp = (n: number) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
   const dec = (step.toString().split('.')[1] ?? '').length;
   const fix = (n: number) => Number(n.toFixed(dec));
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-medium uppercase tracking-wider text-slate-400">
-        {label}
+        {t(label)}
       </label>
       <div className="flex items-stretch gap-1">
         <button type="button" disabled={disabled} onClick={() => onChange(clamp(fix(value - step)))} aria-label={`Disminuir ${label}`} className="rounded-lg bg-slate-800 px-2 hover:bg-slate-700 disabled:opacity-50">
@@ -327,9 +332,10 @@ export function NumberField({
 }
 
 export function Segmented<T extends string | number>({ label, value, options, onChange, disabled }: { label: string; value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; disabled?: boolean }) {
+  const { t } = useT();
   return (
     <div role="radiogroup" aria-label={label}>
-      <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">{t(label)}</div>
       <div className="flex flex-wrap gap-1">
         {options.map((o) => (
           <button
@@ -350,12 +356,13 @@ export function Segmented<T extends string | number>({ label, value, options, on
 }
 
 export function TurboToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  const { t } = useT();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={value}
-      aria-label="Modo turbo"
+      aria-label={t("Modo turbo")}
       onClick={() => onChange(!value)}
       className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm ${value ? 'border-amber-400 bg-amber-400/10 text-amber-300' : 'border-white/10 bg-slate-900 text-slate-300'}`}
     >
@@ -378,9 +385,10 @@ export function PrimaryButton({ children, ...p }: React.ButtonHTMLAttributes<HTM
 }
 
 export function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 'win' | 'lose' }) {
+  const { t } = useT();
   return (
     <div className="rounded-lg bg-slate-900 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="text-[11px] uppercase tracking-wider text-slate-400">{t(label)}</div>
       <div className={`font-mono text-base font-semibold ${tone === 'win' ? 'text-emerald-400' : tone === 'lose' ? 'text-rose-400' : ''}`}>{value}</div>
     </div>
   );
@@ -388,10 +396,11 @@ export function Stat({ label, value, tone }: { label: string; value: ReactNode; 
 
 /** Fichas con el multiplicador de las últimas rondas. */
 export function HistoryStrip({ rounds, loading }: { rounds: PublicRound[]; loading?: boolean }) {
-  if (loading) return <p className="text-xs text-slate-500">Cargando historial…</p>;
-  if (rounds.length === 0) return <p className="text-xs text-slate-500">Aún no hay rondas. ¡Haz tu primera apuesta!</p>;
+  const { t } = useT();
+  if (loading) return <p className="text-xs text-slate-500">{t("Cargando historial…")}</p>;
+  if (rounds.length === 0) return <p className="text-xs text-slate-500">{t("Aún no hay rondas. ¡Haz tu primera apuesta!")}</p>;
   return (
-    <ul className="flex flex-wrap gap-1" aria-label="Historial de rondas">
+    <ul className="flex flex-wrap gap-1" aria-label={t("Historial de rondas")}>
       {rounds.slice(0, 20).map((r) => {
         const win = BigInt(r.win) > BigInt(0);
         return (

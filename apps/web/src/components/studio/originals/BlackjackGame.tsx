@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useState } from 'react';
 import type { StudioGameProps } from '../types';
@@ -56,6 +57,7 @@ function PlayingCard({ card, hidden, delay }: { card?: Card; hidden?: boolean; d
 }
 
 export default function BlackjackGame(props: StudioGameProps) {
+  const { t } = useT();
   const session = useStudioSession(props);
   const history = useRoundHistory(props);
   const openRound = useOpenRound(props, session, true);
@@ -123,7 +125,7 @@ export default function BlackjackGame(props: StudioGameProps) {
       <BetInput value={bet} onChange={setBet} disabled={playing || busy} />
       <TurboToggle value={turbo} onChange={setTurbo} />
       {playing ? (
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Acciones de la mano">
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Acciones de la mano")}>
           {(['hit', 'stand', 'double', 'split'] as const).map((a) => (
             <PrimaryButton key={a} tone={a === 'stand' ? 'stop' : 'go'} disabled={busy || !actions.includes(a)} onClick={() => act(a)} aria-label={ACTION_LABEL[a]}>
               {ACTION_LABEL[a]}
@@ -131,7 +133,7 @@ export default function BlackjackGame(props: StudioGameProps) {
           ))}
         </div>
       ) : (
-        <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={deal} aria-label="Repartir cartas">
+        <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={deal} aria-label={t("Repartir cartas")}>
           {busy ? 'Repartiendo…' : 'Repartir'}
         </PrimaryButton>
       )}
@@ -143,7 +145,7 @@ export default function BlackjackGame(props: StudioGameProps) {
   const won = last ? BigInt(last.win) : null;
   const staked = last ? BigInt(last.bet) : BigInt(0);
   return (
-    <GameShell title="Abyss Blackjack" session={session} aside={aside}>
+    <GameShell title={t("Abyss Blackjack")} session={session} aside={aside}>
       <style>{`@keyframes bjdeal{from{opacity:0;transform:translateY(-16px) scale(.9)}to{opacity:1;transform:none}}@media (prefers-reduced-motion: reduce){[style*="bjdeal"],.animate-\\[bjdeal_0\\.3s_ease-out_both\\]{animation:none!important}}`}</style>
       <div className="space-y-3">
         <div className="min-h-[360px] space-y-5 rounded-2xl bg-emerald-900/50 p-3 sm:p-5">
@@ -158,7 +160,7 @@ export default function BlackjackGame(props: StudioGameProps) {
                   {view.dealer.hidden > 0 && <PlayingCard hidden delay={120} />}
                 </>
               ) : (
-                <p className="self-center text-sm text-emerald-100/60">Haz tu apuesta y reparte.</p>
+                <p className="self-center text-sm text-emerald-100/60">{t("Haz tu apuesta y reparte.")}</p>
               )}
             </div>
           </div>
@@ -185,7 +187,7 @@ export default function BlackjackGame(props: StudioGameProps) {
             })}
           </div>
         </div>
-        <ResultBanner win={won !== null ? won >= staked && won > BigInt(0) : null} text={last && won !== null ? (won > staked ? `¡Ganaste ${formatMinor(won - staked, last.currency)}!` : won > BigInt(0) && won === staked ? 'Empate: te devolvemos la apuesta.' : won > BigInt(0) ? `Recuperas ${formatMinor(won, last.currency)}.` : 'La casa gana esta mano.') : ''} />
+        <ResultBanner win={won !== null ? won >= staked && won > BigInt(0) : null} text={last && won !== null ? (won > staked ? `¡Ganaste ${formatMinor(won - staked, last.currency)}!` : won > BigInt(0) && won === staked ? 'Empate: te devolvemos la apuesta.' : won > BigInt(0) ? `Recuperas ${formatMinor(won, last.currency)}.` : t("La casa gana esta mano.")) : ''} />
         <HistoryStrip rounds={history.rounds} loading={history.loading} />
       </div>
     </GameShell>

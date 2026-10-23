@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { StudioGameProps } from '../types';
@@ -42,10 +43,11 @@ const spotOf = (key: string): Spot => {
 };
 
 function Wheel({ rotation, ms }: { rotation: number; ms: number }) {
+  const { t } = useT();
   const R = 100;
   const polar = (a: number, r: number) => [Math.sin((a * Math.PI) / 180) * r, -Math.cos((a * Math.PI) / 180) * r];
   return (
-    <svg viewBox="-110 -110 220 220" className="mx-auto w-full max-w-[260px]" role="img" aria-label="Rueda de ruleta europea">
+    <svg viewBox="-110 -110 220 220" className="mx-auto w-full max-w-[260px]" role="img" aria-label={t("Rueda de ruleta europea")}>
       <g style={{ transform: `rotate(${rotation}deg)`, transition: `transform ${ms}ms cubic-bezier(0.15, 0.6, 0.1, 1)` }}>
         <circle r="108" fill="#78350f" />
         {WHEEL.map((n, i) => {
@@ -72,6 +74,7 @@ function Wheel({ rotation, ms }: { rotation: number; ms: number }) {
 }
 
 export default function RouletteGame(props: StudioGameProps) {
+  const { t } = useT();
   const session = useStudioSession(props);
   const history = useRoundHistory(props);
   const reduced = usePrefersReducedMotion();
@@ -169,8 +172,8 @@ export default function RouletteGame(props: StudioGameProps) {
 
   const aside = (
     <>
-      <div role="radiogroup" aria-label="Valor de la ficha">
-        <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Ficha</div>
+      <div role="radiogroup" aria-label={t("Valor de la ficha")}>
+        <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">{t("Ficha")}</div>
         <div className="flex gap-1">
           {CHIPS.map((c) => (
             <button key={c.toString()} type="button" role="radio" aria-checked={chip === c} onClick={() => setChip(c)} className={`flex-1 rounded-full border-2 py-2 text-xs font-bold ${chip === c ? 'border-amber-400 bg-amber-400 text-slate-900' : 'border-slate-600 bg-slate-800 text-slate-200'}`}>
@@ -178,11 +181,11 @@ export default function RouletteGame(props: StudioGameProps) {
             </button>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-slate-500">Clic derecho o mantén pulsado para quitar una ficha.</p>
+        <p className="mt-1 text-[11px] text-slate-500">{t("Clic derecho o mantén pulsado para quitar una ficha.")}</p>
       </div>
       <div className="rounded-lg bg-slate-900 px-3 py-2 text-sm">
         Apuesta total: <span className="font-mono font-semibold">{formatMinor(total, session.currency)}</span>
-        {total > bal && session.ready && <p className="text-xs text-rose-300">Saldo insuficiente</p>}
+        {total > bal && session.ready && <p className="text-xs text-rose-300">{t("Saldo insuficiente")}</p>}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" disabled={locked || total === BigInt(0)} onClick={() => setBets({})} className="rounded-lg bg-slate-800 py-2 text-sm font-semibold hover:bg-slate-700 disabled:opacity-50">
@@ -193,17 +196,17 @@ export default function RouletteGame(props: StudioGameProps) {
         </button>
       </div>
       <TurboToggle value={turbo} onChange={setTurbo} />
-      <NumberField id="roulette-auto" label="Giros automáticos" value={autoCount} onChange={(v) => setAutoCount(Math.round(v))} min={1} max={100} disabled={locked} />
+      <NumberField id="roulette-auto" label={t("Giros automáticos")} value={autoCount} onChange={(v) => setAutoCount(Math.round(v))} min={1} max={100} disabled={locked} />
       {autoLeft > 0 ? (
         <PrimaryButton tone="stop" onClick={() => (stopRef.current = true)}>
           Detener autoplay ({autoLeft})
         </PrimaryButton>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={single} aria-label="Girar la ruleta">
+          <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={single} aria-label={t("Girar la ruleta")}>
             {busy ? 'Girando…' : 'Girar'}
           </PrimaryButton>
-          <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={auto} aria-label="Iniciar autoplay">
+          <PrimaryButton disabled={locked || total === BigInt(0) || total > bal || !session.ready} onClick={auto} aria-label={t("Iniciar autoplay")}>
             Auto
           </PrimaryButton>
         </div>
@@ -213,12 +216,12 @@ export default function RouletteGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Abyss Roulette" session={session} aside={aside}>
+    <GameShell title={t("Abyss Roulette")} session={session} aside={aside}>
       <div className="space-y-3">
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-around">
           <Wheel rotation={rotation} ms={spinMs} />
           <div className="text-center" aria-live="polite">
-            <div className="text-xs uppercase tracking-wider text-slate-400">Número</div>
+            <div className="text-xs uppercase tracking-wider text-slate-400">{t("Número")}</div>
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 border-amber-400 text-4xl font-black text-white" style={{ background: hit === null ? '#334155' : FILL[colorOf(hit)] }}>
               {hit ?? '—'}
             </div>

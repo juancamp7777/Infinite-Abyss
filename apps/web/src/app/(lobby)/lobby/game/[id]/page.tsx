@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -15,6 +16,7 @@ import type { Game } from '@/lib/lobby/types';
 const VOL: Record<string, string> = { low: 'Baja', medium: 'Media', high: 'Alta', very_high: 'Muy alta' };
 
 function Player({ game }: { game: Game }) {
+  const { t } = useT();
   const { balance } = useLobby();
   const { status } = useAuth();
   const [mode, setMode] = useState<'demo' | 'real'>(game.hasDemo ? 'demo' : 'real');
@@ -39,28 +41,28 @@ function Player({ game }: { game: Game }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Modo de juego" className="flex overflow-hidden rounded-lg border border-white/10">
-          <button type="button" aria-pressed={mode === 'demo'} disabled={!canDemo} onClick={() => setMode('demo')} className={`px-3 py-1.5 text-sm ${mode === 'demo' ? 'nf-btn-primary' : ''} disabled:opacity-40`}>Demo</button>
-          <button type="button" aria-pressed={mode === 'real'} onClick={() => setMode('real')} className={`px-3 py-1.5 text-sm ${mode === 'real' ? 'nf-btn-primary' : ''}`}>Dinero real</button>
+        <div role="group" aria-label={t("Modo de juego")} className="flex overflow-hidden rounded-lg border border-white/10">
+          <button type="button" aria-pressed={mode === 'demo'} disabled={!canDemo} onClick={() => setMode('demo')} className={`px-3 py-1.5 text-sm ${mode === 'demo' ? 'nf-btn-primary' : ''} disabled:opacity-40`}>{t("Demo")}</button>
+          <button type="button" aria-pressed={mode === 'real'} onClick={() => setMode('real')} className={`px-3 py-1.5 text-sm ${mode === 'real' ? 'nf-btn-primary' : ''}`}>{t("Dinero real")}</button>
         </div>
-        <button type="button" className="nf-btn flex items-center gap-1" onClick={() => fav.toggle(game.id)} aria-pressed={fav.has(game.id)}><Heart aria-hidden className="h-4 w-4" fill={fav.has(game.id) ? 'currentColor' : 'none'} />Favorito</button>
-        <button type="button" className="nf-btn ml-auto flex items-center gap-1" onClick={() => box.current?.requestFullscreen?.().catch(() => {})}><Maximize2 aria-hidden className="h-4 w-4" />Pantalla completa</button>
+        <button type="button" className="nf-btn flex items-center gap-1" onClick={() => fav.toggle(game.id)} aria-pressed={fav.has(game.id)}><Heart aria-hidden className="h-4 w-4" fill={fav.has(game.id) ? 'currentColor' : 'none'} />{t("Favorito")}</button>
+        <button type="button" className="nf-btn ml-auto flex items-center gap-1" onClick={() => box.current?.requestFullscreen?.().catch(() => {})}><Maximize2 aria-hidden className="h-4 w-4" />{t("Pantalla completa")}</button>
       </div>
       <div ref={box} className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-black sm:aspect-video">
         {needsLogin && (
           <div className="absolute inset-0 grid place-items-center p-4 text-center" role="status">
             <div className="space-y-3">
-              <p className="font-semibold">Inicia sesión para jugar con dinero real</p>
+              <p className="font-semibold">{t("Inicia sesión para jugar con dinero real")}</p>
               <div className="flex justify-center gap-2">
-                <Link href={`/login?next=${encodeURIComponent(`/lobby/game/${game.id}`)}`} className="nf-btn nf-btn-primary">Iniciar sesión</Link>
-                <Link href="/register" className="nf-btn">Crear cuenta</Link>
+                <Link href={`/login?next=${encodeURIComponent(`/lobby/game/${game.id}`)}`} className="nf-btn nf-btn-primary">{t("Iniciar sesión")}</Link>
+                <Link href="/register" className="nf-btn">{t("Crear cuenta")}</Link>
               </div>
-              {game.hasDemo && <button type="button" className="nf-btn" onClick={() => setMode('demo')}>Probar en demo</button>}
+              {game.hasDemo && <button type="button" className="nf-btn" onClick={() => setMode('demo')}>{t("Probar en demo")}</button>}
             </div>
           </div>
         )}
         {state.loading && <Skeleton className="absolute inset-0 rounded-none" />}
-        {state.error && <div className="absolute inset-0 grid place-items-center p-4"><ErrorState message={state.error} onRetry={() => setTick((t) => t + 1)} /></div>}
+        {state.error && <div className="absolute inset-0 grid place-items-center p-4"><ErrorState message={state.error} onRetry={() => setTick((tv) => tv + 1)} /></div>}
         {state.url && <iframe key={state.url} src={state.url} title={game.title} className="h-full w-full border-0" allow="fullscreen; autoplay; clipboard-write" allowFullScreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />}
       </div>
     </div>
@@ -68,11 +70,13 @@ function Player({ game }: { game: Game }) {
 }
 
 function Related({ game }: { game: Game }) {
+  const { t } = useT();
   const g = useGames({ category: game.category, pageSize: 13 });
-  return <GameRow title="Juegos relacionados" games={g.items.filter((x) => x.id !== game.id).slice(0, 12)} loading={g.loading} error={g.error} />;
+  return <GameRow title={t("Juegos relacionados")} games={g.items.filter((x) => x.id !== game.id).slice(0, 12)} loading={g.loading} error={g.error} />;
 }
 
 export default function GamePage() {
+  const { t } = useT();
   const id = String(useParams<{ id: string }>().id);
   const g = useAsync(() => api.game(id), `game:${id}`);
   useEffect(() => { if (g.data) pushRecent(g.data.id); }, [g.data]);
@@ -87,10 +91,10 @@ export default function GamePage() {
       </header>
       <Player game={game} />
       <dl className="nf-panel grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-        <div><dt className="opacity-60">RTP</dt><dd className="font-semibold">{game.rtp}%</dd></div>
-        <div><dt className="opacity-60">Volatilidad</dt><dd className="font-semibold">{VOL[game.volatility] ?? game.volatility}</dd></div>
-        <div><dt className="opacity-60">Mecánica</dt><dd className="font-semibold">{game.mechanic || '—'}</dd></div>
-        <div><dt className="opacity-60">Categoría</dt><dd className="font-semibold capitalize">{game.category}</dd></div>
+        <div><dt className="opacity-60">{t("RTP")}</dt><dd className="font-semibold">{game.rtp}%</dd></div>
+        <div><dt className="opacity-60">{t("Volatilidad")}</dt><dd className="font-semibold">{VOL[game.volatility] ?? game.volatility}</dd></div>
+        <div><dt className="opacity-60">{t("Mecánica")}</dt><dd className="font-semibold">{game.mechanic || '—'}</dd></div>
+        <div><dt className="opacity-60">{t("Categoría")}</dt><dd className="font-semibold capitalize">{game.category}</dd></div>
       </dl>
       <Related game={game} />
     </div>

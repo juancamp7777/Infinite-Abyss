@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useCallback, useRef, useState } from 'react';
 import type { StudioGameProps } from '../types';
@@ -16,6 +17,7 @@ interface DiceOutcome {
 }
 
 export default function DiceGame(props: StudioGameProps) {
+  const { t } = useT();
   const session = useStudioSession(props);
   const history = useRoundHistory(props);
   const reduced = usePrefersReducedMotion();
@@ -84,23 +86,23 @@ export default function DiceGame(props: StudioGameProps) {
   const aside = (
     <>
       <BetInput value={bet} onChange={setBet} disabled={busy} />
-      <Segmented label="Modo" value={over ? 'over' : 'under'} onChange={(v) => setOver(v === 'over')} disabled={busy} options={[{ value: 'over', label: 'Más de' }, { value: 'under', label: 'Menos de' }]} />
+      <Segmented label="Modo" value={over ? 'over' : 'under'} onChange={(v) => setOver(v === 'over')} disabled={busy} options={[{ value: 'over', label: t("Más de") }, { value: 'under', label: t("Menos de") }]} />
       <div className="grid grid-cols-2 gap-2">
         <Stat label="Probabilidad" value={`${chanceOk ? chance.toFixed(2) : '—'}%`} />
         <Stat label="Multiplicador" value={chanceOk ? `${mult.toFixed(4)}×` : '—'} />
       </div>
       <TurboToggle value={turbo} onChange={setTurbo} />
-      <NumberField id="dice-auto" label="Apuestas automáticas" value={autoCount} onChange={(v) => setAutoCount(Math.round(v))} min={1} max={200} disabled={busy} />
+      <NumberField id="dice-auto" label={t("Apuestas automáticas")} value={autoCount} onChange={(v) => setAutoCount(Math.round(v))} min={1} max={200} disabled={busy} />
       {autoLeft > 0 ? (
         <PrimaryButton tone="stop" onClick={() => (stopRef.current = true)}>
           Detener autoplay ({autoLeft})
         </PrimaryButton>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={single} aria-label="Lanzar dado">
+          <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={single} aria-label={t("Lanzar dado")}>
             {busy ? 'Lanzando…' : 'Apostar'}
           </PrimaryButton>
-          <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={auto} aria-label="Iniciar autoplay">
+          <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={auto} aria-label={t("Iniciar autoplay")}>
             Auto
           </PrimaryButton>
         </div>
@@ -110,7 +112,7 @@ export default function DiceGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Abyss Dice" session={session} aside={aside}>
+    <GameShell title={t("Abyss Dice")} session={session} aside={aside}>
       <div className="space-y-4">
         <div className="rounded-2xl bg-slate-900 p-4 sm:p-8">
           <div className="mb-6 text-center" aria-live="polite">
@@ -149,7 +151,7 @@ export default function DiceGame(props: StudioGameProps) {
             </div>
           </div>
           <div className="mx-auto max-w-xs">
-            <NumberField id="dice-target" label={over ? 'Más de' : 'Menos de'} value={target} onChange={setTarget} min={1} max={98.99} step={0.01} disabled={busy} />
+            <NumberField id="dice-target" label={over ? 'Más de' : t("Menos de")} value={target} onChange={setTarget} min={1} max={98.99} step={0.01} disabled={busy} />
           </div>
         </div>
         <ResultBanner win={out ? out.win : null} text={out && last ? (out.win ? `¡Ganaste ${formatMinor(last.win, last.currency)} (${out.payout.toFixed(2)}×)!` : `Salió ${out.roll.toFixed(2)}. Sin premio.`) : ''} />

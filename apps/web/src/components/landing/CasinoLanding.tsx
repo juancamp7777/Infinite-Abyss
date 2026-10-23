@@ -65,14 +65,22 @@ const STEPS = [
   { icon: Gamepad2, title: "Juega y retira", text: "Verificas tu identidad una vez y retiras a tu cuenta." },
 ];
 
+/** Métodos de pago que acepta el casino, con su color de marca. */
+const METHODS: Record<string, { name: string; color: string; ink?: string }> = {
+  nequi: { name: "Nequi", color: "#e5007d" },
+  daviplata: { name: "Daviplata", color: "#ed1c27" },
+  pse: { name: "PSE", color: "#0f4c9a" },
+  mercadopago: { name: "Mercado Pago", color: "#00b1ea" },
+  binance: { name: "Binance", color: "#f3ba2f", ink: "#1a1300" },
+};
 const PAYMENTS: Array<{ code: string; country: string; currency: string; methods: string[] }> = [
-  { code: "CO", country: "Colombia", currency: "COP", methods: ["Nequi", "Daviplata", "PSE", "Bancolombia", "Transferencia bancaria"] },
-  { code: "MX", country: "México", currency: "MXN", methods: ["SPEI", "Transferencia bancaria", "Mercado Pago"] },
-  { code: "AR", country: "Argentina", currency: "ARS", methods: ["Mercado Pago", "Transferencia CVU / CBU"] },
+  { code: "CO", country: "Colombia", currency: "COP", methods: ["nequi", "daviplata", "pse", "mercadopago", "binance"] },
+  { code: "MX", country: "México", currency: "MXN", methods: ["mercadopago", "binance"] },
+  { code: "AR", country: "Argentina", currency: "ARS", methods: ["mercadopago", "binance"] },
 ];
 
 const FAQ: Array<{ q: string; a: string }> = [
-  { q: "¿Cómo deposito?", a: "Entra a Caja, elige el medio de pago de tu país y sigue los pasos. Si pagas por transferencia, subes el comprobante y nuestro sistema lo verifica contra el banco para acreditarte cuanto antes." },
+  { q: "¿Cómo deposito?", a: "Entra a Caja o escríbenos por Telegram y elige Nequi, Daviplata, PSE, Mercado Pago o Binance según tu país. Si pagas por transferencia, subes el comprobante y nuestro sistema lo verifica contra el banco para acreditarte cuanto antes." },
   { q: "¿Cuánto tardan los retiros?", a: "Los procesamos en cuanto tu cuenta está verificada. El tiempo final depende del medio de pago que elijas; siempre ves el estado de tu retiro en tu cuenta." },
   { q: "¿Tengo que verificar mi identidad?", a: "Sí, una sola vez antes de tu primer retiro. Es por tu seguridad y por ley: así nadie más puede retirar tu dinero." },
   { q: "¿Qué es provably fair?", a: "En nuestros Originals cada resultado sale de una semilla del servidor (que ves cifrada antes de jugar) combinada con tu propia semilla. Después de jugar puedes comprobar tú mismo que el resultado no se alteró." },
@@ -319,6 +327,11 @@ function Jackpots() {
   );
 }
 
+function PayBadge({ id }: { id: string }) {
+  const m = METHODS[id];
+  return <span className="cx-pay" style={{ "--pay": m.color, "--pay-ink": m.ink ?? "#fff" } as CSSProperties}>{m.name}</span>;
+}
+
 function Payments() {
   const [code, setCode] = useState(PAYMENTS[0].code);
   const p = PAYMENTS.find((x) => x.code === code) ?? PAYMENTS[0];
@@ -326,12 +339,12 @@ function Payments() {
     <div className="cx-panel cx-reveal">
       <p className="cx-kicker">Pagos</p>
       <h3 className="cx-h3">Deposita como ya pagas</h3>
-      <p className="cx-muted">Elige tu país: juegas y retiras en {p.currency}, sin conversiones.</p>
+      <p className="cx-muted">Elige tu país: juegas y retiras en {p.currency}, sin conversiones. Con Binance también puedes depositar en cripto.</p>
       <div className="cx-tabs" role="tablist" aria-label="País" style={{ marginTop: "1.2rem" }}>
         {PAYMENTS.map((x) => <button key={x.code} type="button" role="tab" aria-selected={x.code === code} className="cx-tab cx-country" onClick={() => setCode(x.code)}><Flag code={x.code} />{x.country}</button>)}
       </div>
       <ul className="cx-methods" role="tabpanel">
-        {p.methods.map((m) => <li key={m}><Wallet aria-hidden size={16} />{m}</li>)}
+        {p.methods.map((m) => <li key={m}><PayBadge id={m} /></li>)}
       </ul>
       <p className="cx-soon">Próximamente{SOON.map((c) => <span key={c.code} className="cx-country"><Flag code={c.code} />{c.name}</span>)}</p>
     </div>
@@ -486,6 +499,7 @@ function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
           <div><h4>Jugar</h4><ul>{NAV.slice(0, 4).map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}</ul></div>
           <div><h4>Ayuda</h4><ul><li><Link href="/webchat">Soporte 24/7</Link></li>{telegram && <li><a href={telegram} target="_blank" rel="noopener noreferrer">Telegram</a></li>}<li><Link href="/account">Mi cuenta y límites</Link></li><li><Link href="/plataforma">Para operadores</Link></li></ul></div>
         </div>
+        <div className="cx-wrap cx-paystrip" aria-label="Métodos de pago">{Object.keys(METHODS).map((m) => <PayBadge key={m} id={m} />)}</div>
         <div className="cx-wrap cx-footer-bottom">
           <span>© {new Date().getFullYear()} Infinite Abyss</span>
           <Link href="/plataforma">¿Tienes un casino? Conoce la plataforma →</Link>

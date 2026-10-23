@@ -231,3 +231,10 @@
 .cx-flag { width: 1.15rem; height: auto; border-radius: 2px; box-shadow: 0 0 0 1px rgb(255 255 255 / .18); flex-shrink: 0; }
 .cx-soon { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--cx-line); font-size: .85rem; font-weight: 700; color: var(--cx-gold-2); }
 .cx-soon .cx-country { color: var(--cx-muted); font-weight: 600; }
+
+/* Métodos de pago */
+.cx-methods li { padding: 0; background: none; border: 0; }
+.cx-pay { display: inline-flex; align-items: center; gap: .45rem; padding: .7rem 1.1rem; border-radius: .9rem; font-weight: 800; font-size: .95rem; letter-spacing: -.01em; color: var(--pay-ink); background: linear-gradient(135deg, color-mix(in srgb, var(--pay) 92%, #fff), var(--pay)); box-shadow: 0 8px 22px -10px var(--pay), inset 0 1px 0 rgb(255 255 255 / .3); }
+.cx-pay::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; opacity: .85; }
+.cx-paystrip { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 2rem; }
+.cx-paystrip .cx-pay { padding: .45rem .85rem; font-size: .82rem; }

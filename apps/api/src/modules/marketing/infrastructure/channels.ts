@@ -117,7 +117,7 @@ export type PushSender = (sub: { endpoint: string; keys: { p256dh: string; auth:
 
 export const webPushSender: PushSender = async (sub, payload, vapid) => {
   try {
-    const r = await webpush.sendNotification(sub, payload, { vapidDetails: vapid, TTL: 24 * 3600, urgency: 'normal', timeout: 10_000 });
+    const r = await webpush.sendNotification(sub, payload, { vapidDetails: vapid, TTL: 24 * 3600, urgency: 'high', timeout: 10_000 });
     return { statusCode: r.statusCode };
   } catch (e) {
     const status = (e as { statusCode?: number }).statusCode;

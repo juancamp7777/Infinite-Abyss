@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Bell, Download, Share, SquarePlus, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -46,6 +47,7 @@ async function subscribe(): Promise<boolean> {
  * Con permiso ya concedido, la suscripción se re-sincroniza en silencio.
  */
 export function PushPrompt() {
+  const { t } = useT();
   const { status } = useAuth();
   const [mode, setMode] = useState<"hidden" | "enable" | "ios-install">("hidden");
   const [installEvt, setInstallEvt] = useState<InstallEvent | null>(null);
@@ -70,8 +72,8 @@ export function PushPrompt() {
     }
     if (isIOS() && !isStandalone()) {
       if (dismissed) return;
-      const t = setTimeout(() => setMode("ios-install"), 4000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setMode("ios-install"), 4000);
+      return () => clearTimeout(timer);
     }
     if (!pushSupported()) return;
     if (Notification.permission === "granted") {
@@ -79,8 +81,8 @@ export function PushPrompt() {
       return;
     }
     if (Notification.permission === "default" && !dismissed) {
-      const t = setTimeout(() => setMode("enable"), 4000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setMode("enable"), 4000);
+      return () => clearTimeout(timer);
     }
   }, [status]);
 
@@ -115,33 +117,33 @@ export function PushPrompt() {
 
   if (mode === "hidden") return null;
   return (
-    <div role="dialog" aria-label="Activar notificaciones" className="fixed inset-x-3 bottom-24 z-50 mx-auto max-w-sm rounded-2xl border border-white/10 bg-[#0b1830]/95 p-4 text-sm text-white shadow-2xl backdrop-blur lg:bottom-6 lg:left-6 lg:right-auto">
+    <div role="dialog" aria-label={t("Activar notificaciones")} className="fixed inset-x-3 bottom-24 z-50 mx-auto max-w-sm rounded-2xl border border-white/10 bg-[#0b1830]/95 p-4 text-sm text-white shadow-2xl backdrop-blur lg:bottom-6 lg:left-6 lg:right-auto">
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f4b73f]/15 text-[#f4b73f]"><Bell aria-hidden className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
           {mode === "ios-install" ? (
             <>
-              <p className="font-semibold">Instala la app para recibir avisos</p>
+              <p className="font-semibold">{t("Instala la app para recibir avisos")}</p>
               <ol className="mt-1 space-y-1 text-white/70">
-                <li className="flex items-center gap-1.5">1. Toca <Share aria-label="Compartir" className="inline h-4 w-4 text-[#3cc8f0]" /> en Safari.</li>
-                <li className="flex items-center gap-1.5">2. Elige <SquarePlus aria-hidden className="inline h-4 w-4 text-[#3cc8f0]" /> «Agregar a inicio».</li>
-                <li>3. Abre la app desde el ícono y activa las notificaciones.</li>
+                <li className="flex items-center gap-1.5">{t("1. Toca")} <Share aria-label={t("Compartir")} className="inline h-4 w-4 text-[#3cc8f0]" /> {t("en Safari.")}</li>
+                <li className="flex items-center gap-1.5">{t("2. Elige")} <SquarePlus aria-hidden className="inline h-4 w-4 text-[#3cc8f0]" /> {t("«Agregar a inicio».")}</li>
+                <li>{t("3. Abre la app desde el ícono y activa las notificaciones.")}</li>
               </ol>
-              <button type="button" onClick={close} className="mt-3 rounded-lg bg-white/10 px-3 py-1.5 font-semibold">Entendido</button>
+              <button type="button" onClick={close} className="mt-3 rounded-lg bg-white/10 px-3 py-1.5 font-semibold">{t("Entendido")}</button>
             </>
           ) : (
             <>
-              <p className="font-semibold">¿Activamos las notificaciones?</p>
-              <p className="mt-0.5 text-white/60">Te avisamos de cargas acreditadas, retiros, bonos y torneos al instante.</p>
+              <p className="font-semibold">{t("¿Activamos las notificaciones?")}</p>
+              <p className="mt-0.5 text-white/60">{t("Te avisamos de cargas acreditadas, retiros, bonos y torneos al instante.")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void enable()} disabled={busy} className="rounded-lg bg-[#f4b73f] px-3 py-1.5 font-bold text-black disabled:opacity-60">Activar</button>
-                {installEvt && <button type="button" onClick={() => void install()} className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 font-semibold"><Download aria-hidden className="h-4 w-4" /> Instalar app</button>}
-                <button type="button" onClick={close} className="rounded-lg px-3 py-1.5 text-white/60 hover:text-white">Ahora no</button>
+                <button type="button" onClick={() => void enable()} disabled={busy} className="rounded-lg bg-[#f4b73f] px-3 py-1.5 font-bold text-black disabled:opacity-60">{t("Activar")}</button>
+                {installEvt && <button type="button" onClick={() => void install()} className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 font-semibold"><Download aria-hidden className="h-4 w-4" /> {t("Instalar app")}</button>}
+                <button type="button" onClick={close} className="rounded-lg px-3 py-1.5 text-white/60 hover:text-white">{t("Ahora no")}</button>
               </div>
             </>
           )}
         </div>
-        <button type="button" onClick={close} aria-label="Cerrar" className="text-white/40 hover:text-white"><X aria-hidden className="h-4 w-4" /></button>
+        <button type="button" onClick={close} aria-label={t("Cerrar")} className="text-white/40 hover:text-white"><X aria-hidden className="h-4 w-4" /></button>
       </div>
     </div>
   );

@@ -20,3 +20,4 @@ infra/.env.production
 infra/.env.staging
 infra/ansible/inventory.ini
 apps/api/.qa/
+apps/web/.i18n-*.cjs

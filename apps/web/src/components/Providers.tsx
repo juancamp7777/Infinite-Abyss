@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeProvider, useTheme } from "@/lib/theme";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { I18nProvider } from "@/lib/i18n";
 import { SiteFooter } from "./SiteFooter";
 import { AgeGate } from "./AgeGate";
 import { PushPrompt } from "./PushPrompt";
@@ -56,6 +57,7 @@ function ThemeBanner() {
 export function Providers({ children }: { children: React.ReactNode }) {
   const bare = BARE.includes(usePathname());
   return (
+    <I18nProvider>
     <ThemeProvider>
       <AuthProvider>
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-black focus:text-white focus:p-3">
@@ -70,5 +72,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {!bare && <AgeGate />}
       </AuthProvider>
     </ThemeProvider>
+    </I18nProvider>
   );
 }

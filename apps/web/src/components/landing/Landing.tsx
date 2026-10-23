@@ -19,7 +19,7 @@ const MODULES: Array<{ name: string; tag: string; text: string; icon: LucideIcon
   { name: "Integraciones", tag: "Todo conectado", text: "Claude, proveedores de juegos, pagos cripto y alertas, desde una sola pantalla, cifrado.", icon: Plug, color: "#9be15d" },
 ];
 
-const MARQUEE = ["KYC antes de retirar", "Push en iPhone y Android", "Argentina y Colombia", "Provably fair", "Multi-operador", "Cifrado AES-256", "Cripto y USDT", "Backoffice Abyss Command"];
+const MARQUEE = ["KYC antes de retirar", "Push en iPhone y Android", "Argentina · Brasil · Colombia · México", "Próximamente USA", "Provably fair", "Multi-operador", "Cifrado AES-256", "Cripto y USDT", "Backoffice Abyss Command"];
 
 function zoneFor(m: number) {
   let name = ZONES[0][1];

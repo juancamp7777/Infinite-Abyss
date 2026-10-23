@@ -20,7 +20,7 @@ const sha256 = (v: string | Buffer) => createHash('sha256').update(v).digest('he
 const safeEq = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const TERMINAL: ReceiptStatus[] = ['credited', 'rejected', 'duplicate'];
 /** Hora local de los comprobantes por moneda (mercados de arranque: Argentina y Colombia); editable por operador. */
-const UTC_OFFSET_BY_CURRENCY: Record<string, number> = { ARS: -180, COP: -300, CLP: -180, PEN: -300, MXN: -360, USD: 0 };
+const UTC_OFFSET_BY_CURRENCY: Record<string, number> = { ARS: -180, BRL: -180, COP: -300, CLP: -180, PEN: -300, MXN: -360, USD: 0 };
 
 export interface SubmitReceipt {
   operatorId: string;

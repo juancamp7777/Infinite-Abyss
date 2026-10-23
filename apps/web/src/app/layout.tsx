@@ -1,35 +1,29 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { reefAssetUrl } from "@/lib/reefAsset";
-import { Cinzel, Geist, Geist_Mono, Inter, Montserrat, Playfair_Display, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Fuentes dentro del proyecto (src/fonts, OFL): el build no depende de Google Fonts ni el navegador del jugador
+// le avisa a Google qué casino visita. Variables con todo el rango de pesos, salvo Poppins (estática).
+const geistSans = localFont({ src: "../fonts/geist-latin-wght-normal.woff2", variable: "--font-geist-sans", weight: "100 900", display: "swap" });
+const geistMono = localFont({ src: "../fonts/geist-mono-latin-wght-normal.woff2", variable: "--font-geist-mono", weight: "100 900", display: "swap" });
+const playfair = localFont({ src: "../fonts/playfair-display-latin-wght-normal.woff2", variable: "--font-playfair", weight: "400 900", display: "swap" });
+const inter = localFont({ src: "../fonts/inter-latin-wght-normal.woff2", variable: "--font-inter", weight: "100 900", display: "swap" });
+const montserrat = localFont({ src: "../fonts/montserrat-latin-wght-normal.woff2", variable: "--font-montserrat", weight: "100 900", display: "swap" });
+const poppins = localFont({
+  src: [
+    { path: "../fonts/poppins-latin-400-normal.woff2", weight: "400" },
+    { path: "../fonts/poppins-latin-600-normal.woff2", weight: "600" },
+    { path: "../fonts/poppins-latin-700-normal.woff2", weight: "700" },
+    { path: "../fonts/poppins-latin-800-normal.woff2", weight: "800" },
+  ],
+  variable: "--font-poppins",
+  display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-});
-
 /** Serif romana de la marca (títulos y cifras destacadas). */
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["400", "600", "700", "800"], display: "swap" });
-const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"], weight: ["400", "600", "700", "800", "900"], display: "swap" });
-
-const cinzel = Cinzel({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["600", "700", "800", "900"],
-});
+const cinzel = localFont({ src: "../fonts/cinzel-latin-wght-normal.woff2", variable: "--font-display", weight: "400 900", display: "swap" });
 
 /** URL pública del sitio para las URLs absolutas de Open Graph (NEXT_PUBLIC_SITE_URL); sin ella, rutas relativas. */
 function siteUrl(): URL | undefined {

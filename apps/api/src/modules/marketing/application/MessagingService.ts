@@ -70,7 +70,9 @@ export class MessagingService {
     const comp = await this.checkCompliance(operatorId, playerId);
     if (!comp.ok) return comp;
     const consent = await this.d.repos.consents.get(`${operatorId}:${playerId}:${channel}`);
-    if (!consent?.optIn) return { ok: false, reason: 'NO_OPT_IN' };
+    // Push: aceptar las notificaciones en el navegador ES el permiso del canal; una baja explícita siempre manda.
+    const pushPermission = !consent && channel === 'push' && (await this.d.repos.pushSubs.list({ operatorId, playerId })).length > 0;
+    if (!consent?.optIn && !pushPermission) return { ok: false, reason: 'NO_OPT_IN' };
     const since = this.d.clock().getTime() - this.d.config.frequencyCapHours * 3_600_000;
     const recent = await this.d.repos.sends.list({ operatorId, playerId, status: 'sent' });
     const count = recent.filter((s) => s.kind === 'marketing' && new Date(s.at).getTime() >= since).length;

@@ -123,6 +123,16 @@ describe('guard de cumplimiento (NUNCA se envía)', () => {
     expect(c.channels.email.sent).toHaveLength(0);
   });
 
+  it('push: aceptar notificaciones en el navegador cuenta como permiso; una baja explícita manda', async () => {
+    const c = setup();
+    const t = await mkTemplate(c, { channel: 'push', subject: 'Hola', body: 'Bono listo' });
+    expect((await c.rt.messaging.checkEligibility(OP, 'p1', 'push')).ok).toBe(false);
+    await c.rt.repos.pushSubs.put({ id: 'sub-1', operatorId: OP, playerId: 'p1', endpoint: 'https://push.example/1', keys: { p256dh: 'k', auth: 'a' }, createdAt: new Date().toISOString() });
+    expect((await c.rt.messaging.checkEligibility(OP, 'p1', 'push')).ok).toBe(true);
+    await c.rt.consent.set(OP, 'p1', 'push', false, 'test');
+    expect((await c.rt.messaging.sendMarketing({ operatorId: OP, playerId: 'p1', templateId: t.id })).reason).toBe('NO_OPT_IN');
+  });
+
   it('el opt-in es por canal', async () => {
     const c = setup();
     const t = await mkTemplate(c, { channel: 'sms', subject: undefined, body: 'Hola' });

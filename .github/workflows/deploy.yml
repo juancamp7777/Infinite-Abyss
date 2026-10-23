@@ -62,6 +62,10 @@ jobs:
       - name: ¿Hay servidor configurado?
         id: cfg
         run: echo "ready=$([ -n "$HOST" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          sparse-checkout: infra
       - name: Desplegar el sha por SSH
         if: steps.cfg.outputs.ready == 'true'
         env:
@@ -75,9 +79,13 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
           printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          # La pila (compose, Caddy y backups) viaja con cada despliegue: los cambios de seguridad llegan solos.
+          scp -i ~/.ssh/id_deploy infra/docker-compose.prod.yml "$USER_@$HOST:/opt/infinite-abyss/"
+          scp -i ~/.ssh/id_deploy infra/caddy/Caddyfile "$USER_@$HOST:/opt/infinite-abyss/caddy/"
+          scp -i ~/.ssh/id_deploy infra/backup/backup.sh infra/backup/restore.sh "$USER_@$HOST:/opt/infinite-abyss/backup/"
           # El token del job vence al terminar: el servidor nunca guarda una credencial de GitHub.
           printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "docker login ghcr.io -u $GHCR_USER --password-stdin >/dev/null"
-          ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "cd /opt/infinite-abyss && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$SHA/' .env.production && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --pull always --no-build --remove-orphans; s=\$?; docker logout ghcr.io >/dev/null; docker image prune -f >/dev/null; exit \$s"
+          ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "cd /opt/infinite-abyss && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$SHA/' .env.production && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --pull always --no-build --remove-orphans && docker compose -f docker-compose.prod.yml --env-file .env.production exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; s=\$?; docker logout ghcr.io >/dev/null; docker image prune -f >/dev/null; exit \$s"
       - name: Sin servidor todavía
         if: steps.cfg.outputs.ready != 'true'
         run: echo "Imágenes publicadas; sin DEPLOY_HOST en el entorno staging no se despliega."

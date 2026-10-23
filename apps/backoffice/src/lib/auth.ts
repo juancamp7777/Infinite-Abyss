@@ -44,12 +44,16 @@ export interface Session {
   email?: string;
   /** Vencimiento del access token (ms epoch) leído del claim `exp`; solo informativo, el API es la autoridad. */
   expiresAt?: number;
+  /** La cuenta tiene verificación en dos pasos activa (login real). */
+  mfaEnabled?: boolean;
 }
 
 export interface LoginInput {
   /** Login real: credenciales de backoffice. */
   email?: string;
   password?: string;
+  /** Código de la app de autenticación o de respaldo (cuentas con verificación en dos pasos). */
+  code?: string;
   /** Solo mock. */
   role?: Role;
   operatorId?: string;
@@ -92,6 +96,12 @@ function readSession(): Session | null {
   return cachedSession;
 }
 
+/** Actualiza datos de la sesión actual (p. ej. al activar la verificación en dos pasos). */
+export function patchSession(patch: Partial<Session>): void {
+  const s = readSession();
+  if (s) writeSession({ ...s, ...patch });
+}
+
 function writeSession(s: Session | null) {
   if (s) {
     window.sessionStorage.setItem(KEY, JSON.stringify(s));
@@ -114,6 +124,9 @@ export function takeLoginNotice(): string | null {
   if (n) window.sessionStorage.removeItem(NOTICE_KEY);
   return n;
 }
+
+/** El API pide el código de verificación en dos pasos (la contraseña ya fue correcta). */
+export class MfaRequiredError extends Error {}
 
 async function parseError(res: Response): Promise<string> {
   try {
@@ -169,18 +182,22 @@ export class PasswordAuthClient extends BaseAuthClient {
       res = await fetch(`${API_URL}/api/backoffice/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: input.password }),
+        body: JSON.stringify({ email, password: input.password, ...(input.code?.trim() ? { code: input.code.trim() } : {}) }),
       });
     } catch {
       throw new Error("No se pudo conectar con el API. Revisa tu conexión y que el servidor esté activo.");
     }
-    if (!res.ok) throw new Error(await parseError(res));
-    const j = (await res.json()) as { accessToken?: string; user?: { email?: string; role?: Role; operatorId?: string | null } };
+    if (!res.ok) {
+      const body = await res.clone().json().catch(() => null);
+      if (body?.error?.code === "MFA_REQUIRED") throw new MfaRequiredError(body.error.message);
+      throw new Error(await parseError(res));
+    }
+    const j = (await res.json()) as { accessToken?: string; user?: { email?: string; role?: Role; operatorId?: string | null; mfaEnabled?: boolean } };
     const role = j.user?.role;
     if (!j.accessToken || !role || !ROLES.includes(role)) throw new Error("Respuesta de autenticación inesperada");
     const operatorId = j.user?.operatorId ?? null;
     if (role !== "PLATFORM_ADMIN" && !operatorId) throw new Error("La cuenta no tiene operador asignado");
-    const s: Session = { token: j.accessToken, role, operatorId, email: j.user?.email ?? email, expiresAt: jwtExpiryMs(j.accessToken) };
+    const s: Session = { token: j.accessToken, role, operatorId, email: j.user?.email ?? email, expiresAt: jwtExpiryMs(j.accessToken), mfaEnabled: !!j.user?.mfaEnabled };
     writeSession(s);
     return s;
   }
@@ -241,6 +258,7 @@ export const NAV: NavItem[] = [
   { href: "/skin", label: "Skin clásica", roles: ADMINS, section: "Marca" },
   { href: "/reports", label: "Reportes", roles: ADMINS, section: "Principal" },
   { href: "/integrations", label: "Integraciones", roles: ADMINS, section: "Principal" },
+  { href: "/security", label: "Mi seguridad", roles: ALL, section: "Principal" },
 ];
 
 export const canAccess = (role: Role | null, href: string) => !!role && NAV.some((n) => n.href === href && n.roles.includes(role));

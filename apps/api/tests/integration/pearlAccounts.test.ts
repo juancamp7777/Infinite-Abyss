@@ -85,6 +85,8 @@ describe('Cuentas de cobro por país', () => {
     expect(JSON.stringify(seen.body)).not.toContain('1020304050');
     const usdtSeen = seen.body.items.find((i: { method: string }) => i.method === 'Binance · USDT (TRC20)');
     expect(usdtSeen.network).toBe('USDT · TRON (TRC20)');
+    expect(usdtSeen.currency).toBe('USDT');
+    expect(seen.body.items.find((i: { method: string }) => i.method === 'Nequi').currency).toBe('COP');
     expect(usdtSeen.holderName).toBeUndefined();
     expect((await request(created.app).get('/pearl/v1/player/receipts/latest').set(bearer(playerToken(player.id, opId)))).body).toEqual({ receipt: null });
     expect((await request(created.app).get('/pearl/v1/player/accounts').set(bearer(admin))).status).toBe(403);

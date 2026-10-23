@@ -28,6 +28,7 @@ const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_inf
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
 const COUNTRY_BY_CURRENCY: Record<string, string> = { COP: 'CO', MXN: 'MX', ARS: 'AR' };
+const CURRENCY_BY_COUNTRY: Record<string, string> = { CO: 'COP', MX: 'MXN', AR: 'ARS' };
 
 export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger; sealSecret?: (v: unknown) => string }): Router {
   const r = Router();
@@ -46,7 +47,8 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
   /** Cuentas activas a las que puede transferir (las de su país y las que sirven en todos, como Binance). */
   r.get('/player/accounts', player, asyncHandler(async (req, res) => {
     const { operatorId } = requirePlayer(req);
-    const country = COUNTRY_BY_CURRENCY[(await d.pearl.settings(operatorId)).currency];
+    const currency = (await d.pearl.settings(operatorId)).currency;
+    const country = COUNTRY_BY_CURRENCY[currency];
     const items = (await d.pearl.listAccounts(operatorId))
       .filter((a) => a.active && (!a.country || !country || a.country === country || accountMethod(a.bank)?.country === '*'))
       .map((a) => {
@@ -54,6 +56,8 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
         return {
           id: a.id, method: m?.label ?? a.bank ?? 'Transferencia', numberLabel: m?.numberLabel ?? 'Cuenta', number: a.accountNumber, holderName: m?.walletOnly ? undefined : a.holderName,
           alias: m?.keyLike ? undefined : a.alias, bankName: a.bankName, accountType: a.accountType, network: m?.walletOnly ? 'USDT · TRON (TRC20)' : undefined,
+          // Binance recibe USDT; el resto, la moneda local del país de la cuenta.
+          currency: m?.key.startsWith('binance') ? 'USDT' : (a.country && CURRENCY_BY_COUNTRY[a.country]) || currency,
         };
       });
     sendJson(res, { items });

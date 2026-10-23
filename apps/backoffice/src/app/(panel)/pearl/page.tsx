@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Check, CircleAlert, Copy, Landmark, Plus, Trash2, X } from "lucide-react";
+import { Banknote, Check, CircleAlert, Copy, X } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient, useSession } from "@/lib/hooks";
 import { Badge, Button, Card, Empty, ErrorBox, Field, inputCls, NeedOperator, Notice, PageHeader, Spinner, Tabs } from "@/components/ui";
 import { AuthImage } from "@/components/AuthImage";
+import { AccountsCard, type Account } from "./accounts";
 
 type ReceiptStatus = "credited" | "pending_review" | "waiting_bank" | "needs_info" | "rejected" | "duplicate" | "error";
 interface Receipt {
@@ -26,7 +27,6 @@ interface Receipt {
 }
 interface BankTx { id: string; externalId: string; amount: string; currency: string; senderName: string; senderTaxId?: string; occurredAt: string; status: "available" | "used" | "ignored" }
 interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean }
-interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; active: boolean }
 interface Feed { id: string; type: string; name: string; enabled: boolean; lastEventAt?: string }
 interface AiView { enabled: boolean; provider: "anthropic" | "gemini" | "deepseek"; readerModel: string; judgeModel: string; hasKey: boolean; keyFromEnv: boolean }
 const PROVIDER_LABEL = { anthropic: "Claude (Anthropic)", gemini: "Gemini (Google)", deepseek: "DeepSeek" } as const;
@@ -186,7 +186,6 @@ function Config() {
   const aiCfg = useApi<AiView>("/pearl/v1/admin/ai");
   const [aiForm, setAiForm] = useState<{ provider?: AiView["provider"]; readerModel?: string; judgeModel?: string; apiKey?: string; enabled?: boolean }>({});
   const [form, setForm] = useState<Partial<Settings>>({});
-  const [acc, setAcc] = useState({ holderName: "", alias: "", accountNumber: "" });
   const [feedType, setFeedType] = useState("quikipay");
   const [newFeed, setNewFeed] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
@@ -223,24 +222,7 @@ function Config() {
         </div>
       </Card>
 
-      <Card title="Cuentas que reciben pagos">
-        <ul className="mb-3 space-y-1.5 text-sm">
-          {(accounts.data?.items ?? []).map((a) => (
-            <li key={a.id} className="flex items-center gap-2 rounded-lg bg-white/[.03] px-2.5 py-1.5">
-              <Landmark aria-hidden className="h-4 w-4 text-white/40" />
-              <div className="min-w-0 flex-1"><div className="truncate">{a.holderName}</div><div className="truncate text-xs text-white/45">{a.alias || a.accountNumber}</div></div>
-              <button type="button" className="text-white/30 hover:text-red-300" aria-label={`Quitar ${a.holderName}`} onClick={() => void run(() => call(`/pearl/v1/admin/accounts/${a.id}`, { method: "DELETE" }), "Cuenta quitada")}><Trash2 aria-hidden className="h-4 w-4" /></button>
-            </li>
-          ))}
-          {!accounts.data?.items.length && <li className="text-xs text-white/40">Sin cuentas: Pearl no podrá verificar la cuenta destino.</li>}
-        </ul>
-        <div className="space-y-2">
-          <input className={`${inputCls} w-full`} placeholder="Titular" value={acc.holderName} onChange={(e) => setAcc({ ...acc, holderName: e.target.value })} aria-label="Titular" />
-          <input className={`${inputCls} w-full`} placeholder="CBU / CVU / número de cuenta" value={acc.accountNumber} onChange={(e) => setAcc({ ...acc, accountNumber: e.target.value })} aria-label="Número de cuenta" />
-          <input className={`${inputCls} w-full`} placeholder="Alias (opcional)" value={acc.alias} onChange={(e) => setAcc({ ...acc, alias: e.target.value })} aria-label="Alias" />
-          <Button variant="ghost" className="w-full" onClick={() => void run(async () => { await call("/pearl/v1/admin/accounts", { method: "POST", body: { ...acc, alias: acc.alias || undefined } }); setAcc({ holderName: "", alias: "", accountNumber: "" }); }, "Cuenta agregada")}><Plus aria-hidden className="h-4 w-4" /> Agregar cuenta</Button>
-        </div>
-      </Card>
+      <AccountsCard accounts={accounts.data?.items ?? []} run={run} />
 
       <Card title="Feeds bancarios">
         <ul className="mb-3 space-y-1.5 text-sm">

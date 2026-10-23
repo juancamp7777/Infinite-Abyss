@@ -169,7 +169,7 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
 
       <nav className="lx-nav" aria-label={t("Principal")}>
         <span className="lx-logo">INFINITE <b>ABYSS</b></span>
-        <LanguageSwitcher className="ml-auto mr-3" />
+        <LanguageSwitcher compact className="lx-lang ml-auto mr-2 items-center" />
         <a href={contactUrl} className="lx-btn lx-btn-gold">{t("Quiero mi casino")}</a>
       </nav>
 
@@ -179,8 +179,7 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
             <p className="lx-kicker lx-reveal" style={i(0)}>{t("Plataforma de casino online · todo en uno")}</p>
             <h1 className="lx-title lx-reveal" style={i(1)}><span>{t("Infinite")}</span><span>{t("Abyss")}</span></h1>
             <p className="lx-lead lx-reveal" style={i(2)}>
-              Casino, cajero con IA, CRM, bots, equipo y marca propia en una sola plataforma.
-              Lánzate en días, no en meses. Baja y mira hasta dónde llega.
+              {t("Casino, cajero con IA, CRM, bots, equipo y marca propia en una sola plataforma. Lánzate en días, no en meses. Baja y mira hasta dónde llega.")}
             </p>
             <div className="lx-cta lx-reveal" style={i(3)}>
               <a href={demoUrl} className="lx-btn lx-btn-gold">{t("Ver el casino en vivo")}</a>
@@ -267,8 +266,7 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
             <div className="lx-eye lx-reveal" style={i(1)} aria-hidden />
             <h2 className="lx-h2 lx-reveal" style={i(2)}>{t("Aquí abajo vive Nautilus.")}</h2>
             <p className="lx-lead lx-reveal" style={i(3)}>
-              Un operador con inteligencia artificial que mira tu casino sin parpadear: detecta fraude y abuso de bonos,
-              responde a jugadores, avisa caídas y te manda el resumen del día. Lo que mueve dinero, siempre te lo pregunta.
+              {t("Un operador con inteligencia artificial que mira tu casino sin parpadear: detecta fraude y abuso de bonos, responde a jugadores, avisa caídas y te manda el resumen del día. Lo que mueve dinero, siempre te lo pregunta.")}
             </p>
             <div className="lx-cta lx-reveal" style={i(4)}>
               <a href={contactUrl} className="lx-btn lx-btn-gold"><Brain aria-hidden className="h-5 w-5" />{t("Toca fondo con nosotros")}</a>
@@ -281,6 +279,7 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
       <footer className="lx-footer">
         <span>© {new Date().getFullYear()} Infinite Abyss · Software para operadores con licencia.</span>
         <span>{t("Juego responsable · +18")}</span>
+        <LanguageSwitcher />
       </footer>
     </div>
   );

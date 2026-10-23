@@ -513,7 +513,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
             </div>
             <button
               type="button"
-              aria-label={busy ? 'Saltar animación' : 'Girar'}
+              aria-label={busy ? t("Saltar animación") : t("Girar")}
               disabled={boot !== 'ready'}
               onClick={onSpinClick}
               className="grid h-14 w-14 place-items-center rounded-full text-black shadow-lg transition-transform active:scale-95 disabled:opacity-50"

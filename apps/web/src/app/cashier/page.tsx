@@ -123,7 +123,7 @@ export default function CashierPage() {
             <div role="alert" className="text-red-300 text-center">
               {methodsError}{" "}
               <button onClick={() => void loadMethods()} className="underline font-bold">
-                Reintentar
+                {t("Reintentar")}
               </button>
             </div>
           )}
@@ -353,7 +353,7 @@ function History({ money }: { money: (v: bigint) => string }) {
             <tr key={r.id} className="border-t border-gold-900/30">
               <td className="py-2 pr-3 whitespace-nowrap">{r.createdAt ? new Date(r.createdAt).toLocaleString("es-CO") : "—"}</td>
               <td className="py-2 pr-3">{r.type ?? r.kind ?? r.provider ?? "—"}</td>
-              <td className="py-2 pr-3">{r.status ? (STATUS_LABEL[r.status] ?? r.status) : "—"}</td>
+              <td className="py-2 pr-3">{r.status ? t(STATUS_LABEL[r.status] ?? r.status) : "—"}</td>
               <td className="py-2 text-right font-mono">{money(parseMinor(r.amount))}</td>
             </tr>
           ))}

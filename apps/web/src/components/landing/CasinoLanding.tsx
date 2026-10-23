@@ -385,7 +385,7 @@ function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
           <Link href="/" className="cx-brand" aria-label="Infinite Abyss, inicio"><img src={LOGO} alt="Infinite Abyss" /></Link>
           <div className="cx-links">{NAV.map((n) => <Link key={n.href} href={n.href}>{t(n.label)}</Link>)}</div>
           <div className="cx-auth">
-            <LanguageSwitcher className="cx-lang" />
+            <LanguageSwitcher compact className="cx-lang" />
             {telegram && <a href={telegram} target="_blank" rel="noopener noreferrer" className="cx-btn cx-btn-tg cx-btn-sm cx-tg-nav" aria-label={t("Escríbenos por Telegram")}><TelegramIcon size={16} /><span>{t("Telegram")}</span></a>}
             <Link href="/login" className="cx-btn cx-btn-ghost cx-btn-sm">{t("Ingresar")}</Link>
             <Link href="/register" className="cx-btn cx-btn-gold cx-btn-sm">{t("Registrarse")}</Link>
@@ -524,6 +524,7 @@ function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
         </div>
         <div className="cx-wrap cx-paystrip" aria-label={t("Métodos de pago")}>{Object.keys(METHODS).map((m) => <PayBadge key={m} id={m} />)}</div>
         <div className="cx-wrap cx-footer-bottom">
+          <LanguageSwitcher />
           <span>© {new Date().getFullYear()} Infinite Abyss</span>
           <Link href="/plataforma">{t("¿Tienes un casino? Conoce la plataforma →")}</Link>
         </div>

@@ -130,6 +130,10 @@ export class PrismaPearlRepository implements PearlRepository {
     const r = await this.db.pearlReceipt.findFirst({ where: { operatorId, conversationId }, orderBy: { createdAt: 'desc' } });
     return r ? receipt(r) : null;
   }
+  async latestReceiptForPlayer(operatorId: string, playerId: string) {
+    const r = await this.db.pearlReceipt.findFirst({ where: { operatorId, playerId }, orderBy: { createdAt: 'desc' } });
+    return r ? receipt(r) : null;
+  }
   async getAi(operatorId: string) {
     const r = await this.db.pearlAiConfig.findUnique({ where: { operatorId } });
     return r ? noNulls<AiConfig>(r) : null;

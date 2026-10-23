@@ -160,6 +160,7 @@ export interface PearlRepository {
   listReceipts(operatorId: string, f: { status?: ReceiptStatus; limit: number }): Promise<Receipt[]>;
   waitingReceipts(limit: number): Promise<Receipt[]>;
   latestReceiptForConversation(operatorId: string, conversationId: string): Promise<Receipt | null>;
+  latestReceiptForPlayer(operatorId: string, playerId: string): Promise<Receipt | null>;
   getAi(operatorId: string): Promise<AiConfig | null>;
   saveAi(c: AiConfig): Promise<AiConfig>;
   /** Titulares con los que el jugador ya pagó antes (nombres conocidos). */

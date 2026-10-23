@@ -12,6 +12,7 @@ import { betSteps } from "@/lib/bets";
 import { QuickBets } from "@/components/QuickBets";
 import { minorToInput } from "@/lib/money";
 import { Field } from "@/components/Field";
+import { TransferDeposit, type TransferAccount } from "@/components/cashier/TransferDeposit";
 
 type Method = { provider: string; label?: string; name?: string; kind?: string; currencies?: string[]; minAmount?: string; maxAmount?: string };
 type Row = { id: string; type?: string; kind?: string; status?: string; amount: string; currency?: string; createdAt?: string; provider?: string };
@@ -52,13 +53,22 @@ export default function CashierPage() {
   const [tab, setTab] = useState<"deposit" | "withdraw" | "history">("deposit");
   const [methods, setMethods] = useState<Method[] | null>(null);
   const [methodsError, setMethodsError] = useState<string | null>(null);
+  // Cuentas del casino para recargar por transferencia (Pearl verifica el comprobante).
+  const [accounts, setAccounts] = useState<TransferAccount[]>([]);
+  const [depMode, setDepMode] = useState<"gateway" | "transfer">("gateway");
 
   const loadMethods = useCallback(async () => {
     setMethods(null);
     setMethodsError(null);
     try {
-      const raw = await api.get<Method[] | { methods: Method[] }>("/api/cashier/methods");
-      setMethods(Array.isArray(raw) ? raw : raw.methods ?? []);
+      const [raw, acc] = await Promise.all([
+        api.get<Method[] | { methods: Method[] }>("/api/cashier/methods"),
+        api.get<{ items: TransferAccount[] }>("/pearl/v1/player/accounts").catch(() => ({ items: [] as TransferAccount[] })),
+      ]);
+      const list = Array.isArray(raw) ? raw : raw.methods ?? [];
+      setAccounts(acc.items);
+      setDepMode(list.length ? "gateway" : "transfer");
+      setMethods(list);
     } catch (e) {
       setMethodsError(errMsg(e));
     }
@@ -127,12 +137,30 @@ export default function CashierPage() {
               </button>
             </div>
           )}
-          {methods !== null && methods.length === 0 && tab !== "history" && (
+          {methods !== null && methods.length === 0 && (tab === "withdraw" || (tab === "deposit" && !accounts.length)) && (
             <p className="text-gray-300 text-center">{t("No hay métodos de pago habilitados en esta sala.")}</p>
           )}
 
-          {tab === "deposit" && methods && methods.length > 0 && (
+          {tab === "deposit" && methods && methods.length > 0 && accounts.length > 0 && (
+            <div role="radiogroup" aria-label={t("Forma de recargar")} className="mb-5 flex gap-2">
+              {(
+                [
+                  ["gateway", "Pago en línea"],
+                  ["transfer", "Transferencia"],
+                ] as const
+              ).map(([key, label]) => (
+                <button key={key} type="button" role="radio" aria-checked={depMode === key} onClick={() => setDepMode(key)}
+                  className={`flex-1 rounded-xl border-2 p-3 text-sm font-bold ${depMode === key ? "border-gold-400 bg-gold-500/10" : "border-gray-800 bg-black text-gray-300"}`}>
+                  {t(label)}
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === "deposit" && methods && methods.length > 0 && depMode === "gateway" && (
             <DepositForm methods={methods} currency={currency} decimals={decimals} tryMinor={tryMinor} onDone={() => void reloadMe()} />
+          )}
+          {tab === "deposit" && methods && accounts.length > 0 && (depMode === "transfer" || methods.length === 0) && (
+            <TransferDeposit accounts={accounts} money={money} onCredited={() => void reloadMe()} />
           )}
           {tab === "withdraw" && methods && methods.length > 0 && (
             <WithdrawForm methods={methods} currency={currency} tryMinor={tryMinor} kyc={user?.kycStatus ?? "NONE"} />

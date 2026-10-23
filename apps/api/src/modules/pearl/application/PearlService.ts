@@ -102,6 +102,10 @@ export class PearlService {
     return this.repo.saveSettings({ ...cur, ...patch, operatorId, updatedAt: this.now() });
   }
 
+  latestReceiptForPlayer(operatorId: string, playerId: string) {
+    return this.repo.latestReceiptForPlayer(operatorId, playerId);
+  }
+
   listAccounts(operatorId: string) {
     return this.repo.listAccounts(operatorId);
   }

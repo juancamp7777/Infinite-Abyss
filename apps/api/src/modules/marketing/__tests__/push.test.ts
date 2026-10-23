@@ -40,6 +40,14 @@ describe('push web real (VAPID)', () => {
     expect(payload.url).toBe('/lobby');
   });
 
+  it('push premium: imagen, página al tocar y hasta 2 botones; botones con links externos se descartan', async () => {
+    const repos = await withSubs(1);
+    let payload: any;
+    const ch = new PushChannel(repos.pushSubs, vapid, silentLogger, async (_s, p) => { payload = JSON.parse(p); return { statusCode: 201 }; });
+    await ch.send(msg({ meta: { push: { image: '/brand/push/bono.png', url: '/cashier', actions: [{ title: '🎰 Jugar ahora', url: '/lobby' }, { title: 'Trampa', url: '//evil.example' }, { title: 'Tercero', url: '/vip' }] } } }));
+    expect(payload).toMatchObject({ url: '/cashier', image: '/brand/push/bono.png', actions: [{ action: 'a0', title: '🎰 Jugar ahora', url: '/lobby' }] });
+  });
+
   it('errores honestos: sin claves, sin dispositivos o ninguno aceptó', async () => {
     const repos = await withSubs(1);
     await expect(new PushChannel(repos.pushSubs, null, silentLogger).send(msg())).rejects.toMatchObject({ code: 'NOT_CONFIGURED' });

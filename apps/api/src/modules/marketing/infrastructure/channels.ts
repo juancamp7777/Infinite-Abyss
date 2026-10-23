@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import webpush from 'web-push';
 import type { Server as SocketIOServer } from 'socket.io';
 import type { ModuleLogger } from '../../shared/module';
-import type { Channel, ChannelKind, ChannelMessage, InboxMessage, PushSubscription } from '../domain/types';
+import type { Channel, ChannelKind, ChannelMessage, InboxMessage, PushDesign, PushSubscription } from '../domain/types';
 import type { Store } from './stores';
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
@@ -156,8 +156,14 @@ export class PushChannel implements Channel {
     if (!this.vapid) throw new ChannelError('NOT_CONFIGURED', 'Push sin claves VAPID');
     const subs = await this.subs.list({ operatorId: msg.operatorId, playerId: msg.playerId });
     if (subs.length === 0) throw new ChannelError('NO_ADDRESS', 'El jugador no tiene suscripciones push');
-    const url = typeof msg.meta?.url === 'string' && msg.meta.url.startsWith('/') ? msg.meta.url : '/lobby';
-    const payload = JSON.stringify({ title: msg.subject || 'Infinite Abyss', body: msg.text.slice(0, 300), url, tag: msg.sendId });
+    const design = (msg.meta?.push ?? {}) as PushDesign;
+    const internalPath = (u: unknown) => (typeof u === 'string' && u.startsWith('/') && !u.startsWith('//') ? u : undefined);
+    const url = internalPath(design.url) ?? internalPath(msg.meta?.url) ?? '/lobby';
+    const payload = JSON.stringify({
+      title: msg.subject || 'Infinite Abyss', body: msg.text.slice(0, 300), url, tag: msg.sendId,
+      ...(design.image ? { image: design.image } : {}),
+      ...(design.actions?.length ? { actions: design.actions.slice(0, 2).filter((a) => internalPath(a.url)).map((a, i) => ({ action: `a${i}`, title: a.title.slice(0, 24), url: a.url })) } : {}),
+    });
     let delivered = 0;
     for (const s of subs) {
       try {

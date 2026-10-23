@@ -8,40 +8,51 @@ export function useSession(): Session | null {
   return useSyncExternalStore(subscribeSession, getSessionSnapshot, getServerSessionSnapshot);
 }
 
+export interface OperatorOption { id: string; name: string }
+
 interface OperatorCtx {
   /** Operador activo (null = plataforma sin selección). */
   operatorId: string | null;
   setOperatorId(id: string): void;
-  known: string[];
+  /** Operadores de la plataforma por nombre (solo PLATFORM_ADMIN). */
+  known: OperatorOption[];
 }
 
 const Ctx = createContext<OperatorCtx>({ operatorId: null, setOperatorId: () => {}, known: [] });
 const OP_KEY = "nymfo.backoffice.operators";
 
+function saveCurrent(id: string | null) {
+  try { window.localStorage.setItem(OP_KEY, JSON.stringify({ current: id ?? undefined })); } catch { /* almacenamiento bloqueado */ }
+}
+
 /** PLATFORM_ADMIN elige operador; el resto queda fijado al de su sesión. */
 export function OperatorProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const [picked, setPicked] = useState<string | null>(null);
-  const [known, setKnown] = useState<string[]>([]);
+  const [known, setKnown] = useState<OperatorOption[]>([]);
+  const isPlatform = session?.role === "PLATFORM_ADMIN";
+  // La plataforma recibe la lista de operadores por nombre y, si no había uno elegido (o ya no existe), toma el primero.
   useEffect(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(OP_KEY) ?? "{}") as { current?: string; list?: string[] };
-      if (saved.current) setPicked(saved.current);
-      if (saved.list) setKnown(saved.list);
-    } catch {
-      /* ignorar almacenamiento corrupto */
-    }
+    if (!isPlatform) return;
+    let alive = true;
+    let saved: string | undefined;
+    try { saved = (JSON.parse(window.localStorage.getItem(OP_KEY) ?? "{}") as { current?: string }).current; } catch { /* almacenamiento corrupto */ }
+    request<{ items: OperatorOption[] }>("/backoffice/v1/admin/operators")
+      .then(({ items }) => {
+        if (!alive) return;
+        setKnown(items);
+        const next = items.find((o) => o.id === saved)?.id ?? items[0]?.id ?? saved ?? null;
+        setPicked(next);
+        saveCurrent(next);
+      })
+      .catch(() => alive && setPicked(saved ?? null));
+    return () => { alive = false; };
+  }, [isPlatform]);
+  const setOperatorId = useCallback((id: string) => {
+    const clean = id.trim() || null;
+    setPicked(clean);
+    saveCurrent(clean);
   }, []);
-  const setOperatorId = useCallback(
-    (id: string) => {
-      const clean = id.trim();
-      setPicked(clean || null);
-      const list = clean && !known.includes(clean) ? [...known, clean].slice(-12) : known;
-      setKnown(list);
-      window.localStorage.setItem(OP_KEY, JSON.stringify({ current: clean || undefined, list }));
-    },
-    [known],
-  );
   const operatorId = session ? (session.role === "PLATFORM_ADMIN" ? picked : session.operatorId) : null;
   const value = useMemo(() => ({ operatorId, setOperatorId, known }), [operatorId, setOperatorId, known]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

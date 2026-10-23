@@ -50,7 +50,7 @@ function Form({ mode }: { mode: "login" | "register" }) {
 
     setBusy(true);
     try {
-      if (isRegister) await register({ email: email.trim(), password, username: username || undefined });
+      if (isRegister) await register({ email: email.trim(), password, username: username || undefined, adult });
       else await login(email.trim(), password);
       router.replace(next);
     } catch (err) {

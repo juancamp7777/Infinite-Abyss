@@ -193,6 +193,8 @@ model User {
   passwordHash    String
   status          UserStatus @default(ACTIVE)
   kycStatus       KycStatus  @default(NONE)
+  /// Cuándo declaró al registrarse ser mayor de 18 y aceptar los términos (habilita publicidad; el KYC es para retirar).
+  ageDeclaredAt   DateTime?
   currency        String
   isDemo          Boolean    @default(false)
   lastLoginAt     DateTime?

@@ -13,7 +13,7 @@ type AuthState = {
   user: PlayerUser | null;
   balances: Balances | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: { email: string; password: string; username?: string }) => Promise<void>;
+  register: (input: { email: string; password: string; username?: string; adult?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
   /** Recarga usuario y saldos desde /api/me. */
   reloadMe: () => Promise<void>;
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (input: { email: string; password: string; username?: string }) => {
+    async (input: { email: string; password: string; username?: string; adult?: boolean }) => {
       const res = await api.post<AuthResponse>("/api/auth/register", input, { scope: "none" });
       await applySession(res);
     },

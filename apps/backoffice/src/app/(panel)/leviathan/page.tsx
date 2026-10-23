@@ -36,6 +36,8 @@ const REASON: Record<string, string> = { INSUFFICIENT_PLAYERS: "faltaron jugador
 export default function LeviathanAdmin() {
   const { operatorId, call } = useApiClient();
   const games = useApi<{ items: Game[] }>(operatorId ? "/leviathan/v1/admin/games" : null);
+  const auto = useApi<{ autoEnabled: boolean; autoEntry: string; autoDurationMin: number; autoLeadMin: number }>(operatorId ? "/leviathan/v1/admin/settings" : null);
+  const [af, setAf] = useState<{ autoEnabled?: boolean; entry?: string; durationMin?: string; leadMin?: string }>({});
   const [f, setF] = useState({ title: "Rápido", entry: "10.000", startsInMin: "15", durationMin: "120", maxPlayers: "100" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,6 +82,37 @@ export default function LeviathanAdmin() {
         <Stat label="Pagados" value={String(settled.length)} accent="gold" />
         <Stat label="Comisión ganada" value={money(rake.toString(), currency)} accent="green" />
       </div>
+
+      <Card title="Concursos automáticos">
+        {auto.data && (() => {
+          const a = auto.data;
+          const enabled = af.autoEnabled ?? a.autoEnabled;
+          const entryText = af.entry ?? (BigInt(a.autoEntry) > BigInt(0) ? (BigInt(a.autoEntry) / BigInt(100)).toLocaleString("es-CO") : "");
+          return (
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" checked={enabled} onChange={(e) => setAf({ ...af, autoEnabled: e.target.checked })} />
+                Mantener siempre un concurso abierto con los próximos partidos
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label={`Entrada (${currency})`} htmlFor="au-e"><input id="au-e" inputMode="decimal" className={inputCls} placeholder="5.000" value={entryText} onChange={(e) => setAf({ ...af, entry: e.target.value })} /></Field>
+                <Field label="Dura (min)" htmlFor="au-d"><input id="au-d" inputMode="numeric" className={inputCls} value={af.durationMin ?? String(a.autoDurationMin)} onChange={(e) => setAf({ ...af, durationMin: e.target.value.replace(/\D/g, "") })} /></Field>
+                <Field label="Inscripciones abiertas (min)" htmlFor="au-l"><input id="au-l" inputMode="numeric" className={inputCls} value={af.leadMin ?? String(a.autoLeadMin)} onChange={(e) => setAf({ ...af, leadMin: e.target.value.replace(/\D/g, "") })} /></Field>
+              </div>
+              <p className="text-xs text-white/45">Cuando no haya un concurso abierto, la plataforma crea uno solo (por ejemplo «⚔️ Gran Leviathan de la noche») con los partidos que vienen. Con fútbol real, usa 360 minutos o más.</p>
+              <Button disabled={busy} onClick={() => {
+                const entry = entryText.trim() ? toMinorUnits(entryText, currency) : "0";
+                if (entry === null) return setMsg({ ok: false, text: "Revisa el monto de la entrada automática" });
+                void act(async () => {
+                  await call("/leviathan/v1/admin/settings", { method: "PUT", body: { autoEnabled: enabled, autoEntry: entry, autoDurationMin: Number(af.durationMin ?? a.autoDurationMin), autoLeadMin: Number(af.leadMin ?? a.autoLeadMin) } });
+                  setAf({});
+                  auto.reload();
+                }, enabled ? "Concursos automáticos activados" : "Concursos automáticos apagados");
+              }}>Guardar</Button>
+            </div>
+          );
+        })()}
+      </Card>
 
       <Card title="Crear concurso rápido">
         <div className="grid gap-3 sm:grid-cols-5">

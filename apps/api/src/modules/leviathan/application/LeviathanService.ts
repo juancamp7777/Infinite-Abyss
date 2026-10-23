@@ -52,6 +52,7 @@ export class LeviathanService {
 
   private lastDiscovery = 0;
   private lastResults = 0;
+  private lastAuto = 0;
 
   private now() {
     return this.opts.now?.() ?? new Date();
@@ -350,11 +351,52 @@ export class LeviathanService {
         } else if (open) continue;
         await this.settleGame(g.id);
       }
+      if (now.getTime() - this.lastAuto >= 5 * MIN) {
+        this.lastAuto = now.getTime();
+        await this.autoSchedule();
+      }
     } catch (e) {
       this.opts.logger.error('[leviathan] barrido', { error: (e as Error).message });
     } finally {
       this.ticking = false;
     }
+  }
+
+  // ───────────────────────── concursos automáticos ─────────────────────────
+
+  async settings(operatorId: string) {
+    return (await this.db.levSettings.findUnique({ where: { operatorId } })) ?? { operatorId, autoEnabled: false, autoEntry: 0n, autoDurationMin: 360, autoLeadMin: 60 };
+  }
+
+  async updateSettings(operatorId: string, p: { autoEnabled?: boolean; autoEntry?: bigint; autoDurationMin?: number; autoLeadMin?: number }) {
+    const s = await this.db.levSettings.upsert({ where: { operatorId }, create: { operatorId, ...p }, update: p });
+    if (s.autoEnabled) await this.autoSchedule([operatorId]);
+    return s;
+  }
+
+  /** Mantiene un concurso rápido abierto en cada casino que lo activó (si hay partidos para armarlo). */
+  async autoSchedule(only?: string[]) {
+    const all = await this.db.levSettings.findMany({ where: { autoEnabled: true, ...(only ? { operatorId: { in: only } } : {}) } });
+    for (const s of all) {
+      if (await this.db.levGame.count({ where: { operatorId: s.operatorId, mode: 'QUICK', status: 'OPEN' } })) continue;
+      const start = new Date(this.now().getTime() + s.autoLeadMin * MIN);
+      // Hora de Colombia para el nombre (mañana, tarde o noche).
+      const h = (start.getUTCHours() + 19) % 24;
+      const title = `⚔️ Gran Leviathan de la ${h < 12 ? 'mañana' : h < 18 ? 'tarde' : 'noche'}`;
+      try {
+        await this.createGame({ operatorId: s.operatorId, mode: 'QUICK', title, entry: s.autoEntry, startsInMin: s.autoLeadMin, durationMin: s.autoDurationMin, createdBy: 'auto' });
+      } catch (e) {
+        if (!(e instanceof HttpError && e.code === 'NO_EVENTS')) this.opts.logger.warn('[leviathan] concurso automático', { operatorId: s.operatorId, error: (e as Error).message });
+      }
+    }
+  }
+
+  /** Próximos partidos apostables (los del feed activo), para mostrar aunque no haya concurso abierto. */
+  async upcoming(limit = 8) {
+    const real = await this.realFeed();
+    const events = await this.db.levEvent.findMany({ where: { status: 'SCHEDULED', source: real ? 'api-football' : 'sim', startsAt: { gt: this.now() } }, orderBy: { startsAt: 'asc' }, take: limit });
+    const sels = await this.db.levSelection.findMany({ where: { eventId: { in: events.map((e) => e.id) }, market: 'MATCH_RESULT' } });
+    return events.map((e) => ({ id: e.id, sport: e.sport, league: e.league, home: e.home, away: e.away, startsAt: e.startsAt, real: e.source !== 'sim', odds: sels.filter((s) => s.eventId === e.id).map((s) => ({ key: s.key, label: s.label, oddsE2: s.oddsE2 })) }));
   }
 
   // ───────────────────────── vistas ─────────────────────────

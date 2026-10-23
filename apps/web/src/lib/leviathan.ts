@@ -43,7 +43,11 @@ export const lev = {
   bet: (id: string, b: { selectionId: string; stake: string; oddsE2: number }) => api.post<LevBet>(`${B}/games/${id}/bets`, b),
   createFriends: (b: { title: string; entry: string; maxPlayers: number }) => api.post<LevGame>(`${B}/friends`, b),
   joinCode: (code: string) => api.post<{ game: LevGame }>(`${B}/rooms/${encodeURIComponent(code)}/join`),
+  upcoming: () => api.get<{ items: LevUpcoming[] }>(`${B}/events/upcoming`).then((r) => r.items),
 };
+
+/** Partido que viene (real o simulado) con sus cuotas de ganador. */
+export interface LevUpcoming { id: string; sport: string; league: string; home: string; away: string; startsAt: string; real: boolean; odds: Array<{ key: string; label: string; oddsE2: number }> }
 
 /** Premios que se reparten: el pozo menos la comisión. */
 export const prizePool = (g: Pick<LevGame, "pot" | "rakePpm">) => (BigInt(g.pot) * BigInt(1_000_000 - g.rakePpm)) / BigInt(1_000_000);

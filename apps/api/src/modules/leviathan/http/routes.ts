@@ -56,7 +56,16 @@ export function buildLeviathanRouter(d: { auth: AuthPort; lev: LeviathanService;
     sendJson(res, await d.lev.joinByCode(operatorId, playerId, code), 201);
   }));
 
+  r.get('/events/upcoming', auth, asyncHandler(async (_req, res) => sendJson(res, { items: await d.lev.upcoming() })));
+
   /* ─── Administración ─── */
+  r.get('/admin/settings', ...admin, asyncHandler(async (req, res) => sendJson(res, await d.lev.settings(op(req)))));
+  r.put('/admin/settings', ...admin, asyncHandler(async (req, res) => {
+    const b = parse(z.object({
+      autoEnabled: z.boolean().optional(), autoEntry: minor.optional(), autoDurationMin: z.number().int().min(60).max(2880).optional(), autoLeadMin: z.number().int().min(5).max(1440).optional(),
+    }), req.body);
+    sendJson(res, await d.lev.updateSettings(op(req), b));
+  }));
   r.get('/admin/games', ...admin, asyncHandler(async (req, res) => sendJson(res, { items: await d.lev.adminList(op(req)) })));
   r.post('/admin/games', ...admin, asyncHandler(async (req, res) => {
     const b = parse(z.object({

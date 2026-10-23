@@ -93,6 +93,8 @@ describe('adaptadores', () => {
     expect(await tg.send(config, '9', 'respuesta')).toEqual({ externalMessageId: '901' });
     await tg.activate(config, 'https://api.example.com/inbox/v1/channels/x/webhook', 's3cret');
     expect(f.calls[1]).toMatchObject({ url: `https://api.telegram.org/bot${TG_TOKEN}/setWebhook`, body: { url: 'https://api.example.com/inbox/v1/channels/x/webhook', secret_token: 's3cret' } });
+    expect(f.calls.slice(2).map((c) => c.url.split('/').at(-1))).toEqual(['setMyShortDescription', 'setMyDescription', 'setMyCommands']);
+    expect(f.calls.at(-1)!.body).toMatchObject({ commands: expect.arrayContaining([{ command: 'recargar', description: 'Recargar saldo' }]) });
     f.queue.push({ status: 403, json: { ok: false, description: 'Forbidden: bot was blocked by the user' } });
     await expect(tg.send(config, '9', 'x')).rejects.toThrow(/blocked/);
   });
@@ -203,7 +205,7 @@ describe('canales por HTTP', () => {
     expect(created.status).toBe(201);
     const ch = created.body.channel;
     expect(ch.verifyToken).toBeUndefined();
-    const setHook = f.calls.at(-1)!;
+    const setHook = f.calls.filter((c) => c.url.endsWith('/setWebhook')).at(-1)!;
     expect(setHook.url).toContain('/setWebhook');
     const secret = setHook.body.secret_token as string;
 

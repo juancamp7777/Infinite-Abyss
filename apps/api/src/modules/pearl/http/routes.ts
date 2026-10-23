@@ -49,11 +49,14 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     sendJson(res, await d.pearl.updateSettings(op(req), b));
   }));
 
-  const account = z.object({ holderName: z.string().trim().min(2).max(120), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(4).max(60), bank: z.string().trim().max(60).optional(), holderDocument: z.string().trim().max(30).optional(), country: z.enum(['CO', 'MX', 'AR']).optional(), bankName: z.string().trim().max(60).optional(), accountType: z.string().trim().max(30).optional(), active: z.boolean().optional() });
+  const account = z.object({ holderName: z.string().trim().max(120).default(''), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(4).max(60), bank: z.string().trim().max(60).optional(), holderDocument: z.string().trim().max(30).optional(), country: z.enum(['CO', 'MX', 'AR']).optional(), bankName: z.string().trim().max(60).optional(), accountType: z.string().trim().max(30).optional(), active: z.boolean().optional() });
   /** Con un método conocido (Nequi, CLABE, CVU…) se limpia y valida el número y el documento según el país. */
   const parseAccount = (body: unknown) => {
     const a = parse(account, body);
     const m = accountMethod(a.bank);
+    // Billetera USDT: solo la dirección; el nombre identifica la red.
+    if (m?.walletOnly) Object.assign(a, { holderName: a.holderName || m.label, holderDocument: undefined });
+    if (a.holderName.length < 2) throw badRequest('Escribe el titular de la cuenta');
     if (!m) {
       if (a.accountNumber.length < 6) throw badRequest('El número de cuenta debe tener al menos 6 caracteres');
       return a;

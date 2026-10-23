@@ -7,7 +7,7 @@ import { Button, Card, Field, inputCls } from "@/components/ui";
 
 export interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; country?: string; holderDocument?: string; bankName?: string; accountType?: string; active: boolean }
 interface Country { country: string; name: string; docLabel: string; docPlaceholder: string; aliasLabel: string }
-interface Method { key: string; country: string; label: string; numberLabel: string; placeholder: string; pattern: string; hint: string; keyLike?: boolean; banks?: string[]; accountTypes?: string[] }
+interface Method { key: string; country: string; label: string; numberLabel: string; placeholder: string; pattern: string; hint: string; keyLike?: boolean; banks?: string[]; accountTypes?: string[]; walletOnly?: boolean }
 
 const EMPTY = { holderName: "", accountNumber: "", holderDocument: "", alias: "", bankName: "", accountType: "" };
 
@@ -90,16 +90,18 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
             ))}
           </div>
         )}
-        <Field label="Titular (como sale en el comprobante)" htmlFor="acc-holder">
-          <input id="acc-holder" className={`${inputCls} w-full`} placeholder="JUAN CAMPOS" value={f.holderName} onChange={(e) => setF({ ...f, holderName: e.target.value })} />
-        </Field>
+        {!m?.walletOnly && (
+          <Field label="Titular (como sale en el comprobante)" htmlFor="acc-holder">
+            <input id="acc-holder" className={`${inputCls} w-full`} placeholder="JUAN CAMPOS" value={f.holderName} onChange={(e) => setF({ ...f, holderName: e.target.value })} />
+          </Field>
+        )}
         {m && (
           <Field label={m.numberLabel} htmlFor="acc-number">
             <input id="acc-number" className={`${inputCls} w-full`} inputMode={m.keyLike ? "text" : "numeric"} placeholder={m.placeholder} value={f.accountNumber} onChange={(e) => setF({ ...f, accountNumber: e.target.value })} />
             <span className={`mt-1 block text-xs ${showBad ? "text-red-300" : "text-white/45"}`} role={showBad ? "alert" : undefined}>{showBad ? `Revisa el número: ${m.hint}` : m.hint}</span>
           </Field>
         )}
-        {c && (
+        {c && !m?.walletOnly && (
           <Field label={`${c.docLabel} (opcional)`} htmlFor="acc-doc">
             <input id="acc-doc" className={`${inputCls} w-full`} placeholder={c.docPlaceholder} value={f.holderDocument} onChange={(e) => setF({ ...f, holderDocument: e.target.value })} />
           </Field>
@@ -109,7 +111,7 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
             <input id="acc-alias" className={`${inputCls} w-full`} value={f.alias} onChange={(e) => setF({ ...f, alias: e.target.value })} />
           </Field>
         )}
-        <Button variant="ghost" className="w-full" disabled={!numberOk || !bankOk || f.holderName.trim().length < 2} onClick={() => void add()}><Plus aria-hidden className="h-4 w-4" /> Agregar cuenta</Button>
+        <Button variant="ghost" className="w-full" disabled={!numberOk || !bankOk || (!m?.walletOnly && f.holderName.trim().length < 2)} onClick={() => void add()}><Plus aria-hidden className="h-4 w-4" /> Agregar cuenta</Button>
       </div>
     </Card>
   );

@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CreatedApp } from '../../src/app';
@@ -27,6 +27,8 @@ beforeAll(async () => {
   const player = await createTestPlayer(opId);
   playerId = player.id;
   pToken = playerToken(player.id, opId);
+  // Estas pruebas miden el inbox sin bot: un flujo apagado evita que Tide active la bienvenida de fábrica.
+  await prisma.tideFlow.create({ data: { id: randomUUID(), operatorId: opId, name: 'Apagado', enabled: false, draft: { nodes: [], edges: [] }, updatedAt: new Date() } });
 });
 
 afterAll(async () => {

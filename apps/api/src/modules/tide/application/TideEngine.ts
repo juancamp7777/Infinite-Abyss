@@ -1,9 +1,11 @@
+import { randomUUID } from 'crypto';
 import type { ModuleLogger } from '../../shared/module';
 import type { InboxEvent } from '../../inbox/application/InboxService';
 import { BOT_SILENT_STAGES, type Conversation, type Stage } from '../../inbox/domain/types';
 import { bestFaq, compare, matchOption, normalize, render, type FlowGraph, type FlowNode } from '../domain/graph';
 import type { NodeConfig } from '../domain/nodes';
 import type { TideFlow, TideRepository, TideSession } from '../domain/types';
+import { welcomeTemplate } from './FlowService';
 
 /** Lo que Tide necesita del inbox Sonar. */
 export interface TideInboxPort {
@@ -96,7 +98,9 @@ export class TideEngine {
   private async pickFlow(conv: Conversation, body: string): Promise<TideFlow | null> {
     const text = ` ${normalize(body)} `;
     const candidates: Array<{ flow: TideFlow; keyword: boolean }> = [];
-    for (const f of await this.repo.listFlows(conv.operatorId)) {
+    let flows = await this.repo.listFlows(conv.operatorId);
+    if (!flows.length) flows = [await this.provisionWelcome(conv.operatorId)];
+    for (const f of flows) {
       if (!f.enabled || !f.publishedVersion) continue;
       const v = await this.repo.findVersion(f.id, f.publishedVersion);
       const t = v?.graph.nodes.find((n) => n.type === 'trigger');
@@ -107,6 +111,18 @@ export class TideEngine {
       else if (cfg.keywords.some((k) => text.includes(` ${normalize(k)} `))) candidates.push({ flow: f, keyword: true });
     }
     return (candidates.find((c) => c.keyword) ?? candidates[0])?.flow ?? null;
+  }
+
+  /**
+   * Un casino recién creado no queda mudo: si el operador nunca creó un flujo, se publica y activa la plantilla de
+   * bienvenida (saludo, menú, recargas, retiros, FAQ y paso a humano). Desde Tide se edita o se desactiva.
+   */
+  private async provisionWelcome(operatorId: string): Promise<TideFlow> {
+    const now = this.now();
+    const flow = await this.repo.saveFlow({ id: randomUUID(), operatorId, name: 'Bienvenida (automático)', enabled: true, draft: welcomeTemplate(), publishedVersion: 1, createdAt: now, updatedAt: now });
+    await this.repo.saveVersion({ flowId: flow.id, version: 1, graph: welcomeTemplate(), publishedBy: 'system', createdAt: now });
+    this.opts.logger.info(`[tide] flujo de bienvenida activado de fábrica para el operador ${operatorId}`);
+    return flow;
   }
 
   private follow(graph: FlowGraph, node: FlowNode, port: string): string | null {

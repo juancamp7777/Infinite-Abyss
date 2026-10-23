@@ -162,8 +162,21 @@ export function useWebchat(operatorId: string, opts: { active: boolean; visitorN
       try {
         const id = await ensureIdentity();
         const headers = id.visitor && !id.player ? { "X-Visitor-Token": id.visitor } : undefined;
-        const saved = await api.post<ChatMessage>(`${BASE}/messages`, { body: msg.body, clientMsgId: msg.clientMsgId }, id.player ? {} : { scope: "none", headers });
-        setMessages((prev) => mergeMessages(prev, [saved]));
+        const post = () => api.post<ChatMessage>(`${BASE}/messages`, { body: msg.body, clientMsgId: msg.clientMsgId }, id.player ? {} : { scope: "none", headers });
+        // Si el servidor no responde un momento (p. ej. mientras se publica una versión), se reintenta solo: el
+        // clientMsgId hace que el mensaje nunca se guarde dos veces. Los errores del pedido en sí (4xx) no se reintentan.
+        let saved: ChatMessage | undefined;
+        for (const wait of [0, 1500, 3000, 6000, 12000]) {
+          if (wait) await new Promise((r) => setTimeout(r, wait));
+          try {
+            saved = await post();
+            break;
+          } catch (e) {
+            if (e instanceof ApiError && e.status > 0 && e.status < 500) throw e;
+            if (wait === 12000) throw e;
+          }
+        }
+        setMessages((prev) => mergeMessages(prev, [saved!]));
         setError(null);
       } catch (e) {
         setMessages((prev) => prev.map((m) => (m.clientMsgId === msg.clientMsgId ? { ...m, state: "failed" } : m)));

@@ -10,9 +10,9 @@ export function welcomeTemplate(): FlowGraph {
       { id: 'start', type: 'trigger', config: { channels: ['webchat', 'whatsapp', 'telegram'], keywords: [] }, x: 40, y: 200 },
       { id: 'hello', type: 'message', config: { text: '¡Hola {{contact.name}}! 👋 Soy el asistente virtual.' }, x: 300, y: 200 },
       { id: 'menu', type: 'ask', config: { question: '¿En qué te ayudo? Elige una opción o escribe tu pregunta.', options: ['Depósitos', 'Retiros', 'Hablar con un agente'], saveAs: 'motivo', timeoutMinutes: 30 }, x: 560, y: 200 },
-      { id: 'deposit', type: 'message', config: { text: 'Para depositar entra a Caja → Depositar. Se acredita al instante una vez confirmado el pago.' }, x: 860, y: 20 },
+      { id: 'deposit', type: 'message', config: { text: 'Para recargar, haz tu transferencia y envíame aquí la foto del comprobante 📸. La verificamos y te acreditamos en minutos. También puedes depositar desde Caja → Depositar.' }, x: 860, y: 20 },
       { id: 'w_amount', type: 'ask', config: { question: '¿Cuánto quieres retirar? Escribe solo el número.', options: [], saveAs: 'monto', timeoutMinutes: 15 }, x: 860, y: 140 },
-      { id: 'w_account', type: 'ask', config: { question: '¿A qué CBU, CVU o alias te lo enviamos?', options: [], saveAs: 'cuenta', timeoutMinutes: 15 }, x: 1120, y: 140 },
+      { id: 'w_account', type: 'ask', config: { question: '¿A qué cuenta te lo enviamos? (Nequi, Daviplata, cuenta bancaria, CBU/CVU o alias)', options: [], saveAs: 'cuenta', timeoutMinutes: 15 }, x: 1120, y: 140 },
       { id: 'w_holder', type: 'ask', config: { question: '¿Nombre completo del titular de esa cuenta?', options: [], saveAs: 'titular', timeoutMinutes: 15 }, x: 1380, y: 140 },
       { id: 'withdraw', type: 'withdraw', config: { amountVar: 'monto', accountVar: 'cuenta', holderVar: 'titular' }, x: 1640, y: 140 },
       { id: 'faq', type: 'faq', config: { threshold: 0.35, entries: [

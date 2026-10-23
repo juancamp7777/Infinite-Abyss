@@ -2077,3 +2077,15 @@ model LevBet {
   @@index([entryId])
   @@map("lev_bets")
 }
+
+/// Concursos automáticos de Leviathan por casino: mantener siempre uno abierto con los próximos partidos.
+model LevSettings {
+  operatorId      String   @id
+  autoEnabled     Boolean  @default(false)
+  autoEntry       BigInt   @default(0)
+  autoDurationMin Int      @default(360)
+  autoLeadMin     Int      @default(60)
+  updatedAt       DateTime @updatedAt
+
+  @@map("lev_settings")
+}

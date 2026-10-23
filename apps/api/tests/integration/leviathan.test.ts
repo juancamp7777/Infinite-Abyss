@@ -124,6 +124,19 @@ describe('Leviathan: concurso rápido de punta a punta', () => {
     real.stop();
   });
 
+  it('concursos automáticos: siempre uno abierto, sin duplicar', async () => {
+    const op2 = (await createTestOperator({ currencies: ['COP'], defaultCurrency: 'COP' })).id;
+    expect((await lev.settings(op2)).autoEnabled).toBe(false);
+    await lev.updateSettings(op2, { autoEnabled: true, autoEntry: 500_000n, autoDurationMin: 120, autoLeadMin: 15 });
+    const open = await prisma.levGame.findMany({ where: { operatorId: op2, status: 'OPEN' } });
+    expect(open).toHaveLength(1);
+    expect(open[0]).toMatchObject({ entry: 500_000n, createdBy: 'auto', mode: 'QUICK' });
+    expect(open[0].title).toMatch(/^⚔️ Gran Leviathan de la (mañana|tarde|noche)$/);
+    await lev.autoSchedule();
+    expect(await prisma.levGame.count({ where: { operatorId: op2, status: 'OPEN' } })).toBe(1);
+    expect((await lev.upcoming(3)).length).toBeGreaterThan(0);
+  });
+
   it('sala de amigos con código', async () => {
     const g = await lev.createGame({ operatorId: op, mode: 'FRIENDS', title: 'Los del barrio', entry: 0n, maxPlayers: 5 });
     expect(g.roomCode).toMatch(/^[A-Z2-9]{5}$/);

@@ -182,6 +182,16 @@ const MORE: Record<string, [string, string]> = {
 };
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
+  "Notificaciones": ["Notifications", "Notificações"], "Activadas en este dispositivo.": ["Turned on for this device.", "Ativadas neste dispositivo."], "Activando…": ["Turning on…", "Ativando…"],
+  "Están bloqueadas en este navegador.": ["They're blocked in this browser.", "Estão bloqueadas neste navegador."],
+  "Toca el ícono a la izquierda de la dirección de la página.": ["Tap the icon to the left of the page address.", "Toque no ícone à esquerda do endereço da página."],
+  "Entra a Permisos (o Configuración del sitio) → Notificaciones.": ["Open Permissions (or Site settings) → Notifications.", "Abra Permissões (ou Configurações do site) → Notificações."],
+  "Elige Permitir y recarga la página.": ["Choose Allow and reload the page.", "Escolha Permitir e recarregue a página."],
+  "En iPhone: toca Compartir → «Agregar a inicio», abre la app desde el ícono y vuelve aquí para activarlas.": ["On iPhone: tap Share → “Add to Home Screen”, open the app from the icon and come back here to turn them on.", "No iPhone: toque Compartilhar → «Adicionar à Tela de Início», abra o app pelo ícone e volte aqui para ativá-las."],
+  "Este navegador no admite notificaciones.": ["This browser doesn't support notifications.", "Este navegador não suporta notificações."],
+  "Listo: este dispositivo recibirá tus avisos.": ["Done: this device will get your alerts.", "Pronto: este dispositivo receberá seus avisos."],
+  "Las notificaciones no están disponibles en este momento.": ["Notifications aren't available right now.", "As notificações não estão disponíveis no momento."],
+  "No se pudo activar. Intenta de nuevo.": ["Couldn't turn them on. Try again.", "Não foi possível ativar. Tente de novo."],
   "Modo": ["Mode", "Modo"], "Siguiente": ["Next", "Próximo"],
   "Proveedor": ["Provider", "Provedor"], "Enviar a revisión": ["Send for review", "Enviar para análise"], "Guardando…": ["Saving…", "Salvando…"], "Guardar límites": ["Save limits", "Salvar limites"],
   "Solicitar retiro": ["Request withdrawal", "Solicitar saque"], "Ver más": ["See more", "Ver mais"], "Cerrar sesión": ["Log out", "Sair"], "Cargar más": ["Load more", "Carregar mais"],

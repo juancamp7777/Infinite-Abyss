@@ -10,12 +10,12 @@ const DISMISS_KEY = "abyss.push.dismissed";
 
 type InstallEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
-const pushSupported = () =>
+export const pushSupported = () =>
   typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 /** iPhone/iPad (incluye iPadOS que se presenta como Mac). */
-const isIOS = () =>
+export const isIOS = () =>
   typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-const isStandalone = () =>
+export const isStandalone = () =>
   typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
@@ -27,7 +27,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 /** Suscribe este dispositivo y guarda la suscripción del jugador en el CRM (reemplaza la anterior si cambió). */
-async function subscribe(): Promise<boolean> {
+export async function subscribe(): Promise<boolean> {
   const { publicKey } = await api.get<{ publicKey: string | null }>("/marketing/v1/push/public-key", { scope: "none" });
   if (!publicKey) return false;
   const reg = await navigator.serviceWorker.register("/sw.js");

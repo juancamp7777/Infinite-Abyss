@@ -11,6 +11,9 @@ import { PushPrompt } from "./PushPrompt";
 /** Rutas que exigen sesión de jugador. /admin tiene su propio login de backoffice. */
 const PROTECTED = ["/lobby/vip", "/slots", "/roulette", "/blackjack", "/mines", "/crash", "/plinko", "/cashier", "/account"];
 
+/** Páginas sin la estructura del casino (footer, aviso +18, push): la landing comercial. */
+const BARE = ["/", "/landing"];
+
 function isProtected(pathname: string) {
   return PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
@@ -51,6 +54,7 @@ function ThemeBanner() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const bare = BARE.includes(usePathname());
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -61,9 +65,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <div id="main" className="flex-1 flex flex-col">
           <Guard>{children}</Guard>
         </div>
-        <SiteFooter />
-        <PushPrompt />
-        <AgeGate />
+        {!bare && <SiteFooter />}
+        {!bare && <PushPrompt />}
+        {!bare && <AgeGate />}
       </AuthProvider>
     </ThemeProvider>
   );

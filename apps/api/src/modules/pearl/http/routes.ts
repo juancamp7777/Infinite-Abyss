@@ -2,7 +2,8 @@ import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
 import { getPrincipal, requireAuth, requireRole, scopeOperator } from '../../shared/http/auth';
-import { HttpError, asyncHandler, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { HttpError, asyncHandler, badRequest, moduleErrorHandler, sendJson } from '../../shared/http/errors';
+import { ACCOUNT_COUNTRIES, ACCOUNT_METHODS, accountMethod, checkAccount, cleanAccountNumber } from '../domain/accountMethods';
 import { parse } from '../../shared/http/validate';
 import type { ModuleLogger } from '../../shared/module';
 import type { Attachment } from '../../inbox/domain/types';
@@ -48,12 +49,28 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     sendJson(res, await d.pearl.updateSettings(op(req), b));
   }));
 
-  const account = z.object({ holderName: z.string().trim().min(2).max(120), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(6).max(40), bank: z.string().trim().max(60).optional(), active: z.boolean().optional() });
+  const account = z.object({ holderName: z.string().trim().min(2).max(120), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(4).max(60), bank: z.string().trim().max(60).optional(), holderDocument: z.string().trim().max(30).optional(), active: z.boolean().optional() });
+  /** Con un método conocido (Nequi, CLABE, CVU…) se limpia y valida el número y el documento según el país. */
+  const parseAccount = (body: unknown) => {
+    const a = parse(account, body);
+    const m = accountMethod(a.bank);
+    if (!m) {
+      if (a.accountNumber.length < 6) throw badRequest('El número de cuenta debe tener al menos 6 caracteres');
+      return a;
+    }
+    const accountNumber = cleanAccountNumber(m, a.accountNumber);
+    const holderDocument = a.holderDocument?.replace(/[s.-]/g, '').toUpperCase() || undefined;
+    const err = checkAccount(m, accountNumber, holderDocument);
+    if (err) throw badRequest(err);
+    // Una llave (Bre-B) se reconoce en el comprobante por su texto: queda también como alias.
+    return { ...a, accountNumber, holderDocument, country: m.country, alias: a.alias || (m.keyLike ? accountNumber : undefined) };
+  };
+  r.get('/admin/account-methods', ...admin, (_req, res) => sendJson(res, { countries: ACCOUNT_COUNTRIES, methods: ACCOUNT_METHODS }));
   r.get('/admin/accounts', ...admin, asyncHandler(async (req, res) => sendJson(res, { items: await d.pearl.listAccounts(op(req)) })));
-  r.post('/admin/accounts', ...admin, asyncHandler(async (req, res) => sendJson(res, await d.pearl.saveAccount(op(req), parse(account, req.body)), 201)));
+  r.post('/admin/accounts', ...admin, asyncHandler(async (req, res) => sendJson(res, await d.pearl.saveAccount(op(req), parseAccount(req.body)), 201)));
   r.put('/admin/accounts/:id', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
-    sendJson(res, await d.pearl.saveAccount(op(req), { ...parse(account, req.body), id }));
+    sendJson(res, await d.pearl.saveAccount(op(req), { ...parseAccount(req.body), id }));
   }));
   r.delete('/admin/accounts/:id', ...admin, asyncHandler(async (req, res) => {
     await d.pearl.deleteAccount(op(req), parse(idParams, req.params).id);

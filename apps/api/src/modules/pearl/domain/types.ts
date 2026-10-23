@@ -33,7 +33,10 @@ export interface BankAccount {
   holderName: string;
   alias?: string;
   accountNumber: string;
+  /** Clave del método de cobro (ver accountMethods) o el nombre libre de cuentas antiguas. */
   bank?: string;
+  country?: string;
+  holderDocument?: string;
   active: boolean;
   createdAt: Date;
 }

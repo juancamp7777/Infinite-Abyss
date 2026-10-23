@@ -1500,6 +1500,9 @@ model PearlBankAccount {
   alias         String?
   accountNumber String
   bank          String?
+  /// País del método de cobro (CO, MX, AR) y documento del titular (cédula, RFC, CUIT).
+  country        String?
+  holderDocument String?
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
 

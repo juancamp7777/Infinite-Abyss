@@ -43,7 +43,7 @@ export class PrismaPearlRepository implements PearlRepository {
     return (await this.db.pearlBankAccount.findMany({ where: { operatorId }, orderBy: { createdAt: 'asc' } })).map((r) => noNulls<BankAccount>(r));
   }
   async saveAccount(a: BankAccount) {
-    const data = { ...a, alias: a.alias ?? null, bank: a.bank ?? null };
+    const data = { ...a, alias: a.alias ?? null, bank: a.bank ?? null, country: a.country ?? null, holderDocument: a.holderDocument ?? null };
     const { id, createdAt: _c, ...rest } = data;
     return noNulls<BankAccount>(await this.db.pearlBankAccount.upsert({ where: { id }, create: data, update: rest }));
   }

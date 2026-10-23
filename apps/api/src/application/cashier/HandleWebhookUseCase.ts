@@ -115,6 +115,36 @@ export class HandleWebhookUseCase {
     return event.kind === 'DEPOSIT' ? this.processDeposit(provider, event) : this.processWithdrawal(provider, event);
   }
 
+  /**
+   * Respaldo del webhook: consulta al PSP los depósitos pendientes recientes y aplica su estado por el mismo camino
+   * que el aviso (confirmación servidor a servidor, acreditación idempotente). Si un aviso se pierde, la plata llega igual.
+   */
+  async sweepPending(providerCode: string, opts: { maxAgeHours?: number; limit?: number } = {}): Promise<number> {
+    const provider = this.deps.registry.getEnabled(providerCode);
+    if (!provider) return 0;
+    const since = new Date(Date.now() - (opts.maxAgeHours ?? 72) * 3_600_000);
+    const pending = await this.deps.prisma.deposit.findMany({
+      where: { provider: provider.code, status: { in: ['CREATED', 'PENDING'] }, createdAt: { gte: since } },
+      // Los más recientes primero: un pendiente viejo que falla no tapa a los nuevos.
+      orderBy: { createdAt: 'desc' },
+      take: opts.limit ?? 200,
+    });
+    let confirmed = 0;
+    for (const d of pending) {
+      try {
+        const remote = await provider.getStatus({ providerReference: d.providerReference, externalId: d.externalId ?? undefined });
+        if (remote.status === 'PENDING') continue;
+        const out = await this.processDeposit(provider, {
+          kind: 'DEPOSIT', providerReference: d.providerReference, externalId: d.externalId ?? remote.externalId ?? d.providerReference, status: remote.status,
+        });
+        if (out.result === 'deposit_confirmed') confirmed++;
+      } catch (e) {
+        this.deps.logger?.warn('Deposit sweep failed', { provider: provider.code, depositId: d.id, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    return confirmed;
+  }
+
   private async processDeposit(provider: PaymentProvider, event: ProviderEvent) {
     const { prisma, wallet } = this.deps;
     const deposit = await prisma.deposit.findFirst({
@@ -168,14 +198,17 @@ export class HandleWebhookUseCase {
       where: { id: deposit.id, status: { in: CREDITABLE } },
       data: { status: 'CONFIRMED', ledgerTransactionId: credit.ledgerTransactionId, confirmedAt: new Date() },
     });
-    if (moved.count === 1) {
+    // creditDeposit ya deja el depósito CONFIRMED en la misma transacción (y lanza si ya estaba acreditado):
+    // si llegamos aquí, esta llamada fue la que acreditó, aunque `moved` no haya cambiado nada.
+    const creditedNow = moved.count === 1 || !credit.idempotentReplay;
+    if (creditedNow) {
       // externalId es único por proveedor: mejor esfuerzo.
       await prisma.deposit
         .updateMany({ where: { id: deposit.id, externalId: null }, data: { externalId: event.externalId } })
         .catch(() => undefined);
       await this.emitDepositCompleted(deposit, credit.ledgerTransactionId);
     }
-    return { status: 200, result: moved.count === 1 ? 'deposit_confirmed' : 'already_confirmed' };
+    return { status: 200, result: creditedNow ? 'deposit_confirmed' : 'already_confirmed' };
   }
 
   /** Solo la transición efectiva a CONFIRMED emite (una vez por depósito). isFirst = único depósito confirmado. */

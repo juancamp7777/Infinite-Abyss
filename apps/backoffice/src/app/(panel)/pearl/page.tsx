@@ -241,7 +241,7 @@ function Config() {
               </Field>
               {["ARS", "MXN"].filter((c) => c !== s.currency).map((c) => (
                 <Field key={c} label={c} htmlFor={`rate-${c}`}>
-                  <input id={`rate-${c}`} inputMode="decimal" className={`${inputCls} w-full`} placeholder={c === "ARS" ? "4.2" : "215"} value={s.fxRates?.[c] ?? ""}
+                  <input id={`rate-${c}`} inputMode="decimal" className={`${inputCls} w-full`} placeholder={c === "ARS" ? "2.1" : "215"} value={s.fxRates?.[c] ?? ""}
                     onChange={(e) => setForm({ ...form, fxRates: { ...(s.fxRates ?? {}), [c]: e.target.value.replace(/[^\d.]/g, "") } })} />
                 </Field>
               ))}

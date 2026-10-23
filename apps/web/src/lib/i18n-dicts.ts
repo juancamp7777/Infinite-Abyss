@@ -182,6 +182,9 @@ const MORE: Record<string, [string, string]> = {
 };
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
+  "Moneda": ["Currency","Moeda"],
+  "Otras": ["Other","Outras"],
+  "Envía USDT y te acreditamos el equivalente en tu moneda a la tasa del día.": ["Send USDT and we credit the equivalent in your currency at today’s rate.","Envie USDT e creditamos o equivalente na sua moeda pela cotação do dia."],
   "Recursos": ["Resources","Recursos"],
   "Acerca de nosotros": ["About us","Sobre nós"],
   "KYC y AML": ["KYC & AML","KYC e AML"],

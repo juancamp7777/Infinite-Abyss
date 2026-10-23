@@ -15,6 +15,8 @@ export type TransferAccount = {
   bankName?: string;
   accountType?: string;
   network?: string;
+  /** COP, ARS, MXN o USDT. */
+  currency?: string;
 };
 
 type ReceiptView = { id: string; status: string; amount: string | null; currency: string; createdAt: string };
@@ -46,6 +48,10 @@ export function TransferDeposit({ accounts, money, onCredited }: { accounts: Tra
   const [receipt, setReceipt] = useState<ReceiptView | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const credited = useRef(false);
+  // Pestañas por moneda (la local primero; USDT al final).
+  const currencies = [...new Set(accounts.map((a) => a.currency ?? ""))].sort((a, b) => (a === "USDT" ? 1 : b === "USDT" ? -1 : 0));
+  const [cur, setCur] = useState(currencies[0] ?? "");
+  const shown = currencies.length > 1 ? accounts.filter((a) => (a.currency ?? "") === cur) : accounts;
 
   // Tras subir la foto, se consulta su estado hasta que se resuelva (o pasen 5 minutos).
   useEffect(() => {
@@ -120,11 +126,23 @@ export function TransferDeposit({ accounts, money, onCredited }: { accounts: Tra
         <li><b className="text-gold-300">3.</b> {t("Lo verificamos con el pago real y se acredita solo.")}</li>
       </ol>
 
+      {currencies.length > 1 && (
+        <div role="tablist" aria-label={t("Moneda")} className="flex gap-2">
+          {currencies.map((c) => (
+            <button key={c} type="button" role="tab" aria-selected={cur === c} onClick={() => setCur(c)}
+              className={`flex-1 rounded-xl border-2 py-2.5 font-mono text-sm font-bold tracking-widest ${cur === c ? "border-gold-400 bg-gold-500/10 text-gold-300" : "border-gray-800 bg-black text-gray-400"}`}>
+              {c || t("Otras")}
+            </button>
+          ))}
+        </div>
+      )}
+      {cur === "USDT" && currencies.length > 1 && <p className="text-xs text-gray-400">{t("Envía USDT y te acreditamos el equivalente en tu moneda a la tasa del día.")}</p>}
+
       <ul className="flex flex-col gap-3">
-        {accounts.map((a) => (
+        {shown.map((a) => (
           <li key={a.id} className="rounded-xl border border-gold-900/50 bg-black/40 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="font-bold text-white">{a.bankName ?? a.method}</span>
+              <span className="flex items-center gap-2 font-bold text-white">{a.bankName ?? a.method}{a.currency && <span className="rounded-md border border-gold-500/40 px-1.5 py-0.5 font-mono text-[10px] tracking-widest text-gold-300">{a.currency}</span>}</span>
               <span className="text-xs uppercase tracking-widest text-gold-300">{[a.accountType, a.network].filter(Boolean).join(" · ") || a.method}</span>
             </div>
             <div className="mt-2 text-xs text-gray-400">{t(a.numberLabel)}</div>

@@ -88,7 +88,7 @@ export default function LeviathanAdmin() {
           <Field label="Dura (min)" htmlFor="lv-d"><input id="lv-d" inputMode="numeric" className={inputCls} value={f.durationMin} onChange={(e) => setF({ ...f, durationMin: e.target.value.replace(/\D/g, "") })} /></Field>
           <Field label="Máx. jugadores" htmlFor="lv-m"><input id="lv-m" inputMode="numeric" className={inputCls} value={f.maxPlayers} onChange={(e) => setF({ ...f, maxPlayers: e.target.value.replace(/\D/g, "") })} /></Field>
         </div>
-        <p className="mt-2 text-xs text-white/45">Cada jugador recibe 1.000 fichas. Para cobrar premio debe hacer entre 3 y 15 apuestas. Premios 60 % / 25 % / 15 % del pozo menos la comisión. Si no llegan 2 jugadores, se cancela y se devuelve todo.</p>
+        <p className="mt-2 text-xs text-white/45">Cada jugador recibe 1.000 fichas. Para cobrar premio debe hacer entre 3 y 15 apuestas. Premios 60 % / 25 % / 15 % del pozo menos la comisión. Si no llegan 2 jugadores, se cancela y se devuelve todo. Con API-Football conectada (Integraciones → Datos deportivos) se usan partidos reales: crea concursos de 3 horas o más, porque cada partido dura unas 2 horas.</p>
         <div className="mt-3">
           <Button disabled={busy} onClick={() => {
             const entry = f.entry.trim() ? toMinorUnits(f.entry, currency) : "0";

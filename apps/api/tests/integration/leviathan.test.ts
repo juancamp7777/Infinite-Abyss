@@ -84,6 +84,46 @@ describe('Leviathan: concurso rápido de punta a punta', () => {
     expect(await cash('p5')).toBe(5_000_000n);
   });
 
+  it('con API-Football: partidos reales con cuotas, resultado a los 90 y aplazados anulados', async () => {
+    const T = new Date(now.getTime() + 60 * MIN);
+    const fx = (id: number, short: string, startsAt: Date, h: number | null = null, a: number | null = null) => ({
+      externalId: String(id), leagueId: 239, league: 'Primera A', home: `Local ${id}`, away: `Visita ${id}`, startsAt, status: short as 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'CANCELLED', homeScore: h, awayScore: a,
+    });
+    let state = [fx(900001, 'SCHEDULED', T), fx(900002, 'SCHEDULED', T), fx(900003, 'SCHEDULED', T)];
+    const api = {
+      fixturesByDate: async () => state,
+      fixturesByIds: async (ids: string[]) => state.filter((f) => ids.includes(f.externalId)),
+      odds: async (id: string) => (id === '900003' ? [] : [
+        { market: 'MATCH_RESULT' as const, key: '1', label: 'Local', oddsE2: 210 }, { market: 'MATCH_RESULT' as const, key: 'X', label: 'Empate', oddsE2: 330 }, { market: 'MATCH_RESULT' as const, key: '2', label: 'Visita', oddsE2: 360 },
+      ]),
+    };
+    const real = new LeviathanService(prisma, wallet, { logger: silentLogger, now: () => now, rand, realFeed: async () => ({ api: api as never, leagues: [239] }) });
+    await real.tick();
+    const evs = await prisma.levEvent.findMany({ where: { source: 'api-football', externalId: { in: ['900001', '900002', '900003'] } } });
+    expect(evs.map((e) => e.externalId).sort()).toEqual(['900001', '900002']); // sin cuotas no entra
+
+    // Concurso sobre esos partidos (desde 30 min antes del pitazo, 3 h).
+    const g = await real.createGame({ operatorId: op, mode: 'QUICK', title: 'Fútbol real', entry: 1_000_000n, startsInMin: 30, durationMin: 180 });
+    for (const p of ['p1', 'p2']) await real.join(op, p, g.id);
+    now = new Date(now.getTime() + 31 * MIN);
+    await real.tick();
+    const d = await real.detail(op, g.id, 'p1');
+    expect(d.events.every((e) => e.source === 'api-football')).toBe(true);
+    const [e1, e2] = d.events;
+    await real.placeBet(op, 'p1', g.id, { selectionId: e1.selections.find((s) => s.key === '1')!.id, stake: 100n, oddsE2: 210 });
+    await real.placeBet(op, 'p2', g.id, { selectionId: e2.selections.find((s) => s.key === '2')!.id, stake: 100n, oddsE2: 360 });
+
+    // Termina 900001 (2-1, gana el local) y se aplaza 900002: la apuesta de p2 se anula y devuelve sus fichas.
+    state = [fx(900001, 'FINISHED', T, 2, 1), fx(900002, 'CANCELLED', T)];
+    now = new Date(T.getTime() + 120 * MIN);
+    await real.tick();
+    const p1 = await prisma.levEntry.findUniqueOrThrow({ where: { gameId_playerId: { gameId: g.id, playerId: 'p1' } } });
+    const p2 = await prisma.levEntry.findUniqueOrThrow({ where: { gameId_playerId: { gameId: g.id, playerId: 'p2' } } });
+    expect(p1.chips).toBe(1110n); // 900 + 210
+    expect(p2.chips).toBe(1000n); // anulada: vuelven las 100
+    real.stop();
+  });
+
   it('sala de amigos con código', async () => {
     const g = await lev.createGame({ operatorId: op, mode: 'FRIENDS', title: 'Los del barrio', entry: 0n, maxPlayers: 5 });
     expect(g.roomCode).toMatch(/^[A-Z2-9]{5}$/);

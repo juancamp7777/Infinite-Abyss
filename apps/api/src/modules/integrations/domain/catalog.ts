@@ -4,7 +4,7 @@
  * que hoy leen su configuración del entorno (proveedores de juegos del Hub) sin reiniciar el servidor.
  */
 
-export type IntegrationCategory = 'ai' | 'games' | 'payments' | 'alerts';
+export type IntegrationCategory = 'ai' | 'games' | 'payments' | 'sports' | 'alerts';
 /** platform = una sola para toda la plataforma (solo PLATFORM_ADMIN) · operator = cada casino la suya · both = la del casino o, si no tiene, la de la plataforma. */
 export type IntegrationScope = 'platform' | 'operator' | 'both';
 /** live = funciona hoy · contract = el conector existe y se completa con el manual del proveedor · soon = se guarda ya, el conector llega en el bloque de pagos. */
@@ -109,6 +109,17 @@ export const INTEGRATIONS: IntegrationDef[] = [
   {
     key: 'usdt-wallet', category: 'payments', name: 'Billetera USDT', description: 'Dirección donde recibir USDT. Se mostrará al jugador al depositar en cripto.', scope: 'operator', readiness: 'soon', test: 'none',
     fields: [{ name: 'network', label: 'Red (TRC20, BEP20, ERC20…)', required: true, placeholder: 'TRC20' }, { name: 'address', label: 'Dirección', required: true }],
+  },
+
+  // ───── Datos deportivos (Leviathan) ─────
+  {
+    key: 'api-football', category: 'sports', name: 'API-Football (fútbol en vivo)',
+    description: 'Partidos reales, cuotas y resultados de fútbol para Leviathan. Llave en dashboard.api-football.com (plan gratis: 100 consultas al día). Sin llave, Leviathan usa partidos simulados.',
+    scope: 'platform', readiness: 'live', test: 'http',
+    fields: [
+      { name: 'apiKey', label: 'API key', secret: true, required: true },
+      { name: 'leagues', label: 'Ligas (ids separados por coma; vacío = las principales)', placeholder: '239, 2, 13, 39, 140, 128, 262' },
+    ],
   },
 
   // ───── Alertas (Depth y Nautilus) ─────

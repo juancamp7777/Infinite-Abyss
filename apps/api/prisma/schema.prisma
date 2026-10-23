@@ -1979,8 +1979,11 @@ model LevEvent {
   homeScore Int?
   awayScore Int?
   source    String   @default("sim")
+  /// Id del partido en el proveedor (API-Football).
+  externalId String?
   createdAt DateTime @default(now())
 
+  @@unique([source, externalId])
   @@index([status, startsAt])
   @@map("lev_events")
 }

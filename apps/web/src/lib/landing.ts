@@ -14,8 +14,9 @@ export function landingLinks(): { demoUrl: string; contactUrl: string } {
 }
 
 /** Textos opcionales de la landing del casino: sin configurar no se muestra oferta ni licencia (nunca se inventan). */
-export function casinoLandingConfig(): { bonus?: string; license?: string } {
+export function casinoLandingConfig(): { bonus?: string; license?: string; telegram?: string } {
   return {
+    telegram: process.env.LANDING_TELEGRAM_URL?.trim() || "https://t.me/FunkyholeAbyssbot",
     bonus: process.env.LANDING_BONUS?.trim() || undefined,
     license: process.env.LANDING_LICENSE?.trim() || undefined,
   };

@@ -204,3 +204,12 @@
 .cx-footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--cx-line); }
 .cx-footer-bottom a { color: var(--cx-gold-2); }
 .cx-rtp { position: absolute; top: .6rem; right: .6rem; padding: .2rem .5rem; border-radius: .4rem; font-size: .62rem; font-weight: 800; background: rgb(5 4 11 / .75); color: #34d399; border: 1px solid rgb(52 211 153 / .35); }
+
+/* Telegram */
+.cx-btn-tg { color: #fff; background: linear-gradient(135deg, #37bbfe, #229ed9 60%, #1b86bb); box-shadow: 0 10px 30px -10px rgb(34 158 217 / .8), inset 0 1px 0 rgb(255 255 255 / .35); }
+.cx-btn-tg:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -10px rgb(34 158 217 / .95), inset 0 1px 0 rgb(255 255 255 / .35); }
+@media (max-width: 560px) { .cx-tg-nav span { display: none; } .cx-tg-nav { padding: .55rem .7rem; } }
+.cx-tg-fab { position: fixed; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 50; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; color: #fff; background: linear-gradient(135deg, #37bbfe, #229ed9); box-shadow: 0 12px 34px -8px rgb(34 158 217 / .9); transition: transform .2s; }
+.cx-tg-fab:hover { transform: scale(1.08); }
+.cx-tg-fab::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid #37bbfe; animation: cx-ping 2.4s ease-out infinite; }
+@keyframes cx-ping { from { transform: scale(1); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }

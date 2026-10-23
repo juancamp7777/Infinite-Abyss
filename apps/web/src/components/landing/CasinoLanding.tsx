@@ -15,6 +15,15 @@ export interface CasinoLandingProps {
   bonus?: string;
   /** Texto de la licencia para el pie (LANDING_LICENSE). */
   license?: string;
+  /** Enlace al bot de Telegram del casino (LANDING_TELEGRAM_URL): pedidos, recargas y soporte. */
+  telegram?: string;
+}
+
+/** Logo de Telegram (avión de papel) para los botones. */
+function TelegramIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg aria-hidden width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.3a1.5 1.5 0 0 0-2.05-1.1L2.9 9.93c-1.2.48-1.18 2.2.04 2.64l4.03 1.46 1.6 5.08c.24.78 1.22 1.02 1.8.45l2.3-2.24 4.33 3.2c.86.63 2.08.16 2.3-.88l2.64-15.34zM9.8 14.2l-.6 3.3-1.1-3.7 9.6-6.5-7.9 6.9z"/></svg>
+  );
 }
 
 const LOGO = "/brand/infinite-abyss-logo.svg";
@@ -57,7 +66,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   { q: "¿Puedo jugar desde el celular?", a: "Sí. Funciona en cualquier navegador y puedes instalarlo como app en iPhone o Android, con avisos de tus bonos y retiros." },
   { q: "¿Cómo funciona el VIP?", a: "Cada apuesta suma puntos. Al subir de nivel desbloqueas rakeback y beneficios que crecen contigo." },
   { q: "¿Puedo poner límites o pausar mi cuenta?", a: "Sí. En tu cuenta defines límites de depósito y de tiempo de sesión, o te autoexcluyes por el tiempo que quieras." },
-  { q: "¿Cómo contacto a soporte?", a: "Por el chat del casino, 24/7, con personas reales." },
+  { q: "¿Cómo contacto a soporte?", a: "Por el chat del casino o por nuestro Telegram, 24/7, con personas reales. Por Telegram también puedes pedir tu recarga." },
 ];
 
 const TIER_LABEL: Record<string, string> = { mini: "MINI", minor: "MENOR", major: "MAYOR", grand: "GRAN", mega: "MEGA" };
@@ -229,7 +238,7 @@ function LiveBets({ lists }: { lists: Record<(typeof BET_TABS)[number]["key"], F
   );
 }
 
-function Hero({ bonus }: { bonus?: string }) {
+function Hero({ bonus, telegram }: { bonus?: string; telegram?: string }) {
   const canvas = useLightStrands();
   const { data: jackpots } = useJackpots();
   const top = useMemo(() => {
@@ -249,7 +258,8 @@ function Hero({ bonus }: { bonus?: string }) {
             <Link href="/register" className="cx-btn cx-btn-gold">Jugar ahora <ArrowRight aria-hidden size={18} /></Link>
             {bonus
               ? <Link href="/register" className="cx-btn cx-btn-ghost"><Sparkles aria-hidden size={18} />{bonus}</Link>
-              : <Link href="#juegos" className="cx-btn cx-btn-ghost"><Gamepad2 aria-hidden size={18} />Ver juegos</Link>}
+              : !telegram && <Link href="#juegos" className="cx-btn cx-btn-ghost"><Gamepad2 aria-hidden size={18} />Ver juegos</Link>}
+            {telegram && <a href={telegram} target="_blank" rel="noopener noreferrer" className="cx-btn cx-btn-tg"><TelegramIcon />Recarga por Telegram</a>}
           </div>
           <div className="cx-proof cx-reveal" style={i(4)}>
             <span><Zap aria-hidden size={16} />Retiros a tu cuenta</span>
@@ -311,16 +321,16 @@ function Payments() {
   );
 }
 
-export function CasinoLanding({ bonus, license }: CasinoLandingProps) {
+export function CasinoLanding({ bonus, license, telegram }: CasinoLandingProps) {
   useReveal();
   return (
     <LiveFeedProvider>
-      <CasinoPage bonus={bonus} license={license} />
+      <CasinoPage bonus={bonus} license={license} telegram={telegram} />
     </LiveFeedProvider>
   );
 }
 
-function CasinoPage({ bonus, license }: CasinoLandingProps) {
+function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
   const { lists } = useLiveBets();
   const wins = useMemo(() => {
     const seen = new Set<string>();
@@ -336,6 +346,7 @@ function CasinoPage({ bonus, license }: CasinoLandingProps) {
           <Link href="/" className="cx-brand" aria-label="Infinite Abyss, inicio"><img src={LOGO} alt="Infinite Abyss" /></Link>
           <div className="cx-links">{NAV.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}</div>
           <div className="cx-auth">
+            {telegram && <a href={telegram} target="_blank" rel="noopener noreferrer" className="cx-btn cx-btn-tg cx-btn-sm cx-tg-nav" aria-label="Escríbenos por Telegram"><TelegramIcon size={16} /><span>Telegram</span></a>}
             <Link href="/login" className="cx-btn cx-btn-ghost cx-btn-sm">Ingresar</Link>
             <Link href="/register" className="cx-btn cx-btn-gold cx-btn-sm">Registrarse</Link>
           </div>
@@ -343,7 +354,7 @@ function CasinoPage({ bonus, license }: CasinoLandingProps) {
       </nav>
 
       <main>
-        <Hero bonus={bonus} />
+        <Hero bonus={bonus} telegram={telegram} />
         <Winners wins={wins} />
 
         <section id="juegos" className="cx-section">
@@ -438,7 +449,10 @@ function CasinoPage({ bonus, license }: CasinoLandingProps) {
               <img src={MARK} alt="" className="cx-final-mark" />
               <h2 className="cx-h2">El abismo te espera.</h2>
               <p className="cx-muted">Crea tu cuenta y empieza a jugar hoy.</p>
-              <Link href="/register" className="cx-btn cx-btn-gold" style={{ marginTop: "1.4rem" }}>Jugar ahora <ArrowRight aria-hidden size={18} /></Link>
+              <div className="cx-cta" style={{ justifyContent: "center", marginTop: "1.4rem" }}>
+                <Link href="/register" className="cx-btn cx-btn-gold">Jugar ahora <ArrowRight aria-hidden size={18} /></Link>
+                {telegram && <a href={telegram} target="_blank" rel="noopener noreferrer" className="cx-btn cx-btn-tg"><TelegramIcon />Pide por Telegram</a>}
+              </div>
             </div>
           </div>
         </section>
@@ -453,13 +467,14 @@ function CasinoPage({ bonus, license }: CasinoLandingProps) {
             {license && <p style={{ marginTop: ".8rem" }}>{license}</p>}
           </div>
           <div><h4>Jugar</h4><ul>{NAV.slice(0, 4).map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}</ul></div>
-          <div><h4>Ayuda</h4><ul><li><Link href="/webchat">Soporte 24/7</Link></li><li><Link href="/account">Mi cuenta y límites</Link></li><li><Link href="/plataforma">Para operadores</Link></li></ul></div>
+          <div><h4>Ayuda</h4><ul><li><Link href="/webchat">Soporte 24/7</Link></li>{telegram && <li><a href={telegram} target="_blank" rel="noopener noreferrer">Telegram</a></li>}<li><Link href="/account">Mi cuenta y límites</Link></li><li><Link href="/plataforma">Para operadores</Link></li></ul></div>
         </div>
         <div className="cx-wrap cx-footer-bottom">
           <span>© {new Date().getFullYear()} Infinite Abyss</span>
           <Link href="/plataforma">¿Tienes un casino? Conoce la plataforma →</Link>
         </div>
       </footer>
+      {telegram && <a href={telegram} target="_blank" rel="noopener noreferrer" className="cx-tg-fab" aria-label="Escríbenos por Telegram"><TelegramIcon size={28} /></a>}
     </div>
   );
 }

@@ -66,5 +66,17 @@ export class TelegramAdapter implements ChannelAdapter<TelegramConfig> {
   async activate(config: TelegramConfig, webhookUrl: string, webhookSecret: string) {
     const r = await this.http(`${this.apiBase}/bot${config.botToken}/setWebhook`, { url: webhookUrl, secret_token: webhookSecret, allowed_updates: ['message', 'edited_message'], drop_pending_updates: false });
     if (!r.json?.ok) throw new ChannelSendError(`Telegram no aceptó el webhook: ${String(r.json?.description ?? r.status).slice(0, 200)}`);
+    await this.setupProfile(config);
+  }
+
+  /** Deja el bot presentable sin pasar por BotFather: descripción, texto corto y menú de comandos. Si algo falla, el canal sigue activo. */
+  private async setupProfile(config: TelegramConfig) {
+    const base = `${this.apiBase}/bot${config.botToken}`;
+    const steps: Array<[string, Record<string, unknown>]> = [
+      ['setMyShortDescription', { short_description: 'Recargas, retiros y soporte 24/7 del casino. Escríbenos y te atendemos al instante.' }],
+      ['setMyDescription', { description: '👋 ¡Bienvenido!\n\nPor aquí puedes:\n• Recargar saldo con los medios de pago de tu país\n• Pedir tu retiro\n• Comprar paquetes y bonos\n• Hablar con una persona, 24/7\n\nToca INICIAR y escríbenos.' }],
+      ['setMyCommands', { commands: [{ command: 'start', description: 'Empezar' }, { command: 'recargar', description: 'Recargar saldo' }, { command: 'retirar', description: 'Pedir un retiro' }, { command: 'soporte', description: 'Hablar con una persona' }] }],
+    ];
+    for (const [method, body] of steps) await this.http(`${base}/${method}`, body).catch(() => undefined);
   }
 }

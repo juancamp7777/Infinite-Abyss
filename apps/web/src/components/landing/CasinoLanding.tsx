@@ -26,8 +26,21 @@ function TelegramIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-const LOGO = "/brand/infinite-abyss-logo.svg";
-const MARK = "/brand/infinite-abyss-mark.svg";
+const LOGO = "/brand/abyss-logo.webp";
+const LOGO_FULL = "/brand/abyss-logo-principal.webp";
+const MARK = "/brand/abyss-icon.webp";
+
+/** Banderas en SVG (los emoji de bandera no se ven en Windows). */
+const FLAGS: Record<string, React.ReactNode> = {
+  CO: <><rect width="30" height="10" fill="#fcd116" /><rect y="10" width="30" height="5" fill="#003893" /><rect y="15" width="30" height="5" fill="#ce1126" /></>,
+  MX: <><rect width="10" height="20" fill="#006847" /><rect x="10" width="10" height="20" fill="#fff" /><rect x="20" width="10" height="20" fill="#ce1126" /><circle cx="15" cy="10" r="2.6" fill="#8c5a2b" /></>,
+  AR: <><rect width="30" height="20" fill="#74acdf" /><rect y="6.67" width="30" height="6.67" fill="#fff" /><circle cx="15" cy="10" r="2.2" fill="#f6b40e" /></>,
+  US: <><rect width="30" height="20" fill="#b22234" />{[1, 3, 5, 7, 9, 11].map((n) => <rect key={n} y={(n * 20) / 13} width="30" height={20 / 13} fill="#fff" />)}<rect width="13" height={(7 * 20) / 13} fill="#3c3b6e" /></>,
+  EN: <><rect width="30" height="20" fill="#fff" /><rect x="12.5" width="5" height="20" fill="#ce1124" /><rect y="7.5" width="30" height="5" fill="#ce1124" /></>,
+};
+const Flag = ({ code }: { code: string }) => <svg className="cx-flag" viewBox="0 0 30 20" aria-hidden>{FLAGS[code]}</svg>;
+const LIVE_IN = [{ code: "CO", name: "Colombia" }, { code: "MX", name: "México" }, { code: "AR", name: "Argentina" }];
+const SOON = [{ code: "US", name: "USA" }, { code: "EN", name: "Inglaterra" }];
 
 const NAV = [
   { href: "/lobby", label: "Casino" },
@@ -251,7 +264,10 @@ function Hero({ bonus, telegram }: { bonus?: string; telegram?: string }) {
       <canvas ref={canvas} className="cx-canvas" aria-hidden />
       <div className="cx-wrap cx-hero-grid">
         <div>
-          <span className="cx-chip cx-reveal"><i aria-hidden />Casino online · Colombia · México · Argentina</span>
+          <div className="cx-countries cx-reveal">
+            <span className="cx-chip"><i aria-hidden />{LIVE_IN.map((c) => <span key={c.code} className="cx-country"><Flag code={c.code} />{c.name}</span>)}</span>
+            <span className="cx-chip cx-chip-soon">Próximamente{SOON.map((c) => <span key={c.code} className="cx-country"><Flag code={c.code} />{c.name}</span>)}</span>
+          </div>
           <h1 className="cx-h1 cx-reveal" style={i(1)}>Juega en <em>otra dimensión.</em></h1>
           <p className="cx-lead cx-reveal" style={i(2)}>Slots, mesas y nuestros Originals provably fair. Deposita en tu moneda con los medios de pago de tu país, juega desde el celular y retira a tu cuenta.</p>
           <div className="cx-cta cx-reveal" style={i(3)}>
@@ -271,11 +287,11 @@ function Hero({ bonus, telegram }: { bonus?: string; telegram?: string }) {
           <span className="cx-orbit" aria-hidden />
           <div className="cx-ring-in" aria-live="polite">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MARK} alt="" className="cx-ring-mark" />
+            <img src={LOGO_FULL} alt="Infinite Abyss" className={top ? "cx-ring-logo cx-ring-logo-sm" : "cx-ring-logo"} />
             {top ? (
               <><small>{top.name} JACKPOT</small><strong>{formatMoney(top.amount, top.currency)}</strong><span>Crece con cada apuesta</span></>
             ) : (
-              <><small>INFINITE ABYSS</small><span>Slots · Mesa · Originals</span></>
+              <span>Slots · Mesa · Originals</span>
             )}
           </div>
         </div>
@@ -312,11 +328,12 @@ function Payments() {
       <h3 className="cx-h3">Deposita como ya pagas</h3>
       <p className="cx-muted">Elige tu país: juegas y retiras en {p.currency}, sin conversiones.</p>
       <div className="cx-tabs" role="tablist" aria-label="País" style={{ marginTop: "1.2rem" }}>
-        {PAYMENTS.map((x) => <button key={x.code} type="button" role="tab" aria-selected={x.code === code} className="cx-tab" onClick={() => setCode(x.code)}>{x.country}</button>)}
+        {PAYMENTS.map((x) => <button key={x.code} type="button" role="tab" aria-selected={x.code === code} className="cx-tab cx-country" onClick={() => setCode(x.code)}><Flag code={x.code} />{x.country}</button>)}
       </div>
       <ul className="cx-methods" role="tabpanel">
         {p.methods.map((m) => <li key={m}><Wallet aria-hidden size={16} />{m}</li>)}
       </ul>
+      <p className="cx-soon">Próximamente{SOON.map((c) => <span key={c.code} className="cx-country"><Flag code={c.code} />{c.name}</span>)}</p>
     </div>
   );
 }

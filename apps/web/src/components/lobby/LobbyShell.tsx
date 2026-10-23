@@ -1,4 +1,5 @@
 'use client';
+import { LanguageSwitcher, useT } from '@/lib/i18n';
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChatWidget } from '@/components/webchat/ChatWidget';
 import Link from 'next/link';
@@ -64,6 +65,7 @@ function useModal(open: boolean, close: () => void, ref: React.RefObject<HTMLEle
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  const { t } = useT();
   const { vip, site } = useLobby();
   const topbar = site?.config.layout.nav === 'topbar';
   const path = usePathname();
@@ -81,11 +83,11 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <a href="#nf-main" className="nf-skip">Saltar al contenido</a>
+      <a href="#nf-main" className="nf-skip">{t("Saltar al contenido")}</a>
 
-      {!topbar && <aside data-collapsed={collapsed} className="nf-side sticky top-0 hidden h-screen shrink-0 flex-col lg:flex" aria-label="Menú lateral">
+      {!topbar && <aside data-collapsed={collapsed} className="nf-side sticky top-0 hidden h-screen shrink-0 flex-col lg:flex" aria-label={t("Menú lateral")}>
         <div className={`flex h-16 items-center border-b border-[var(--nf-border)] px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-          {!collapsed && <Link href="/lobby" aria-label="Ir al inicio"><Logo variant="full" className="h-9 w-auto" /></Link>}
+          {!collapsed && <Link href="/lobby" aria-label={t("Ir al inicio")}><Logo variant="full" className="h-9 w-auto" /></Link>}
           <button type="button" onClick={toggleCollapsed} className="nf-square-btn" aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'} aria-expanded={!collapsed}>
             {collapsed ? <PanelLeftOpen aria-hidden className="h-4 w-4" /> : <PanelLeftClose aria-hidden className="h-4 w-4" />}
           </button>
@@ -99,7 +101,7 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="nf-top sticky top-0 z-30">
           <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-3 sm:px-5">
-            <Link href="/lobby" className={`flex shrink-0 items-center ${topbar ? '' : 'lg:hidden'}`} aria-label="Ir al inicio">
+            <Link href="/lobby" className={`flex shrink-0 items-center ${topbar ? '' : 'lg:hidden'}`} aria-label={t("Ir al inicio")}>
               <Logo variant="mark" className="h-9 w-9 sm:hidden" />
               <Logo variant="full" className="hidden h-9 w-auto sm:block" />
             </Link>
@@ -109,6 +111,7 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex items-center gap-2 md:ml-0 md:flex-1 md:justify-center"><WalletChip /></div>
             <div className="flex items-center gap-2">
               <div className="hidden xl:block"><VipProgressBar vip={vip} compact /></div>
+              <LanguageSwitcher className="hidden sm:inline-flex" />
               <AccountMenu />
             </div>
           </div>
@@ -128,11 +131,11 @@ function Shell({ children }: { children: ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="nf-drawer-backdrop absolute inset-0" onClick={closeDrawer} aria-hidden />
-          <div id="nf-drawer" ref={drawerRef} role="dialog" aria-modal="true" aria-label="Menú" tabIndex={-1}
+          <div id="nf-drawer" ref={drawerRef} role="dialog" aria-modal="true" aria-label={t("Menú")} tabIndex={-1}
             className="nf-side absolute inset-y-0 left-0 flex w-[min(19rem,85vw)] flex-col shadow-2xl outline-none">
             <div className="flex h-16 items-center justify-between border-b border-[var(--nf-border)] px-3">
               <Logo variant="full" className="h-9 w-auto" />
-              <button type="button" onClick={closeDrawer} className="nf-square-btn" aria-label="Cerrar menú"><X aria-hidden className="h-4 w-4" /></button>
+              <button type="button" onClick={closeDrawer} className="nf-square-btn" aria-label={t("Cerrar menú")}><X aria-hidden className="h-4 w-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-2"><SideNav onNavigate={closeDrawer} /></div>
             {vip && <div className="border-t border-[var(--nf-border)] p-3"><VipProgressBar vip={vip} /></div>}
@@ -143,9 +146,9 @@ function Shell({ children }: { children: ReactNode }) {
       {search && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="nf-drawer-backdrop absolute inset-0" onClick={closeSearch} aria-hidden />
-          <div ref={searchRef} role="dialog" aria-modal="true" aria-label="Buscar juegos" className="nf-top absolute inset-x-0 top-0 flex items-center gap-2 p-3">
+          <div ref={searchRef} role="dialog" aria-modal="true" aria-label={t("Buscar juegos")} className="nf-top absolute inset-x-0 top-0 flex items-center gap-2 p-3">
             <Suspense fallback={<div className="h-10 flex-1" />}><SearchBox onSubmitted={closeSearch} /></Suspense>
-            <button type="button" onClick={closeSearch} className="nf-square-btn shrink-0" aria-label="Cerrar búsqueda"><X aria-hidden className="h-4 w-4" /></button>
+            <button type="button" onClick={closeSearch} className="nf-square-btn shrink-0" aria-label={t("Cerrar búsqueda")}><X aria-hidden className="h-4 w-4" /></button>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { LanguageSwitcher, useT } from "@/lib/i18n";
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Bot, Brain, Gamepad2, LayoutTemplate, MessagesSquare, Plug, Trophy, Users, Wallet, Workflow, type LucideIcon } from "lucide-react";
 import "./landing.css";
@@ -19,7 +20,7 @@ const MODULES: Array<{ name: string; tag: string; text: string; icon: LucideIcon
   { name: "Integraciones", tag: "Todo conectado", text: "Claude, proveedores de juegos, pagos cripto y alertas, desde una sola pantalla, cifrado.", icon: Plug, color: "#9be15d" },
 ];
 
-const MARQUEE = ["KYC antes de retirar", "Push en iPhone y Android", "Argentina · Brasil · Colombia · México", "Próximamente USA", "Provably fair", "Multi-operador", "Cifrado AES-256", "Cripto y USDT", "Backoffice Abyss Command"];
+const MARQUEE = ["KYC antes de retirar", "Push en iPhone y Android", "Colombia · México · Argentina", "Próximamente USA e Inglaterra", "Provably fair", "Multi-operador", "Cifrado AES-256", "Cripto y USDT", "Backoffice Abyss Command"];
 
 function zoneFor(m: number) {
   let name = ZONES[0][1];
@@ -121,6 +122,7 @@ const glowFollow = (e: MouseEvent<HTMLElement>) => {
 };
 
 export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: string }) {
+  const { t } = useT();
   const root = useRef<HTMLDivElement>(null);
   const depth = useRef(0);
   const [meters, setMeters] = useState(0);
@@ -162,66 +164,67 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
       <div className="lx-gauge" aria-hidden>
         <span className="lx-gauge-num">−{meters.toLocaleString("es")} m</span>
         <div className="lx-gauge-track"><div className="lx-gauge-fill" /></div>
-        <span className="lx-gauge-zone">{zoneFor(meters)}</span>
+        <span className="lx-gauge-zone">{t(zoneFor(meters))}</span>
       </div>
 
-      <nav className="lx-nav" aria-label="Principal">
+      <nav className="lx-nav" aria-label={t("Principal")}>
         <span className="lx-logo">INFINITE <b>ABYSS</b></span>
-        <a href={contactUrl} className="lx-btn lx-btn-gold">Quiero mi casino</a>
+        <LanguageSwitcher className="ml-auto mr-3" />
+        <a href={contactUrl} className="lx-btn lx-btn-gold">{t("Quiero mi casino")}</a>
       </nav>
 
       <main>
         <section className="lx-section lx-hero" data-reveal data-depth="0">
           <div>
-            <p className="lx-kicker lx-reveal" style={i(0)}>Plataforma de casino online · todo en uno</p>
-            <h1 className="lx-title lx-reveal" style={i(1)}><span>Infinite</span><span>Abyss</span></h1>
+            <p className="lx-kicker lx-reveal" style={i(0)}>{t("Plataforma de casino online · todo en uno")}</p>
+            <h1 className="lx-title lx-reveal" style={i(1)}><span>{t("Infinite")}</span><span>{t("Abyss")}</span></h1>
             <p className="lx-lead lx-reveal" style={i(2)}>
               Casino, cajero con IA, CRM, bots, equipo y marca propia en una sola plataforma.
               Lánzate en días, no en meses. Baja y mira hasta dónde llega.
             </p>
             <div className="lx-cta lx-reveal" style={i(3)}>
-              <a href={demoUrl} className="lx-btn lx-btn-gold">Ver el casino en vivo</a>
-              <a href="#planes" className="lx-btn lx-btn-ghost">Ver planes</a>
+              <a href={demoUrl} className="lx-btn lx-btn-gold">{t("Ver el casino en vivo")}</a>
+              <a href="#planes" className="lx-btn lx-btn-ghost">{t("Ver planes")}</a>
             </div>
-            <p className="lx-scroll lx-reveal" style={i(4)}>DESCIENDE</p>
+            <p className="lx-scroll lx-reveal" style={i(4)}>{t("DESCIENDE")}</p>
           </div>
         </section>
 
-        <div className="lx-marquee" aria-label="Incluido en la plataforma">
-          <div className="lx-marquee-track">{[...MARQUEE, ...MARQUEE].map((m, k) => <span key={k} aria-hidden={k >= MARQUEE.length}>{m}</span>)}</div>
+        <div className="lx-marquee" aria-label={t("Incluido en la plataforma")}>
+          <div className="lx-marquee-track">{[...MARQUEE, ...MARQUEE].map((m, k) => <span key={k} aria-hidden={k >= MARQUEE.length}>{t(m)}</span>)}</div>
         </div>
 
         <section id="planes" className="lx-section" data-reveal data-depth="200">
           <div className="lx-wrap">
-            <p className="lx-kicker lx-reveal">−200 m · Zona de luz</p>
-            <h2 className="lx-h2 lx-reveal" style={i(1)}>Dos formas de entrar al abismo.</h2>
-            <p className="lx-lead lx-reveal" style={i(2)}>Empieza con un casino listo para vender o llévate la operación completa: atención, caja, equipo y marketing.</p>
+            <p className="lx-kicker lx-reveal">{t("−200 m · Zona de luz")}</p>
+            <h2 className="lx-h2 lx-reveal" style={i(1)}>{t("Dos formas de entrar al abismo.")}</h2>
+            <p className="lx-lead lx-reveal" style={i(2)}>{t("Empieza con un casino listo para vender o llévate la operación completa: atención, caja, equipo y marketing.")}</p>
             <div className="lx-plans">
               <article className="lx-plan lx-reveal" style={i(3)} onMouseMove={glowFollow}>
-                <span className="lx-tag">Casino listo</span>
-                <h3>Tu casino, tu marca</h3>
-                <p className="lx-lead">Elige una plantilla, pon tu logo y tus colores, y abre.</p>
+                <span className="lx-tag">{t("Casino listo")}</span>
+                <h3>{t("Tu casino, tu marca")}</h3>
+                <p className="lx-lead">{t("Elige una plantilla, pon tu logo y tus colores, y abre.")}</p>
                 <ul>
-                  <li>Plantillas Reef: Golden, Emerald, Royal y Abyss</li>
-                  <li>Abyss Originals y proveedores de juegos</li>
-                  <li>Registro, KYC, depósitos y retiros</li>
-                  <li>Backoffice Abyss Command</li>
-                  <li>Tu dominio, SEO y app instalable</li>
+                  <li>{t("Plantillas Reef: Golden, Emerald, Royal y Abyss")}</li>
+                  <li>{t("Abyss Originals y proveedores de juegos")}</li>
+                  <li>{t("Registro, KYC, depósitos y retiros")}</li>
+                  <li>{t("Backoffice Abyss Command")}</li>
+                  <li>{t("Tu dominio, SEO y app instalable")}</li>
                 </ul>
-                <a href={contactUrl} className="lx-btn lx-btn-ghost">Pedir precio</a>
+                <a href={contactUrl} className="lx-btn lx-btn-ghost">{t("Pedir precio")}</a>
               </article>
               <article className="lx-plan lx-plan-gold lx-reveal" style={i(4)} onMouseMove={glowFollow}>
-                <span className="lx-tag">Kit completo</span>
-                <h3>Toda la operación</h3>
-                <p className="lx-lead">Todo lo del casino listo, más las herramientas para operarlo.</p>
+                <span className="lx-tag">{t("Kit completo")}</span>
+                <h3>{t("Toda la operación")}</h3>
+                <p className="lx-lead">{t("Todo lo del casino listo, más las herramientas para operarlo.")}</p>
                 <ul>
-                  <li>Sonar: WhatsApp, Telegram y chat en una bandeja</li>
-                  <li>Tide: bots y flujos sin programar</li>
-                  <li>Pearl: cajero con IA que acredita solo</li>
-                  <li>Crew y Ascend: turnos, nómina y gamificación</li>
-                  <li>Nautilus: un operador IA que vigila 24/7</li>
+                  <li>{t("Sonar: WhatsApp, Telegram y chat en una bandeja")}</li>
+                  <li>{t("Tide: bots y flujos sin programar")}</li>
+                  <li>{t("Pearl: cajero con IA que acredita solo")}</li>
+                  <li>{t("Crew y Ascend: turnos, nómina y gamificación")}</li>
+                  <li>{t("Nautilus: un operador IA que vigila 24/7")}</li>
                 </ul>
-                <a href={contactUrl} className="lx-btn lx-btn-gold">Quiero el kit completo</a>
+                <a href={contactUrl} className="lx-btn lx-btn-gold">{t("Quiero el kit completo")}</a>
               </article>
             </div>
           </div>
@@ -229,15 +232,15 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
 
         <section className="lx-section" data-reveal data-depth="1000">
           <div className="lx-wrap">
-            <p className="lx-kicker lx-reveal">−1.000 m · Zona crepuscular</p>
-            <h2 className="lx-h2 lx-reveal" style={i(1)}>Cada pieza brilla en la oscuridad.</h2>
-            <p className="lx-lead lx-reveal" style={i(2)}>Módulos que trabajan juntos, con los mismos jugadores, el mismo saldo y el mismo equipo.</p>
+            <p className="lx-kicker lx-reveal">{t("−1.000 m · Zona crepuscular")}</p>
+            <h2 className="lx-h2 lx-reveal" style={i(1)}>{t("Cada pieza brilla en la oscuridad.")}</h2>
+            <p className="lx-lead lx-reveal" style={i(2)}>{t("Módulos que trabajan juntos, con los mismos jugadores, el mismo saldo y el mismo equipo.")}</p>
             <div className="lx-mods">
               {MODULES.map((m, k) => (
                 <article key={m.name} className="lx-mod lx-reveal" style={{ ...i(k + 3), "--c": m.color } as CSSProperties}>
                   <div className="lx-mod-orb"><m.icon aria-hidden className="h-5 w-5" /></div>
-                  <h3><small>{m.tag}</small>{m.name}</h3>
-                  <p>{m.text}</p>
+                  <h3><small>{t(m.tag)}</small>{m.name}</h3>
+                  <p>{t(m.text)}</p>
                 </article>
               ))}
             </div>
@@ -246,30 +249,30 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
 
         <section className="lx-section" data-reveal data-depth="4000">
           <div className="lx-wrap">
-            <p className="lx-kicker lx-reveal">−4.000 m · Zona abisal</p>
-            <h2 className="lx-h2 lx-reveal" style={i(1)}>Presión de fondo marino. Cero grietas.</h2>
-            <p className="lx-lead lx-reveal" style={i(2)}>Construida para operar de verdad: cada cambio pasa cientos de pruebas antes de salir.</p>
+            <p className="lx-kicker lx-reveal">{t("−4.000 m · Zona abisal")}</p>
+            <h2 className="lx-h2 lx-reveal" style={i(1)}>{t("Presión de fondo marino. Cero grietas.")}</h2>
+            <p className="lx-lead lx-reveal" style={i(2)}>{t("Construida para operar de verdad: cada cambio pasa cientos de pruebas antes de salir.")}</p>
             <div className="lx-stats">
-              <div className="lx-stat lx-reveal" style={i(3)}><Counter to={600} suffix="+" /><span>pruebas automáticas en cada cambio</span></div>
-              <div className="lx-stat lx-reveal" style={i(4)}><Counter to={8} /><span>módulos conectados entre sí</span></div>
-              <div className="lx-stat lx-reveal" style={i(5)}><Counter to={256} /><span>bits de cifrado AES para cada llave</span></div>
-              <div className="lx-stat lx-reveal" style={i(6)}><Counter to={24} suffix="/7" /><span>vigilancia con Nautilus</span></div>
+              <div className="lx-stat lx-reveal" style={i(3)}><Counter to={600} suffix="+" /><span>{t("pruebas automáticas en cada cambio")}</span></div>
+              <div className="lx-stat lx-reveal" style={i(4)}><Counter to={8} /><span>{t("módulos conectados entre sí")}</span></div>
+              <div className="lx-stat lx-reveal" style={i(5)}><Counter to={256} /><span>{t("bits de cifrado AES para cada llave")}</span></div>
+              <div className="lx-stat lx-reveal" style={i(6)}><Counter to={24} suffix="/7" /><span>{t("vigilancia con Nautilus")}</span></div>
             </div>
           </div>
         </section>
 
         <section className="lx-section lx-nautilus" data-reveal data-depth="10994">
           <div className="lx-wrap">
-            <p className="lx-kicker lx-reveal">−10.994 m · Fosa hadal</p>
+            <p className="lx-kicker lx-reveal">{t("−10.994 m · Fosa hadal")}</p>
             <div className="lx-eye lx-reveal" style={i(1)} aria-hidden />
-            <h2 className="lx-h2 lx-reveal" style={i(2)}>Aquí abajo vive Nautilus.</h2>
+            <h2 className="lx-h2 lx-reveal" style={i(2)}>{t("Aquí abajo vive Nautilus.")}</h2>
             <p className="lx-lead lx-reveal" style={i(3)}>
               Un operador con inteligencia artificial que mira tu casino sin parpadear: detecta fraude y abuso de bonos,
               responde a jugadores, avisa caídas y te manda el resumen del día. Lo que mueve dinero, siempre te lo pregunta.
             </p>
             <div className="lx-cta lx-reveal" style={i(4)}>
-              <a href={contactUrl} className="lx-btn lx-btn-gold"><Brain aria-hidden className="h-5 w-5" />Toca fondo con nosotros</a>
-              <a href={demoUrl} className="lx-btn lx-btn-ghost"><Bot aria-hidden className="h-5 w-5" />Probar la demo</a>
+              <a href={contactUrl} className="lx-btn lx-btn-gold"><Brain aria-hidden className="h-5 w-5" />{t("Toca fondo con nosotros")}</a>
+              <a href={demoUrl} className="lx-btn lx-btn-ghost"><Bot aria-hidden className="h-5 w-5" />{t("Probar la demo")}</a>
             </div>
           </div>
         </section>
@@ -277,7 +280,7 @@ export function Landing({ demoUrl, contactUrl }: { demoUrl: string; contactUrl: 
 
       <footer className="lx-footer">
         <span>© {new Date().getFullYear()} Infinite Abyss · Software para operadores con licencia.</span>
-        <span>Juego responsable · +18</span>
+        <span>{t("Juego responsable · +18")}</span>
       </footer>
     </div>
   );

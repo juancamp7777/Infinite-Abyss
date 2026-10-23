@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -45,22 +46,23 @@ export function isActive(path: string, href: string): boolean {
 
 /** Menú lateral por secciones. Colapsado muestra solo íconos (con nombre accesible y tooltip). */
 export function SideNav({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const { t } = useT();
   const path = usePathname();
   return (
-    <nav aria-label="Categorías" className="flex flex-col gap-1">
+    <nav aria-label={t("Categorías")} className="flex flex-col gap-1">
       {NAV_SECTIONS.map((s) => (
         <div key={s.title} className="flex flex-col gap-0.5">
-          {collapsed ? <hr aria-hidden className="mx-3 my-2 border-[var(--nf-border)]" /> : <p className="nf-nav-title">{s.title}</p>}
+          {collapsed ? <hr aria-hidden className="mx-3 my-2 border-[var(--nf-border)]" /> : <p className="nf-nav-title">{t(s.title)}</p>}
           {s.items.map(({ label, href, icon: Icon }) => {
             const on = isActive(path, href);
             return (
               <Link
                 key={href} href={href} onClick={onNavigate} aria-current={on ? 'page' : undefined}
-                title={collapsed ? label : undefined} aria-label={collapsed ? label : undefined}
+                title={collapsed ? t(label) : undefined} aria-label={collapsed ? t(label) : undefined}
                 className={`nf-nav ${on ? 'nf-nav-on' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
               >
                 <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
+                {!collapsed && <span className="truncate">{t(label)}</span>}
               </Link>
             );
           })}
@@ -79,10 +81,11 @@ const BOTTOM: NavItem[] = [
 
 /** Barra inferior del móvil: menú, accesos principales y búsqueda. */
 export function BottomNav({ onMenu, onSearch, menuOpen }: { onMenu: () => void; onSearch: () => void; menuOpen: boolean }) {
+  const { t } = useT();
   const path = usePathname();
   const cls = 'nf-nav flex-1 flex-col gap-0.5 px-1 py-1.5 text-[11px] justify-center';
   return (
-    <nav aria-label="Navegación móvil" className="flex items-stretch px-1 pb-[env(safe-area-inset-bottom)]">
+    <nav aria-label={t("Navegación móvil")} className="flex items-stretch px-1 pb-[env(safe-area-inset-bottom)]">
       <button type="button" onClick={onMenu} aria-expanded={menuOpen} aria-controls="nf-drawer" className={cls}>
         <Menu aria-hidden className="h-5 w-5" />Menú
       </button>
@@ -90,7 +93,7 @@ export function BottomNav({ onMenu, onSearch, menuOpen }: { onMenu: () => void; 
         const on = isActive(path, href);
         return (
           <Link key={href} href={href} aria-current={on ? 'page' : undefined} className={`${cls} ${on ? 'text-[var(--nf-primary)]' : ''}`}>
-            <Icon aria-hidden className="h-5 w-5" />{label}
+            <Icon aria-hidden className="h-5 w-5" />{t(label)}
           </Link>
         );
       })}
@@ -105,14 +108,15 @@ const TOP: NavItem[] = NAV_ITEMS.filter((i) => i.href !== '/lobby/favorites' && 
 
 /** Menú horizontal de escritorio (plantillas Reef con navegación superior). */
 export function TopNav() {
+  const { t } = useT();
   const path = usePathname();
   return (
-    <nav aria-label="Categorías" className="nf-topnav mx-auto hidden max-w-[1240px] px-3 sm:px-5 lg:flex">
+    <nav aria-label={t("Categorías")} className="nf-topnav mx-auto hidden max-w-[1240px] px-3 sm:px-5 lg:flex">
       {TOP.map(({ label, href, icon: Icon }) => {
         const on = isActive(path, href);
         return (
           <Link key={href} href={href} aria-current={on ? 'page' : undefined} className={`nf-nav ${on ? 'nf-nav-on' : ''}`}>
-            <Icon aria-hidden className="h-4 w-4 shrink-0" />{label}
+            <Icon aria-hidden className="h-4 w-4 shrink-0" />{t(label)}
           </Link>
         );
       })}

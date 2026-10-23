@@ -102,6 +102,16 @@ export function createBackofficeRouter(d: BackofficeRouterDeps): Router {
     }),
   );
 
+  // --- Operadores por nombre para el selector de la plataforma (solo PLATFORM_ADMIN) ---
+  router.get(
+    '/admin/operators',
+    auth,
+    requireRole('PLATFORM_ADMIN'),
+    asyncHandler(async (_req, res) => {
+      sendJson(res, { items: (await d.deps.operators?.list?.()) ?? [] });
+    }),
+  );
+
   // --- Moneda del operador (el backoffice la usa para formatear montos; cualquier rol, siempre en su alcance) ---
   router.get(
     '/admin/operators/:operatorId/currency',

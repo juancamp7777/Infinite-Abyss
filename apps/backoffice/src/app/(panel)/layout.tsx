@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { authClient, BASE_PATH, canAccess, homeFor, NAV, NAV_SECTIONS, ROLE_LABEL, type NavSection } from "@/lib/auth";
 import { CurrencyProvider, OperatorProvider, useOperator, useSession } from "@/lib/hooks";
-import { Button, Spinner, inputCls } from "@/components/ui";
+import { Spinner, inputCls } from "@/components/ui";
 import { CrewNotices } from "@/components/CrewNotices";
 
 const noop = () => () => {};
@@ -50,7 +50,6 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
   const [open, setOpen] = useState(false);
   const [collapsed, toggleSection] = useCollapsed();
   const { operatorId, setOperatorId, known } = useOperator();
-  const [draft, setDraft] = useState("");
   const items = NAV.filter((n) => n.roles.includes(session.role));
   const allowed = canAccess(session.role, "/" + pathname.split("/")[1]);
   const current = items.find((n) => pathname === n.href || pathname.startsWith(n.href + "/"));
@@ -148,22 +147,14 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
           </div>
           <div className="ml-auto flex items-center gap-2">
             {session.role === "PLATFORM_ADMIN" ? (
-              <form
-                className="flex items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (draft.trim()) setOperatorId(draft);
-                  setDraft("");
-                }}
-              >
+              <div className="flex items-center gap-2">
                 <label htmlFor="op-select" className="hidden text-xs text-white/60 sm:block">Operador</label>
-                <select id="op-select" className={`${inputCls} w-36 sm:w-44`} value={operatorId ?? ""} onChange={(e) => setOperatorId(e.target.value)}>
-                  <option value="">Todos / sin elegir</option>
-                  {known.map((k) => <option key={k} value={k}>{k}</option>)}
+                <select id="op-select" className={`${inputCls} w-40 sm:w-52`} value={operatorId ?? ""} onChange={(e) => setOperatorId(e.target.value)}>
+                  <option value="">Todos (vista de plataforma)</option>
+                  {known.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                  {operatorId && !known.some((k) => k.id === operatorId) && <option value={operatorId}>{operatorId}</option>}
                 </select>
-                <input aria-label="Añadir operador" className={`${inputCls} hidden w-32 md:block`} placeholder="Nuevo id…" value={draft} onChange={(e) => setDraft(e.target.value)} />
-                <Button type="submit" variant="ghost" className="hidden md:inline-flex">Usar</Button>
-              </form>
+              </div>
             ) : (
               <span className="rounded-md border border-white/10 bg-panel px-3 py-1.5 text-xs text-white/70">
                 Operador <strong className="font-mono text-white" title={session.operatorId ?? undefined}>{shortId(session.operatorId)}</strong>

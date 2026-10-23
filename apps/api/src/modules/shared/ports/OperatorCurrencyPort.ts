@@ -17,8 +17,17 @@ export interface OperatorCurrencyInfo {
  * Moneda y límites de apuesta del operador (Operator.defaultCurrency/currencies/limits en la Fase 1).
  * Devuelve null si el operador no existe (p. ej. operadores remotos del Hub o el dev-server sin BD).
  */
+/** Operador visible en el selector de la plataforma (Abyss Command). */
+export interface OperatorSummary {
+  id: string;
+  name: string;
+  defaultCurrency: string;
+}
+
 export interface OperatorCurrencyPort {
   getCurrencyInfo(operatorId: string): Promise<OperatorCurrencyInfo | null>;
+  /** Operadores por nombre (solo para PLATFORM_ADMIN). Opcional: los puertos sin catálogo no lo ofrecen. */
+  list?(): Promise<OperatorSummary[]>;
 }
 
 /**

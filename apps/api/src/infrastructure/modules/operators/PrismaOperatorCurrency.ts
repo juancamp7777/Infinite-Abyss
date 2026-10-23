@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { OperatorBetLimits, OperatorCurrencyInfo, OperatorCurrencyPort } from '../../../modules/shared/ports/OperatorCurrencyPort';
+import type { OperatorBetLimits, OperatorCurrencyInfo, OperatorCurrencyPort, OperatorSummary } from '../../../modules/shared/ports/OperatorCurrencyPort';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DIGITS_RE = /^\d{1,30}$/;
@@ -53,5 +53,9 @@ export class PrismaOperatorCurrency implements OperatorCurrencyPort {
     const info: OperatorCurrencyInfo = { defaultCurrency: op.defaultCurrency, currencies, limits: parseBetLimits(op.limits) };
     this.cache.set(operatorId, { at: this.now(), info });
     return info;
+  }
+
+  async list(): Promise<OperatorSummary[]> {
+    return this.prisma.operator.findMany({ select: { id: true, name: true, defaultCurrency: true }, orderBy: { name: 'asc' }, take: 500 });
   }
 }

@@ -264,7 +264,7 @@ describe('backoffice-api: moneda del operador', () => {
   beforeEach(async () => {
     const app = express();
     const env = { NODE_ENV: 'test' };
-    const operators = new InMemoryOperators().set('op-1', { defaultCurrency: 'COP', currencies: ['COP', 'USD'] }).set('op-2', { defaultCurrency: 'USD' });
+    const operators = new InMemoryOperators().set('op-1', { name: 'Zeta Club', defaultCurrency: 'COP', currencies: ['COP', 'USD'] }).set('op-2', { name: 'Aurora Bet', defaultCurrency: 'USD' });
     const deps: ModuleDeps = { wallet: new InMemoryWallet(), bus: new InMemoryEventBus(), auth: new MockAuth(env), compliance: new InMemoryPlayerCompliance(), operators, logger: silentLogger, env, services: {} };
     app.use(BACKOFFICE_PREFIX, createBackoffice(deps, { costs, clock: () => NOW }).router);
     const server = app.listen(0);
@@ -286,6 +286,19 @@ describe('backoffice-api: moneda del operador', () => {
     const root = devToken('PLATFORM_ADMIN', '*', 'root');
     expect((await get('op-1', root)).json.defaultCurrency).toBe('COP');
     expect((await get('op-2', root)).json.defaultCurrency).toBe('USD');
+  });
+
+  it('la plataforma lista los operadores por nombre; nadie más puede', async () => {
+    const list = async (token?: string) => {
+      const res = await fetch(`${base}/admin/operators`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      return { status: res.status, json: (await res.json()) as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
+    const r = await list(devToken('PLATFORM_ADMIN', '*', 'root'));
+    expect(r.status).toBe(200);
+    expect(r.json.items).toEqual([{ id: 'op-2', name: 'Aurora Bet', defaultCurrency: 'USD' }, { id: 'op-1', name: 'Zeta Club', defaultCurrency: 'COP' }]);
+    expect((await list()).status).toBe(401);
+    expect((await list(devToken('OPERATOR_ADMIN', 'op-1', 'u1'))).status).toBe(403);
+    expect((await list(devToken('OPERATOR_AGENT', 'op-1', 'u1'))).status).toBe(403);
   });
 
   it('exige sesión, respeta el alcance y valida el id', async () => {

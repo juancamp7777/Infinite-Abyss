@@ -25,7 +25,7 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
   const [method, setMethod] = useState("nequi");
   const [f, setF] = useState(EMPTY);
   const countries = cat.data?.countries ?? [];
-  const methods = (cat.data?.methods ?? []).filter((m) => m.country === country);
+  const methods = (cat.data?.methods ?? []).filter((m) => m.country === country || m.country === "*");
   const m = cat.data?.methods.find((x) => x.key === method);
   const c = countries.find((x) => x.country === country);
   const clean = m?.keyLike ? f.accountNumber.trim().replace(/\s+/g, "") : f.accountNumber.replace(/[\s.-]/g, "");
@@ -37,7 +37,7 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
     setMethod(cat.data?.methods.find((x) => x.country === code)?.key ?? "");
   };
   const add = () => run(async () => {
-    await call("/pearl/v1/admin/accounts", { method: "POST", body: { bank: method, holderName: f.holderName, accountNumber: f.accountNumber, holderDocument: f.holderDocument || undefined, alias: f.alias || undefined } });
+    await call("/pearl/v1/admin/accounts", { method: "POST", body: { bank: method, country, holderName: f.holderName, accountNumber: f.accountNumber, holderDocument: f.holderDocument || undefined, alias: f.alias || undefined } });
     setF(EMPTY);
   }, "Cuenta agregada");
 

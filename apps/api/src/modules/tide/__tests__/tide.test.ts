@@ -100,19 +100,20 @@ function setup() {
 }
 
 describe('motor de Tide', () => {
-  it('un operador sin flujos no queda mudo: la bienvenida se activa de fábrica una sola vez; si la desactivan, se respeta', async () => {
+  it('un operador sin flujos activos no queda mudo: la bienvenida se activa de fábrica una sola vez; si la desactivan, se respeta', async () => {
     const t = setup();
+    await t.flows.create(OP, 'Borrador', 'blank');
     const c = await t.say('v0', 'hola, ¿hay alguien?');
     expect(await t.bot(c)).toEqual(['out:¡Hola Ana! 👋 Soy el asistente virtual.', 'out:¿En qué te ayudo? Elige una opción o escribe tu pregunta.']);
-    const flows = await t.flows.list(OP);
+    const flows = (await t.flows.list(OP)).filter((f) => f.name !== 'Borrador');
     expect(flows).toHaveLength(1);
     expect(flows[0]).toMatchObject({ name: 'Bienvenida (automático)', enabled: true, publishedVersion: 1 });
     await t.say('v0b', 'hola');
-    expect(await t.flows.list(OP)).toHaveLength(1);
+    expect(await t.flows.list(OP)).toHaveLength(2);
     await t.flows.setEnabled(OP, flows[0].id, false);
     const quiet = await t.say('v0c', 'hola');
     expect(await t.bot(quiet)).toEqual([]);
-    expect(await t.flows.list(OP)).toHaveLength(1);
+    expect(await t.flows.list(OP)).toHaveLength(2);
   });
 
   it('bienvenida → menú → opción → ¿algo más? → cierre', async () => {

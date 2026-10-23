@@ -41,8 +41,11 @@ describe('Cuentas de cobro por país', () => {
     expect((await add({ bank: 'mercadopago', country: 'AR', holderName: 'Juan Campos', accountNumber: '0000003100012345678901', alias: 'juan.campos.mp' })).body).toMatchObject({ country: 'AR', alias: 'juan.campos.mp' });
     expect((await add({ bank: 'binance_pay', holderName: 'Juan Campos', accountNumber: '123456789' })).status).toBe(400);
     expect((await add({ bank: 'binance_pay', country: 'CO', holderName: 'Juan Campos', accountNumber: '123456789' })).body).toMatchObject({ country: 'CO', accountNumber: '123456789' });
-    const usdt = await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: '0x' + 'a'.repeat(40) });
-    expect(usdt.body).toMatchObject({ country: 'MX', alias: '0x' + 'a'.repeat(40) });
+    const trc20 = 'T' + 'R'.repeat(33);
+    expect((await add({ bank: 'binance_wallet', country: 'MX', accountNumber: '0x' + 'a'.repeat(40) })).status).toBe(400);
+    const usdt = await add({ bank: 'binance_wallet', country: 'MX', accountNumber: trc20 });
+    expect(usdt.body).toMatchObject({ country: 'MX', alias: trc20, holderName: 'Binance · USDT (TRC20)' });
+    expect((await add({ bank: 'nequi', accountNumber: '3001234567' })).status).toBe(400);
     expect((await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: 'no-es-billetera' })).status).toBe(400);
 
     expect((await add({ bank: 'banco_co', holderName: 'Juan Campos', accountNumber: '0550123456' })).status).toBe(400);

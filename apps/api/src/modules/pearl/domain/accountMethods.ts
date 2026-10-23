@@ -20,6 +20,8 @@ export interface AccountMethod {
   banks?: readonly string[];
   /** Si aplica, el operador elige el tipo de cuenta (ahorros o corriente). */
   accountTypes?: readonly string[];
+  /** Solo se pide la dirección: sin titular, documento ni alias. */
+  walletOnly?: boolean;
 }
 
 const TYPES_CO = ['Ahorros', 'Corriente'];
@@ -67,7 +69,7 @@ export const ACCOUNT_METHODS: readonly AccountMethod[] = [
   { key: 'cbu', country: 'AR', label: 'CBU (banco)', numberLabel: 'CBU', placeholder: '0170099220000067797370', pattern: '^\\d{22}$', hint: 'La CBU de tu cuenta bancaria, 22 dígitos.', banks: BANKS_AR, accountTypes: TYPES_AR },
   { key: 'mercadopago', country: '*', label: 'Mercado Pago', numberLabel: 'CVU / CLABE / número de cuenta', placeholder: 'Argentina: CVU · México: CLABE', pattern: '^\\d{6,22}$', hint: 'En Mercado Pago: Tu perfil → Tus datos de cuenta (CVU en Argentina, CLABE en México). Pon tu alias abajo.' },
   { key: 'binance_pay', country: '*', label: 'Binance Pay', numberLabel: 'Pay ID de Binance', placeholder: '123456789', pattern: '^\\d{6,12}$', hint: 'En Binance: Pay → tu Pay ID (solo números).' },
-  { key: 'binance_wallet', country: '*', label: 'Binance · billetera USDT', numberLabel: 'Dirección de la billetera', placeholder: 'TXyz… (TRC20) o 0x… (BEP20)', pattern: '^(T[1-9A-HJ-NP-Za-km-z]{33}|0x[0-9a-fA-F]{40})$', hint: 'Dirección USDT de depósito: red TRC20 (empieza por T) o BEP20 (empieza por 0x).', keyLike: true },
+  { key: 'binance_wallet', country: '*', label: 'Binance · USDT (TRC20)', numberLabel: 'Dirección de la billetera USDT (red TRON · TRC20)', placeholder: 'T…', pattern: '^T[1-9A-HJ-NP-Za-km-z]{33}$', hint: 'En Binance: Billetera → Depositar → USDT → red TRON (TRC20). Copia la dirección (empieza por T).', keyLike: true, walletOnly: true },
 ];
 
 export const accountMethod = (key: string | undefined) => ACCOUNT_METHODS.find((m) => m.key === key);

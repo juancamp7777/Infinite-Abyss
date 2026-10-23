@@ -49,7 +49,7 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     sendJson(res, await d.pearl.updateSettings(op(req), b));
   }));
 
-  const account = z.object({ holderName: z.string().trim().min(2).max(120), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(4).max(60), bank: z.string().trim().max(60).optional(), holderDocument: z.string().trim().max(30).optional(), country: z.enum(['CO', 'MX', 'AR']).optional(), active: z.boolean().optional() });
+  const account = z.object({ holderName: z.string().trim().min(2).max(120), alias: z.string().trim().max(60).optional(), accountNumber: z.string().trim().min(4).max(60), bank: z.string().trim().max(60).optional(), holderDocument: z.string().trim().max(30).optional(), country: z.enum(['CO', 'MX', 'AR']).optional(), bankName: z.string().trim().max(60).optional(), active: z.boolean().optional() });
   /** Con un método conocido (Nequi, CLABE, CVU…) se limpia y valida el número y el documento según el país. */
   const parseAccount = (body: unknown) => {
     const a = parse(account, body);
@@ -61,10 +61,11 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     const accountNumber = cleanAccountNumber(m, a.accountNumber);
     const holderDocument = a.holderDocument?.replace(/[s.-]/g, '').toUpperCase() || undefined;
     const country = m.country === '*' ? a.country : m.country;
-    const err = checkAccount(m, accountNumber, holderDocument, country);
+    const bankName = m.banks ? a.bankName : undefined;
+    const err = checkAccount(m, accountNumber, holderDocument, country, bankName);
     if (err) throw badRequest(err);
     // Una llave (Bre-B, billetera) se reconoce en el comprobante por su texto: queda también como alias.
-    return { ...a, accountNumber, holderDocument, country, alias: a.alias || (m.keyLike ? accountNumber : undefined) };
+    return { ...a, accountNumber, holderDocument, country, bankName, alias: a.alias || (m.keyLike ? accountNumber : undefined) };
   };
   r.get('/admin/account-methods', ...admin, (_req, res) => sendJson(res, { countries: ACCOUNT_COUNTRIES, methods: ACCOUNT_METHODS }));
   r.get('/admin/accounts', ...admin, asyncHandler(async (req, res) => sendJson(res, { items: await d.pearl.listAccounts(op(req)) })));

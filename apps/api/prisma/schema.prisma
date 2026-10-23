@@ -1503,6 +1503,8 @@ model PearlBankAccount {
   /// País del método de cobro (CO, MX, AR) y documento del titular (cédula, RFC, CUIT).
   country        String?
   holderDocument String?
+  /// Banco elegido de la lista cuando el método agrupa varios (Otro banco, SPEI, CBU).
+  bankName       String?
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
 

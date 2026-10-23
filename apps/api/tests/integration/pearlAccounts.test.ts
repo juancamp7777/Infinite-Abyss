@@ -32,7 +32,7 @@ describe('Cuentas de cobro por país', () => {
 
     expect((await add({ bank: 'nequi', holderName: 'Juan Campos', accountNumber: '12345678' })).status).toBe(400);
     expect((await add({ bank: 'spei', holderName: 'Juan Campos', accountNumber: '0121800012345678' })).status).toBe(400);
-    expect((await add({ bank: 'spei', holderName: 'Juan Campos', accountNumber: '012180001234567891', holderDocument: 'CAPJ800101AB1' })).body).toMatchObject({ country: 'MX' });
+    expect((await add({ bank: 'spei', bankName: 'BBVA México', holderName: 'Juan Campos', accountNumber: '012180001234567891', holderDocument: 'CAPJ800101AB1' })).body).toMatchObject({ country: 'MX' });
     expect((await add({ bank: 'cvu', holderName: 'Juan Campos', accountNumber: '0000003100012345678901', holderDocument: '123' })).status).toBe(400);
 
     const breb = await add({ bank: 'breb', holderName: 'Juan Campos', accountNumber: '@juancampos' });
@@ -44,6 +44,11 @@ describe('Cuentas de cobro por país', () => {
     const usdt = await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: '0x' + 'a'.repeat(40) });
     expect(usdt.body).toMatchObject({ country: 'MX', alias: '0x' + 'a'.repeat(40) });
     expect((await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: 'no-es-billetera' })).status).toBe(400);
+
+    expect((await add({ bank: 'banco_co', holderName: 'Juan Campos', accountNumber: '0550123456' })).status).toBe(400);
+    expect((await add({ bank: 'banco_co', bankName: 'Banco Inventado', holderName: 'Juan Campos', accountNumber: '0550123456' })).status).toBe(400);
+    expect((await add({ bank: 'banco_co', bankName: 'Davivienda', holderName: 'Juan Campos', accountNumber: '0550-1234-5678' })).body).toMatchObject({ bankName: 'Davivienda', accountNumber: '055012345678', country: 'CO' });
+    expect((await add({ bank: 'spei', bankName: 'Banorte', holderName: 'Juan Campos', accountNumber: '072180001234567891' })).body).toMatchObject({ bankName: 'Banorte' });
 
     // Cuentas antiguas sin método siguen funcionando.
     expect((await add({ holderName: 'Cuenta vieja', accountNumber: '0170099220000067797370' })).status).toBe(201);

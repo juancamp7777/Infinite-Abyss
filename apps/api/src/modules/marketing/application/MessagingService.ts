@@ -71,7 +71,7 @@ export class MessagingService {
     if (!comp.ok) return comp;
     const consent = await this.d.repos.consents.get(`${operatorId}:${playerId}:${channel}`);
     // Push: aceptar las notificaciones en el navegador ES el permiso del canal; una baja explícita siempre manda.
-    const pushPermission = !consent && channel === 'push' && (await this.d.repos.pushSubs.list({ operatorId, playerId })).length > 0;
+    const pushPermission = !consent && channel === 'push' && (await this.d.repos.pushSubs.list({ operatorId, playerId })).some((s) => !s.dead);
     if (!consent?.optIn && !pushPermission) return { ok: false, reason: 'NO_OPT_IN' };
     const since = this.d.clock().getTime() - this.d.config.frequencyCapHours * 3_600_000;
     const recent = await this.d.repos.sends.list({ operatorId, playerId, status: 'sent' });

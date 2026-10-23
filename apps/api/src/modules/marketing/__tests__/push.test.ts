@@ -29,7 +29,8 @@ describe('push web real (VAPID)', () => {
     expect(await ch.send(msg())).toEqual({ providerMessageId: 'push-s1-2' });
     expect(calls).toHaveLength(3);
     expect(calls[0].payload).toEqual({ title: '¡Carga acreditada!', body: 'Tienes ARS 5.000 listos para jugar', url: '/lobby', tag: 's1' });
-    expect((await repos.pushSubs.list({ operatorId: 'op', playerId: 'p1' })).map((s) => s.id).sort()).toEqual(['sub-0', 'sub-2']);
+    expect((await repos.pushSubs.list({ operatorId: 'op', playerId: 'p1' })).filter((s) => !s.dead).map((s) => s.id).sort()).toEqual(['sub-0', 'sub-2']);
+    expect((await repos.pushSubs.get('sub-1'))?.dead).toBe(true);
   });
 
   it('URL externa en el mensaje → se abre el lobby (nunca otro dominio)', async () => {

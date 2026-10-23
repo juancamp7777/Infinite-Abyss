@@ -190,6 +190,8 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
   r.post('/push/subscribe', auth, asyncHandler(async (req, res) => {
     const { operatorId, playerId } = requirePlayer(req);
     const b = parse(pushSchema, req.body);
+    // Si ese navegador re-envía una suscripción que el servicio de push ya dio por vencida, se le pide una nueva.
+    if ((await rt.repos.pushSubs.get(endpointId(b.endpoint)))?.dead) return sendJson(res, { stale: true }, 409);
     const sub = await rt.repos.pushSubs.put({ id: endpointId(b.endpoint), operatorId, playerId, endpoint: b.endpoint, keys: b.keys, createdAt: now() });
     // El permiso del navegador queda registrado como consentimiento del canal push (con historial).
     const cur = await rt.consent.get(operatorId, playerId, 'push');
@@ -224,7 +226,7 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
 
   /** Dispositivos con push activo (y si el servidor tiene claves VAPID). */
   admin.get('/push/stats', asyncHandler(async (req, res) => {
-    const subs = await rt.repos.pushSubs.list({ operatorId: op(req) });
+    const subs = (await rt.repos.pushSubs.list({ operatorId: op(req) })).filter((s) => !s.dead);
     sendJson(res, { enabled: !!rt.vapidPublicKey, devices: subs.length, players: new Set(subs.map((s) => s.playerId)).size });
   }));
 
@@ -235,7 +237,7 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
   admin.post('/push/broadcast', asyncHandler(async (req, res) => {
     const operatorId = op(req);
     const b = parse(z.object({ title: z.string().trim().min(1).max(80), body: z.string().trim().min(1).max(300), push: pushDesign.default({}) }), req.body);
-    const subs = await rt.repos.pushSubs.list({ operatorId });
+    const subs = (await rt.repos.pushSubs.list({ operatorId })).filter((s) => !s.dead);
     const players = [...new Set(subs.map((s) => s.playerId))];
     const t: Template = { id: randomUUID(), operatorId, name: `Push · ${b.title}`.slice(0, 120), channel: 'push', kind: 'marketing', subject: b.title, body: b.body, push: b.push, createdAt: now(), updatedAt: now() };
     await rt.repos.templates.put(t);

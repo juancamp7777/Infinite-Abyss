@@ -34,8 +34,16 @@ export interface Template {
   subject?: string;
   /** Email: HTML. Resto de canales: texto plano. */
   body: string;
+  /** Push: imagen grande, página al tocar y hasta 2 botones (Android y escritorio; iPhone muestra título y texto). */
+  push?: PushDesign;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PushDesign {
+  image?: string;
+  url?: string;
+  actions?: Array<{ title: string; url: string }>;
 }
 
 export interface OperatorBrand {

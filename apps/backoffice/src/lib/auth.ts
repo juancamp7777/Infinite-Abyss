@@ -248,6 +248,7 @@ export const NAV: NavItem[] = [
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
   { href: "/crew", label: "Crew · Mi turno", roles: ALL, section: "Equipo" },
   { href: "/crew-admin", label: "Crew · Gestión", roles: ADMINS, section: "Equipo" },
+  { href: "/push", label: "Notificaciones push", roles: ADMINS, section: "Marketing" },
   { href: "/campaigns", label: "Campañas y journeys", roles: ADMINS, section: "Marketing" },
   { href: "/bonuses", label: "Bonos", roles: ADMINS, section: "Marketing" },
   { href: "/tournaments", label: "Torneos", roles: ADMINS, section: "Marketing" },

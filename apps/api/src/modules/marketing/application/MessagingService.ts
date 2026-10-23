@@ -201,7 +201,7 @@ export class MessagingService {
     }
     await this.record(req, tpl, { status: 'queued' }, sendId);
     try {
-      const { providerMessageId } = await channel.send({ sendId, operatorId: req.operatorId, playerId: req.playerId, to, subject, text, html, headers, meta: { templateName: tpl.name } });
+      const { providerMessageId } = await channel.send({ sendId, operatorId: req.operatorId, playerId: req.playerId, to, subject, text, html, headers, meta: { templateName: tpl.name, ...(tpl.push ? { push: tpl.push } : {}) } });
       return await this.record(req, tpl, { status: 'sent', providerMessageId }, sendId);
     } catch (e) {
       this.d.logger.error('[marketing] fallo de envío', { sendId, channel: tpl.channel, error: e instanceof Error ? e.message : String(e) });

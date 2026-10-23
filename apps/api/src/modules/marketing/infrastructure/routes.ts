@@ -18,12 +18,21 @@ const channelEnum = z.enum(['email', 'sms', 'whatsapp', 'push', 'inapp']);
 const eventEnum = z.enum(['player.registered', 'deposit.completed', 'login', 'bet.settled']);
 const minorsString = z.string().regex(/^\d{1,30}$/);
 
+/** Solo rutas internas del casino o imágenes https/propias: una push nunca abre un dominio externo. */
+const internal = z.string().max(300).regex(/^\/(?!\/)/, 'Debe ser una ruta del casino (empieza con /)');
+const pushDesign = z.object({
+  image: z.string().max(500).regex(/^(https:\/\/|\/(?!\/))/, 'Imagen https o propia').optional(),
+  url: internal.optional(),
+  actions: z.array(z.object({ title: z.string().trim().min(1).max(24), url: internal })).max(2).optional(),
+});
+
 const templateSchema = z.object({
   name: z.string().min(1).max(120),
   channel: channelEnum,
   kind: z.enum(['marketing', 'transactional', 'regulatory']).default('marketing'),
   subject: z.string().max(300).optional(),
   body: z.string().min(1).max(100_000),
+  push: pushDesign.optional(),
 });
 
 const campaignSchema = z.object({
@@ -214,6 +223,25 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
   admin.get('/push/stats', asyncHandler(async (req, res) => {
     const subs = await rt.repos.pushSubs.list({ operatorId: op(req) });
     sendJson(res, { enabled: !!rt.vapidPublicKey, devices: subs.length, players: new Set(subs.map((s) => s.playerId)).size });
+  }));
+
+  /**
+   * Push a todos los jugadores con notificaciones activas: crea la plantilla (queda en el historial y las métricas) y
+   * envía en segundo plano respetando el consentimiento de marketing de cada jugador.
+   */
+  admin.post('/push/broadcast', asyncHandler(async (req, res) => {
+    const operatorId = op(req);
+    const b = parse(z.object({ title: z.string().trim().min(1).max(80), body: z.string().trim().min(1).max(300), push: pushDesign.default({}) }), req.body);
+    const subs = await rt.repos.pushSubs.list({ operatorId });
+    const players = [...new Set(subs.map((s) => s.playerId))];
+    const t: Template = { id: randomUUID(), operatorId, name: `Push · ${b.title}`.slice(0, 120), channel: 'push', kind: 'marketing', subject: b.title, body: b.body, push: b.push, createdAt: now(), updatedAt: now() };
+    await rt.repos.templates.put(t);
+    void (async () => {
+      for (const playerId of players) {
+        await rt.messaging.sendMarketing({ operatorId, playerId, templateId: t.id }).catch(() => undefined);
+      }
+    })();
+    sendJson(res, { templateId: t.id, audience: players.length, devices: subs.length }, 202);
   }));
 
   // plantillas

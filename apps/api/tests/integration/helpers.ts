@@ -33,6 +33,7 @@ export async function buildIntegrationApp(overrides: Parameters<typeof createApp
       TIDE_TICK_MS: '0',
       PEARL_TICK_MS: '0',
       CREW_TICK_MS: '0',
+      LEVIATHAN_TICK_MS: '0',
       ...(overrides.moduleEnv ?? {}),
     },
   });

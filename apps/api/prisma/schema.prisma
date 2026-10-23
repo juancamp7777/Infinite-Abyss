@@ -1962,3 +1962,115 @@ model NautilusReport {
   @@unique([operatorId, day])
   @@map("nautilus_reports")
 }
+
+// ───────────────────────── Leviathan (concursos de fichas sobre deportes) ─────────────────────────
+
+/// Partido del feed deportivo (simulado hasta que se conecte un proveedor).
+model LevEvent {
+  id        String   @id @db.Uuid
+  sport     String
+  league    String
+  home      String
+  away      String
+  startsAt  DateTime
+  endsAt    DateTime
+  /// SCHEDULED, LIVE, FINISHED, CANCELLED
+  status    String   @default("SCHEDULED")
+  homeScore Int?
+  awayScore Int?
+  source    String   @default("sim")
+  createdAt DateTime @default(now())
+
+  @@index([status, startsAt])
+  @@map("lev_events")
+}
+
+/// Selección apostable de un partido (1X2, total…). result: OPEN, WON, LOST, VOID.
+model LevSelection {
+  id      String  @id @db.Uuid
+  eventId String  @db.Uuid
+  market  String
+  line    String?
+  key     String
+  label   String
+  oddsE2  Int
+  result  String  @default("OPEN")
+
+  @@index([eventId])
+  @@map("lev_selections")
+}
+
+/// Concurso: misma entrada para todos, pozo cerrado, premios por fichas finales.
+model LevGame {
+  id             String    @id @db.Uuid
+  operatorId     String
+  mode           String
+  title          String
+  currency       String
+  entry          BigInt
+  rakePpm        Int
+  curve          String
+  minBets        Int
+  maxBets        Int
+  minPlayers     Int
+  maxPlayers     Int
+  /// OPEN, RUNNING, SETTLING, SETTLED, CANCELLED
+  status         String    @default("OPEN")
+  roomCode       String?
+  createdBy      String?
+  entriesCloseAt DateTime
+  endsAt         DateTime
+  pot            BigInt    @default(0)
+  rake           BigInt?
+  pool           BigInt?
+  residue        BigInt?
+  cancelReason   String?
+  settledAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([operatorId, status])
+  @@index([status, entriesCloseAt])
+  @@map("lev_games")
+}
+
+/// Partidos que se pueden apostar en un concurso.
+model LevGameEvent {
+  gameId  String @db.Uuid
+  eventId String @db.Uuid
+
+  @@id([gameId, eventId])
+  @@map("lev_game_events")
+}
+
+/// Jugador inscrito en un concurso.
+model LevEntry {
+  id        String   @id @db.Uuid
+  gameId    String   @db.Uuid
+  playerId  String
+  chips     BigInt
+  bets      Int      @default(0)
+  joinedAt  DateTime @default(now())
+  rank      Int?
+  qualified Boolean?
+  prize     BigInt?
+
+  @@unique([gameId, playerId])
+  @@map("lev_entries")
+}
+
+/// Apuesta en fichas: retorno congelado al apostar. status: OPEN, WON, LOST, VOID.
+model LevBet {
+  id          String   @id @db.Uuid
+  gameId      String   @db.Uuid
+  entryId     String   @db.Uuid
+  selectionId String   @db.Uuid
+  stake       BigInt
+  oddsE2      Int
+  returnChips BigInt
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+
+  @@index([selectionId, status])
+  @@index([entryId])
+  @@map("lev_bets")
+}

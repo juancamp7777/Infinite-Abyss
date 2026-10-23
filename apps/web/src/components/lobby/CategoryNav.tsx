@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2, Clock, Crown, Dices, Flame, Gamepad2, Heart, Home, Layers, Menu, Radio, Search, Sparkles, Trophy, type LucideIcon,
+  Swords,
 } from 'lucide-react';
 
 export interface NavItem { label: string; href: string; icon: LucideIcon }
@@ -34,6 +35,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Promociones',
     items: [
       { label: 'Torneos', href: '/lobby/tournaments', icon: Trophy },
+      { label: 'Leviathan', href: '/lobby/leviathan', icon: Swords },
       { label: 'VIP', href: '/lobby/vip', icon: Crown },
     ],
   },

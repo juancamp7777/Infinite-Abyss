@@ -19,6 +19,7 @@ import { pearlModule } from './pearl';
 import { crewModule } from './crew';
 import { reefModule } from './reef';
 import { nautilusModule } from './nautilus';
+import { leviathanModule } from './leviathan';
 
 export { captureRawBody } from './hub';
 export type { ModuleDeps, NymfoModule } from './shared/module';
@@ -40,6 +41,7 @@ export const ALL_MODULES: NymfoModule[] = [
   crewModule,
   reefModule,
   nautilusModule,
+  leviathanModule,
 ];
 
 export type RegisterModulesDeps = Omit<ModuleDeps, 'services' | 'catalog' | 'betGuard' | 'segments'> & {

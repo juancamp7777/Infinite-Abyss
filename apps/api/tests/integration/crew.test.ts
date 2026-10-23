@@ -106,4 +106,14 @@ describe('Crew con Postgres', () => {
     await expect(crew.markPaid(opId, '2026-11', m.id, 'admin')).rejects.toMatchObject({ status: 409 });
     expect((await crew.payroll(opId, '2026-11')).find((r) => r.member.id === m.id)!.closed?.paidAt).toBeTruthy();
   });
+
+  it('un administrador se agrega solo al equipo con un clic (idempotente); otros roles no pueden', async () => {
+    expect((await request(created.app).get('/crew/v1/me').set(bearer(otherAdmin))).status).toBe(404);
+    const joined = await request(created.app).post('/crew/v1/me/join').set(bearer(otherAdmin));
+    expect(joined.status).toBe(201);
+    expect(joined.body).toMatchObject({ role: 'Administración', active: true });
+    expect((await request(created.app).post('/crew/v1/me/join').set(bearer(otherAdmin))).body.id).toBe(joined.body.id);
+    expect((await request(created.app).get('/crew/v1/me').set(bearer(otherAdmin))).status).toBe(200);
+    expect((await request(created.app).post('/crew/v1/me/join').set(bearer(cashierToken))).status).toBe(403);
+  });
 });

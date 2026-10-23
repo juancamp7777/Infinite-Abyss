@@ -486,6 +486,19 @@ function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
             </div>
           </div>
         </section>
+
+        <section className="cx-section" style={{ paddingTop: 0 }}>
+          <div className="cx-wrap">
+            <div className="cx-ops cx-reveal">
+              <div>
+                <p className="cx-kicker">Para operadores</p>
+                <h2 className="cx-h2">¿Tienes un casino o quieres lanzar el tuyo?</h2>
+                <p className="cx-muted" style={{ marginTop: ".8rem", maxWidth: "36rem" }}>Este casino corre sobre Infinite Abyss: tu marca, juegos, caja con IA que verifica comprobantes, CRM con WhatsApp y Telegram, bots, equipo y un operador IA que vigila todo 24/7.</p>
+              </div>
+              <Link href="/plataforma" className="cx-btn cx-btn-gold cx-btn-xl">Conoce la plataforma <ArrowRight aria-hidden size={22} /></Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="cx-footer">

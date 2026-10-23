@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Circle, Coffee, LogIn, LogOut, Play, Wallet } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import { useApi, useApiClient } from "@/lib/hooks";
+import { useApi, useApiClient, useSession } from "@/lib/hooks";
 import { Badge, Button, Card, Empty, ErrorBox, Field, inputCls, NeedOperator, Notice, PageHeader, Spinner } from "@/components/ui";
 import { AscendCard, Leaderboard } from "@/components/Ascend";
 
@@ -160,6 +160,27 @@ function CashBox({ me }: { me: Me }) {
   );
 }
 
+/** Sin ficha en el equipo: un administrador se agrega con un clic; el resto lo pide a su administrador. */
+function NotMember({ reload }: { reload(): void }) {
+  const { call } = useApiClient();
+  const session = useSession();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const isAdmin = session?.role === "PLATFORM_ADMIN" || session?.role === "OPERATOR_ADMIN";
+  if (!isAdmin) return <Notice tone="warn">Tu usuario aún no forma parte del equipo. Pide a un administrador que te agregue en Crew · Gestión.</Notice>;
+  return (
+    <Card title="Todavía no estás en el equipo">
+      <p className="text-sm text-white/70">Eres administrador: agrégate con un clic para fichar turnos, usar el checklist, las tareas y la caja del turno.</p>
+      {err && <div className="mt-2"><ErrorBox message={err} /></div>}
+      <Button className="mt-3" disabled={busy} onClick={() => {
+        setBusy(true);
+        setErr(null);
+        call("/crew/v1/me/join", { method: "POST" }).then(reload, (e) => setErr(e instanceof ApiError ? e.message : "Error inesperado")).finally(() => setBusy(false));
+      }}>{busy ? "Agregando…" : "Agregarme al equipo"}</Button>
+    </Card>
+  );
+}
+
 export default function CrewPage() {
   const { operatorId } = useApiClient();
   const me = useApi<Me>(operatorId ? "/crew/v1/me" : null);
@@ -168,7 +189,7 @@ export default function CrewPage() {
     <>
       <PageHeader title="Crew · Mi turno" subtitle="Ficha tu jornada, completa el checklist, gestiona tus tareas y la caja del turno." />
       {me.loading ? <Spinner /> : me.error ? (
-        <ErrorBox message={me.error.includes("no está en el equipo") ? "Tu usuario aún no forma parte del equipo. Pide a un administrador que te agregue en Crew · Gestión." : me.error} onRetry={me.reload} />
+        me.error.includes("no está en el equipo") ? <NotMember reload={me.reload} /> : <ErrorBox message={me.error} onRetry={me.reload} />
       ) : me.data && (
         <div className="space-y-3">
           <Clock me={me.data} reload={me.reload} />

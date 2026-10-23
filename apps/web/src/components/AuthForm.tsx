@@ -25,9 +25,9 @@ function Form({ mode }: { mode: "login" | "register" }) {
   const [busy, setBusy] = useState(false);
 
   const isRegister = mode === "register";
-  const rawNext = params.get("next") ?? "/";
-  // Solo rutas internas, para evitar redirecciones abiertas.
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  const rawNext = params.get("next") ?? "/lobby";
+  // Solo rutas internas, para evitar redirecciones abiertas. La raíz del dominio principal es la landing: tras entrar, al lobby.
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && rawNext !== "/" ? rawNext : "/lobby";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BellRing, ImageOff, Plus, Send, Smartphone, Trash2 } from "lucide-react";
+import { BellRing, ImageOff, Plus, Send, Smartphone, Trash2, Users } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient } from "@/lib/hooks";
 import { Badge, Button, Card, ErrorBox, Field, inputCls, NeedOperator, Notice, PageHeader, Stat } from "@/components/ui";
@@ -25,6 +25,8 @@ interface Action { title: string; url: string }
 export default function PushPage() {
   const { operatorId, call } = useApiClient();
   const stats = useApi<{ enabled: boolean; devices: number; players: number }>(operatorId ? `${A}/push/stats` : null);
+  const audiences = useApi<{ items: { key: string; label: string; hint: string; players: number | null }[]; segments: { id: string; name: string; players: number }[] }>(operatorId ? `${A}/push/audiences` : null);
+  const [target, setTarget] = useState("a:all");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [image, setImage] = useState<string | null>("bono");
@@ -35,17 +37,23 @@ export default function PushPage() {
 
   if (!operatorId) return <><PageHeader title="Notificaciones push" /><NeedOperator /></>;
   const imgUrl = image ? `/brand/push/${image}.png` : null;
-  const players = stats.data?.players ?? 0;
+  const total = stats.data?.players ?? 0;
+  const targets = [
+    ...(audiences.data?.items ?? []).map((a) => ({ id: `a:${a.key}`, label: a.label, hint: a.hint, players: a.players })),
+    ...(audiences.data?.segments ?? []).map((s) => ({ id: `s:${s.id}`, label: s.name, hint: "Segmento propio del CRM.", players: s.players })),
+  ];
+  const chosen = targets.find((t) => t.id === target);
+  const players = target === "a:all" ? total : chosen?.players ?? 0;
   const valid = title.trim().length > 0 && body.trim().length > 0 && actions.every((a) => a.title.trim());
 
   async function send() {
-    if (!confirm(`¿Enviar esta notificación a ${players} jugador(es) con push activo?`)) return;
+    if (!confirm(`¿Enviar esta notificación a ${players} jugador(es) (${chosen?.label ?? "Todos"}) con push activo?`)) return;
     setBusy(true);
     setMsg(null);
     try {
       const r = await call<{ audience: number; devices: number }>(`${A}/push/broadcast`, {
         method: "POST",
-        body: { title: title.trim(), body: body.trim(), push: { ...(imgUrl ? { image: imgUrl } : {}), url, actions: actions.map((a) => ({ title: a.title.trim(), url: a.url })) } },
+        body: { ...(target.startsWith("s:") ? { segmentId: target.slice(2) } : { audience: target.slice(2) }), title: title.trim(), body: body.trim(), push: { ...(imgUrl ? { image: imgUrl } : {}), url, actions: actions.map((a) => ({ title: a.title.trim(), url: a.url })) } },
       });
       setMsg({ ok: true, text: `Enviando a ${r.audience} jugador(es) en ${r.devices} dispositivo(s). Los que no aceptan marketing no la reciben.` });
     } catch (e) {
@@ -66,6 +74,20 @@ export default function PushPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_24rem]">
+        <div className="space-y-4">
+        <Card title="¿A quién se la envías?">
+          {audiences.error && <ErrorBox message={audiences.error} onRetry={audiences.reload} />}
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Tipo de jugador">
+            {targets.map((t) => (
+              <button key={t.id} type="button" role="radio" aria-checked={target === t.id} onClick={() => setTarget(t.id)}
+                className={`rounded-xl border p-3 text-left transition ${target === t.id ? "border-amber-400 bg-amber-400/10" : "border-white/10 hover:border-white/30"}`}>
+                <span className="flex items-center justify-between gap-2"><span className="font-semibold">{t.label}</span><span className="flex items-center gap-1 text-xs text-white/60"><Users className="h-3.5 w-3.5" aria-hidden />{t.players ?? "—"}</span></span>
+                <span className="mt-1 block text-xs text-white/45">{t.hint}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-white/45">El número es cuántos jugadores de ese tipo tienen las notificaciones activas. Crea tipos a tu medida en Segmentos y aparecen aquí.</p>
+        </Card>
         <Card title="Mensaje">
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="self-center text-xs text-white/45">Ideas:</span>
@@ -104,9 +126,10 @@ export default function PushPage() {
           {msg && <div className="mt-4" role={msg.ok ? "status" : "alert"}><Notice tone={msg.ok ? "ok" : "warn"}>{msg.text}</Notice></div>}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button disabled={!valid || busy || !players || !stats.data?.enabled} onClick={() => void send()}><Send className="mr-1 inline h-4 w-4" aria-hidden />{busy ? "Enviando…" : `Enviar a ${players} jugador(es)`}</Button>
-            {!players && <span className="text-xs text-white/45">Aún nadie activó las notificaciones.</span>}
+            {!total ? <span className="text-xs text-white/45">Aún nadie activó las notificaciones.</span> : !players && <span className="text-xs text-white/45">Nadie de este tipo tiene las notificaciones activas.</span>}
           </div>
         </Card>
+        </div>
 
         <div className="space-y-4">
           <div>

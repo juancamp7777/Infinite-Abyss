@@ -171,7 +171,7 @@ export function OpenRoundNotice({ state }: { state: ReturnType<typeof useOpenRou
     <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-950/50 p-3 text-sm text-amber-200">
       <p>{t("Tienes una ronda abierta de una visita anterior. Ciérrala para continuar (se liquida con el resultado actual del servidor).")}</p>
       <button type="button" disabled={state.closing} onClick={state.close} className="mt-2 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 disabled:opacity-50">
-        {state.closing ? 'Cerrando…' : 'Cerrar ronda abierta'}
+        {state.closing ? t("Cerrando…") : t("Cerrar ronda abierta")}
       </button>
     </div>
   );
@@ -369,7 +369,7 @@ export function TurboToggle({ value, onChange }: { value: boolean; onChange: (v:
       <span className="flex items-center gap-2">
         <Zap size={14} /> Modo turbo
       </span>
-      <span className="font-mono text-xs">{value ? 'ON' : 'OFF'}</span>
+      <span className="font-mono text-xs">{value ? t("ON") : t("OFF")}</span>
     </button>
   );
 }

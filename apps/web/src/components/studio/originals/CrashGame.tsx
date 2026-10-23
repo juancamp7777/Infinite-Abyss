@@ -211,7 +211,7 @@ export default function CrashGame(props: StudioGameProps) {
         </PrimaryButton>
       ) : (
         <PrimaryButton disabled={!minor || !session.ready || phase === 'starting' || !!openRound.open} onClick={start} aria-label={t("Iniciar ronda de crash")}>
-          {phase === 'starting' ? 'Iniciando…' : 'Apostar'}
+          {phase === 'starting' ? t("Iniciando…") : t("Apostar")}
         </PrimaryButton>
       )}
       <FairnessPanel game={props} lastRound={last} />
@@ -225,7 +225,7 @@ export default function CrashGame(props: StudioGameProps) {
           <canvas ref={canvasRef} width={800} height={420} role="img" aria-label={t("Curva de multiplicador de Crash")} className="aspect-[40/21] w-full rounded-2xl border border-white/10" />
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" aria-live="off">
             <div className={`font-mono text-5xl font-black tabular-nums drop-shadow sm:text-7xl ${crashed ? 'text-rose-400' : phase === 'done' ? 'text-emerald-400' : 'text-white'}`}>{display.toFixed(2)}×</div>
-            {phase === 'done' && <div className="mt-1 text-sm font-semibold text-slate-200">{crashed ? 'Crash' : 'Retirado'}</div>}
+            {phase === 'done' && <div className="mt-1 text-sm font-semibold text-slate-200">{crashed ? t("Crash") : t("Retirado")}</div>}
             {phase === 'starting' && <div className="mt-1 text-sm text-slate-300">{t("Preparando ronda…")}</div>}
           </div>
         </div>

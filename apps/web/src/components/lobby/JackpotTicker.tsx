@@ -37,7 +37,7 @@ export function JackpotTicker({ jackpots, loading, connected }: { jackpots: Jack
   if (levels.length === 0) return null;
   return (
     <section aria-label={t("Jackpots progresivos")} className="space-y-1">
-      <div className="flex items-center gap-2 text-xs opacity-70"><span aria-hidden className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-zinc-500'}`} />{connected ? 'En vivo' : 'Sin conexión en vivo'}</div>
+      <div className="flex items-center gap-2 text-xs opacity-70"><span aria-hidden className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-zinc-500'}`} />{connected ? t("En vivo") : t("Sin conexión en vivo")}</div>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {levels.map((l) => (
           <li key={`${l.id}-${l.key}`} className="nf-panel nf-jackpot">

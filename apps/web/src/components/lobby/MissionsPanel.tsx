@@ -28,7 +28,7 @@ export function MissionsPanel(p: { missions: Mission[] | null; loading: boolean;
           return (
             <li key={m.id} className="nf-panel flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{m.name} <span className="ml-1 text-[10px] uppercase opacity-60">{m.period === 'daily' ? 'Diaria' : 'Semanal'}</span></p>
+                <p className="truncate text-sm font-semibold">{m.name} <span className="ml-1 text-[10px] uppercase opacity-60">{m.period === 'daily' ? t("Diaria") : t("Semanal")}</span></p>
                 <div role="progressbar" aria-label={m.name} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} className="nf-bar my-1"><div style={{ width: `${pct}%` }} /></div>
                 <p className="text-xs opacity-70">{money ? `${formatMoney(m.progress)} / ${formatMoney(m.target)}` : `${m.progress} / ${m.target}`} · {rewardLabel(m.reward)}</p>
               </div>

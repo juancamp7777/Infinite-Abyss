@@ -48,10 +48,10 @@ export function LiveBets() {
     <section aria-labelledby={`${base}-title`} className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <h2 id={`${base}-title`} className="flex items-center gap-2 text-lg font-bold">
-          <Activity aria-hidden className="h-5 w-5 text-[var(--nf-secondary)]" />Apuestas en vivo
+          <Activity aria-hidden className="h-5 w-5 text-[var(--nf-secondary)]" />{t("Apuestas en vivo")}
         </h2>
         <span className="flex items-center gap-1.5 text-xs text-[var(--nf-muted)]" role="status">
-          <span aria-hidden className="nf-live-dot" data-off={!connected} />{connected ? 'En vivo' : 'Conectando…'}
+          <span aria-hidden className="nf-live-dot" data-off={!connected} />{connected ? t("En vivo") : t("Conectando…")}
         </span>
         <div role="tablist" aria-label={t("Tipo de apuestas")} className="nf-tabs sm:ml-auto">
           {tabs.map((tv) => (

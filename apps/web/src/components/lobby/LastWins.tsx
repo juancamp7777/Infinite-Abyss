@@ -24,7 +24,7 @@ export function LastWins({ games }: { games: Game[] }) {
           {t("Últimas ganancias")}
         </h2>
         <span className="ml-auto flex items-center gap-1.5 text-xs text-[var(--nf-muted)]">
-          <span aria-hidden className="nf-live-dot" data-off={!connected} />{connected ? 'En vivo' : 'Conectando…'}
+          <span aria-hidden className="nf-live-dot" data-off={!connected} />{connected ? t("En vivo") : t("Conectando…")}
         </span>
       </div>
       {wins.length === 0 ? (

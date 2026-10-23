@@ -22,7 +22,7 @@ function Providers() {
   if (p.error) return <ErrorState message={p.error} onRetry={p.reload} />;
   if (p.loading) return <div role="status" aria-label={t("Cargando")} className="nf-grid"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!p.data?.length) return <EmptyState title={t("No hay proveedores")} />;
-  return <ul className="nf-grid">{p.data.map((x) => <li key={x.id}><Link href={`/lobby/provider/${x.id}`} className="nf-panel block text-center font-semibold hover:border-[var(--nf-primary)]">{x.name}<span className="block text-xs font-normal opacity-60">{x.type === 'internal' ? 'Abyss Studios' : 'Proveedor'}</span></Link></li>)}</ul>;
+  return <ul className="nf-grid">{p.data.map((x) => <li key={x.id}><Link href={`/lobby/provider/${x.id}`} className="nf-panel block text-center font-semibold hover:border-[var(--nf-primary)]">{x.name}<span className="block text-xs font-normal opacity-60">{x.type === 'internal' ? t("Abyss Studios") : t("Proveedor")}</span></Link></li>)}</ul>;
 }
 
 function Games({ slug }: { slug: string }) {

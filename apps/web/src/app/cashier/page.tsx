@@ -303,7 +303,7 @@ function WithdrawForm({ methods, currency, tryMinor, kyc }: { methods: Method[];
       <Field label={`Monto a retirar (${currency})`} value={amount} onChange={setAmount} inputMode="decimal" error={errors.amount} required placeholder={currency === "COP" ? "50000" : "0.00"} />
       <Field label={t("Destino (cuenta o dirección)")} value={destination} onChange={setDestination} error={errors.destination} required autoComplete="off" />
       <button type="submit" disabled={busy} className="bg-gold-gradient text-black font-bold py-3 rounded-xl disabled:opacity-60">
-        {busy ? "Enviando…" : "Solicitar retiro"}
+        {busy ? t("Enviando…") : t("Solicitar retiro")}
       </button>
     </form>
   );
@@ -378,7 +378,7 @@ function History({ money }: { money: (v: bigint) => string }) {
       {items.length > 0 && table(items, "Movimientos")}
       {cursor && (
         <button onClick={() => void load(cursor)} disabled={loading} className="self-center border border-gold-500/40 text-gold-300 px-4 py-2 rounded-lg disabled:opacity-60">
-          {loading ? "Cargando…" : "Ver más"}
+          {loading ? t("Cargando…") : t("Ver más")}
         </button>
       )}
       {withdrawals.length > 0 && table(withdrawals, "Retiros")}

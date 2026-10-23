@@ -351,7 +351,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
               {money(balance)} <span className="text-[10px] text-slate-400">{currency}</span>
             </div>
           </div>
-          <IconBtn label={soundOn ? 'Silenciar sonido' : 'Activar sonido'} onClick={() => sound.setEnabled(!soundOn)}>
+          <IconBtn label={soundOn ? t("Silenciar sonido") : t("Activar sonido")} onClick={() => sound.setEnabled(!soundOn)}>
             {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </IconBtn>
           <IconBtn label="Historial de giros" active={panel === 'history'} onClick={() => setPanel(panel === 'history' ? 'none' : 'history')}>
@@ -409,9 +409,9 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
         )}
 
         {panel !== 'none' && (
-          <aside className="absolute inset-x-0 bottom-0 z-10 max-h-[70%] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur" aria-label={panel === 'history' ? 'Historial' : 'Provably fair'}>
+          <aside className="absolute inset-x-0 bottom-0 z-10 max-h-[70%] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur" aria-label={panel === 'history' ? t("Historial") : t("Provably fair")}>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-bold">{panel === 'history' ? 'Historial de giros' : 'Provably fair'}</h2>
+              <h2 className="text-sm font-bold">{panel === 'history' ? t("Historial de giros") : t("Provably fair")}</h2>
               <IconBtn label="Cerrar panel" onClick={() => setPanel('none')}>
                 <X size={16} />
               </IconBtn>
@@ -481,7 +481,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
             <div className="relative">
               <button
                 type="button"
-                aria-label={auto ? 'Detener autoplay' : 'Configurar autoplay'}
+                aria-label={auto ? t("Detener autoplay") : t("Configurar autoplay")}
                 aria-haspopup="dialog"
                 aria-expanded={autoOpen}
                 disabled={boot !== 'ready' || (busy && !auto)}

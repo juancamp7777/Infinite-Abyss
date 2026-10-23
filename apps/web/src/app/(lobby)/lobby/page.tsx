@@ -128,7 +128,7 @@ function Lobby() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section aria-label={t("Torneos activos")} className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-bold">{icon(Trophy)}Torneos</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold">{icon(Trophy)}{t("Torneos")}</h2>
             <Link href="/lobby/tournaments" className="text-sm font-semibold text-[var(--nf-muted)] hover:text-[var(--nf-text)]">{t("Ver todos")}</Link>
           </div>
           {tours.loading ? <Skeleton className="h-20" /> : tours.error ? <p role="alert" className="text-sm text-[var(--nf-muted)]">{t("No se pudieron cargar los torneos.")}</p>

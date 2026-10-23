@@ -243,6 +243,7 @@ export const NAV: NavItem[] = [
   { href: "/channels", label: "Sonar · Canales", roles: ADMINS, section: "Jugadores" },
   { href: "/tide", label: "Tide · Flujos y bots", roles: ADMINS, section: "Jugadores" },
   { href: "/pearl", label: "Pearl · Caja", roles: ALL, section: "Jugadores" },
+  { href: "/cajero", label: "Pearl · Cajero IA", roles: ADMINS, section: "Jugadores" },
   { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
   { href: "/crew", label: "Crew · Mi turno", roles: ALL, section: "Equipo" },

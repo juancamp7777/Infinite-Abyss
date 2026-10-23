@@ -3,6 +3,7 @@ import { currencyDecimals } from '../../../domain/money/currencies';
 import { HttpError } from '../../shared/http/errors';
 import type { ModuleLogger } from '../../shared/module';
 import { ExternalDepositError, type ExternalDepositPort } from '../../shared/ports/ExternalDepositPort';
+import type { CreditPolicy } from './BotConfigService';
 import { parseFeedPayload } from '../domain/feeds';
 import { isOwnAccount, isWalletOrOwnName, matchBankTx, parseAmountToMinor, receiptKey } from '../domain/matching';
 import {
@@ -44,6 +45,7 @@ export interface SubmitReceipt {
 export class PearlService {
   private notifier?: PearlNotifier;
   private judge?: PearlJudge;
+  private policy?: (operatorId: string) => Promise<CreditPolicy | null>;
   private readonly reviewed: Array<(r: Receipt) => Promise<unknown>> = [];
 
   constructor(
@@ -56,6 +58,10 @@ export class PearlService {
   }
   setJudge(j: PearlJudge) {
     this.judge = j;
+  }
+  /** Política publicada del Cajero IA (modo sin cargas, tope y mínimo): se consulta antes de acreditar solo. */
+  setPolicy(p: (operatorId: string) => Promise<CreditPolicy | null>) {
+    this.policy = p;
   }
   /** Comprobantes acreditados por un cajero (para KPIs y gamificación del equipo). */
   onReviewed(cb: (r: Receipt) => Promise<unknown>) {
@@ -289,6 +295,13 @@ export class PearlService {
     const m = matchBankTx({ amount: r.amount!, names, at: r.extracted.time ? this.receiptDate(r.extracted, s) ?? undefined : undefined }, feed);
     if (m.kind === 'unique') {
       if (s.mode !== 'auto') return this.toReview(r, 'modo_revision', m.tx);
+      const p = await this.policy?.(r.operatorId).catch(() => null);
+      if (p) {
+        if (p.noChargeNow) return this.toReview(r, 'modo_sin_cargas', m.tx);
+        if (!p.autoCredit) return this.toReview(r, 'cajero_ia_sin_autoacreditar', m.tx);
+        if (p.autoCreditMax > 0n && r.amount! > p.autoCreditMax) return this.toReview(r, 'supera_tope_cajero_ia', m.tx);
+        if (p.minDeposit > 0n && r.amount! < p.minDeposit) return this.underMinimum(r, m.tx, p);
+      }
       if (r.amount! > s.autoMaxAmount) return this.toReview(r, 'supera_tope_automatico', m.tx);
       if (!r.playerId) return this.toReview(r, 'sin_jugador_vinculado', m.tx);
       if (this.judge) {
@@ -309,6 +322,27 @@ export class PearlService {
       }
     }
     return r;
+  }
+
+  /**
+   * Carga bajo el mínimo: se suma con las otras cargas chicas del mismo jugador que llegaron dentro de la ventana
+   * (p. ej. 5.000 + 5.000 en menos de 10 minutos). Si juntas llegan al mínimo, se acreditan todas; si no, esperan.
+   * Pasada la ventana ya no se suman: la carga nueva tiene que cumplir el mínimo por sí sola.
+   */
+  private async underMinimum(r: Receipt, tx: BankTx, p: CreditPolicy): Promise<Receipt> {
+    const since = this.now().getTime() - p.accumulateMinutes * 60_000;
+    const partials = p.accumulateMinutes > 0 && r.playerId
+      ? (await this.repo.listReceipts(r.operatorId, { status: 'pending_review', limit: 200 })).filter((x) =>
+        x.id !== r.id && x.playerId === r.playerId && x.reason === 'bajo_minimo_cajero_ia' && x.bankTxId && x.amount && x.createdAt.getTime() >= since)
+      : [];
+    const total = partials.reduce((n, x) => n + x.amount!, r.amount!);
+    if (total < p.minDeposit) return this.toReview(r, 'bajo_minimo_cajero_ia', tx);
+    const credited = await this.credit(r, tx, r.status);
+    for (const x of partials) {
+      const t = await this.repo.findBankTx(x.operatorId, x.bankTxId!);
+      if (t) await this.credit(x, t, 'pending_review');
+    }
+    return credited;
   }
 
   private async toReview(r: Receipt, reason: string, tx?: BankTx): Promise<Receipt> {

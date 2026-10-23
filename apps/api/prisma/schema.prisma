@@ -1594,6 +1594,46 @@ model PearlAiConfig {
   @@map("pearl_ai_configs")
 }
 
+/// Cajero IA: borrador editable por operador (se publica en versiones inmutables).
+model PearlBotConfig {
+  operatorId       String   @id
+  draft            Json
+  publishedVersion Int?
+  updatedBy        String?
+  updatedAt        DateTime
+
+  @@map("pearl_bot_configs")
+}
+
+/// Versión publicada del Cajero IA: lo que el bot usa y el historial para volver atrás.
+model PearlBotConfigVersion {
+  id          String   @id @db.Uuid
+  operatorId  String
+  version     Int
+  config      Json
+  publishedBy String
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@unique([operatorId, version])
+  @@map("pearl_bot_config_versions")
+}
+
+/// Reclamos de promos del Cajero IA (topes por jugador y totales; modo observación también registra).
+model PearlPromoClaim {
+  id         String   @id @db.Uuid
+  operatorId String
+  promoId    String
+  playerKey  String
+  observed   Boolean  @default(false)
+  amount     BigInt?
+  refKey     String   @unique
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId, promoId, playerKey])
+  @@map("pearl_promo_claims")
+}
+
 // ───────────────────────── Crew: equipo, turnos, caja y nómina ─────────────────────────
 
 model CrewMember {

@@ -99,6 +99,42 @@ function setup(mode: 'auto' | 'review_all' = 'auto') {
 }
 
 describe('Pearl: flujo de caja', () => {
+  it('Cajero IA: cargas bajo el mínimo se suman dentro de la ventana; fuera de ella, no', async () => {
+    const t = setup();
+    const policy = { autoCredit: true, autoCreditMax: 0n, minDeposit: 1_000_000n, accumulateMinutes: 10, noChargeNow: false, pendingStage: 'deposit_review', noChargeMessage: '' };
+    t.pearl.setPolicy(async () => policy);
+    await t.pay('A1', '5000.00', 'PEREZ JUAN', 3);
+    const first = await t.receipt({ amount: '5.000,00', time: '11:57' });
+    expect(first).toMatchObject({ status: 'pending_review', reason: 'bajo_minimo_cajero_ia' });
+    t.advance(4 * 60_000);
+    await t.pay('A2', '5000.00', 'PEREZ JUAN', 1);
+    const second = await t.receipt({ amount: '5.000,00', time: '12:03' });
+    expect(second.status).toBe('credited');
+    expect((await t.repo.findReceipt(OP, first.id))?.status).toBe('credited');
+    expect(t.credited.size).toBe(2);
+
+    // Pasados los 10 minutos ya no se suman: la nueva carga chica espera a una persona.
+    await t.pay('B1', '4000.00', 'PEREZ JUAN', 1);
+    const late1 = await t.receipt({ amount: '4.000,00', time: '12:06' });
+    expect(late1.reason).toBe('bajo_minimo_cajero_ia');
+    t.advance(15 * 60_000);
+    await t.pay('B2', '6000.00', 'PEREZ JUAN', 1);
+    const late2 = await t.receipt({ amount: '6.000,00', time: '12:21' });
+    expect(late2).toMatchObject({ status: 'pending_review', reason: 'bajo_minimo_cajero_ia' });
+    expect(t.credited.size).toBe(2);
+  });
+
+  it('Cajero IA: modo sin cargas y tope mandan a revisión aunque el pago cuadre', async () => {
+    const t = setup();
+    t.pearl.setPolicy(async () => ({ autoCredit: false, autoCreditMax: 0n, minDeposit: 0n, accumulateMinutes: 0, noChargeNow: true, pendingStage: 'deposit_review', noChargeMessage: '' }));
+    await t.pay('N1', '10000.00', 'PEREZ JUAN');
+    expect(await t.receipt()).toMatchObject({ status: 'pending_review', reason: 'modo_sin_cargas' });
+    const u = setup();
+    u.pearl.setPolicy(async () => ({ autoCredit: true, autoCreditMax: 500_000n, minDeposit: 0n, accumulateMinutes: 0, noChargeNow: false, pendingStage: 'deposit_review', noChargeMessage: '' }));
+    await u.pay('N2', '10000.00', 'PEREZ JUAN');
+    expect(await u.receipt()).toMatchObject({ status: 'pending_review', reason: 'supera_tope_cajero_ia' });
+  });
+
   it('pago en el feed + comprobante → acredita sola, una sola vez', async () => {
     const t = setup();
     await t.pay('TX1', '10000.00', 'PEREZ JUAN');

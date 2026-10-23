@@ -1,9 +1,11 @@
 import { randomBytes } from 'crypto';
+import type { PrismaClient } from '@prisma/client';
 import { currencyDecimals } from '../../domain/money/currencies';
 import { SecretBox } from '../inbox/domain/secretBox';
 import type { InboxService } from '../inbox/application/InboxService';
 import type { NymfoModule } from '../shared/module';
 import type { ExternalDepositPort } from '../shared/ports/ExternalDepositPort';
+import { BotConfigService } from './application/BotConfigService';
 import { ChatCashier } from './application/ChatCashier';
 import { PearlAi, type AiClientFactory } from './application/PearlAi';
 import { formatMoney } from './domain/money';
@@ -85,14 +87,16 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
         });
       }
 
-      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger }));
+      const bot = deps.prisma ? new BotConfigService(deps.prisma as PrismaClient) : undefined;
+      if (bot) pearl.setPolicy((operatorId) => bot.creditPolicy(operatorId));
+      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, bot, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger }));
       const tickMs = opts.tickMs ?? Number(deps.env.PEARL_TICK_MS ?? 60_000);
       if (Number.isFinite(tickMs) && tickMs > 0) {
         const t = setInterval(() => void pearl.tick().catch((e) => deps.logger.error('[pearl] barrido', { error: (e as Error).message })), tickMs);
         t.unref?.();
       }
       const cashier = inbox ? new ChatCashier(inbox, deps.services['players.accounts'] as PlayerAccountsPort | undefined, { logger: deps.logger }) : undefined;
-      return { 'pearl.service': pearl, ...(ai ? { 'pearl.ai': ai } : {}), ...(cashier ? { 'pearl.cashier': cashier } : {}) };
+      return { 'pearl.service': pearl, ...(bot ? { 'pearl.bot': bot } : {}), ...(ai ? { 'pearl.ai': ai } : {}), ...(cashier ? { 'pearl.cashier': cashier } : {}) };
     },
   };
 }

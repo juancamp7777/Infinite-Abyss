@@ -1,4 +1,5 @@
 "use client";
+import { PushSettings } from "@/components/PushSettings";
 import { useT } from "@/lib/i18n";
 
 import { useCallback, useEffect, useState } from "react";
@@ -183,6 +184,8 @@ export default function AccountPage() {
 
       <main className="w-full max-w-3xl p-6 flex flex-col gap-8">
         <h1 className="font-serif text-4xl font-bold text-center uppercase tracking-widest">{t("Mi cuenta")}</h1>
+
+        <PushSettings />
 
         <section aria-labelledby="kyc-title" className="bg-surface border border-gold-900/50 rounded-2xl p-6 flex flex-col gap-3">
           <h2 id="kyc-title" className="font-serif text-xl uppercase tracking-widest text-gold-300">{t("Verificación de identidad (KYC)")}</h2>

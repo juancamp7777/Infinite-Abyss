@@ -96,9 +96,9 @@ export class PearlService {
   listAccounts(operatorId: string) {
     return this.repo.listAccounts(operatorId);
   }
-  async saveAccount(operatorId: string, a: { id?: string; holderName: string; alias?: string; accountNumber: string; bank?: string; country?: string; holderDocument?: string; bankName?: string; active?: boolean }): Promise<BankAccount> {
+  async saveAccount(operatorId: string, a: { id?: string; holderName: string; alias?: string; accountNumber: string; bank?: string; country?: string; holderDocument?: string; bankName?: string; accountType?: string; active?: boolean }): Promise<BankAccount> {
     if (a.id && !(await this.repo.listAccounts(operatorId)).some((x) => x.id === a.id)) throw new HttpError(404, 'NOT_FOUND', 'Cuenta no encontrada');
-    return this.repo.saveAccount({ id: a.id ?? randomUUID(), operatorId, holderName: a.holderName, alias: a.alias || undefined, accountNumber: a.accountNumber, bank: a.bank || undefined, country: a.country || undefined, holderDocument: a.holderDocument || undefined, bankName: a.bankName || undefined, active: a.active ?? true, createdAt: this.now() });
+    return this.repo.saveAccount({ id: a.id ?? randomUUID(), operatorId, holderName: a.holderName, alias: a.alias || undefined, accountNumber: a.accountNumber, bank: a.bank || undefined, country: a.country || undefined, holderDocument: a.holderDocument || undefined, bankName: a.bankName || undefined, accountType: a.accountType || undefined, active: a.active ?? true, createdAt: this.now() });
   }
   async deleteAccount(operatorId: string, id: string) {
     if (!(await this.repo.deleteAccount(operatorId, id))) throw new HttpError(404, 'NOT_FOUND', 'Cuenta no encontrada');

@@ -1505,6 +1505,8 @@ model PearlBankAccount {
   holderDocument String?
   /// Banco elegido de la lista cuando el método agrupa varios (Otro banco, SPEI, CBU).
   bankName       String?
+  /// Ahorros o corriente (cuentas bancarias).
+  accountType    String?
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
 

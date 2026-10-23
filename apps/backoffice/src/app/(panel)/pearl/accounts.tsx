@@ -5,11 +5,11 @@ import { Landmark, Plus, Trash2 } from "lucide-react";
 import { useApi, useApiClient } from "@/lib/hooks";
 import { Button, Card, Field, inputCls } from "@/components/ui";
 
-export interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; country?: string; holderDocument?: string; bankName?: string; active: boolean }
+export interface Account { id: string; holderName: string; alias?: string; accountNumber: string; bank?: string; country?: string; holderDocument?: string; bankName?: string; accountType?: string; active: boolean }
 interface Country { country: string; name: string; docLabel: string; docPlaceholder: string; aliasLabel: string }
-interface Method { key: string; country: string; label: string; numberLabel: string; placeholder: string; pattern: string; hint: string; keyLike?: boolean; banks?: string[] }
+interface Method { key: string; country: string; label: string; numberLabel: string; placeholder: string; pattern: string; hint: string; keyLike?: boolean; banks?: string[]; accountTypes?: string[] }
 
-const EMPTY = { holderName: "", accountNumber: "", holderDocument: "", alias: "", bankName: "" };
+const EMPTY = { holderName: "", accountNumber: "", holderDocument: "", alias: "", bankName: "", accountType: "" };
 
 /** Muestra solo los últimos 4 caracteres del número (las llaves Bre-B se ven completas: son públicas). */
 const masked = (a: Account, m?: Method) => (m?.keyLike ? a.accountNumber : `•••• ${a.accountNumber.slice(-4)}`);
@@ -31,14 +31,14 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
   const clean = m?.keyLike ? f.accountNumber.trim().replace(/\s+/g, "") : f.accountNumber.replace(/[\s.-]/g, "");
   const numberOk = !!m && new RegExp(m.pattern).test(clean);
   const showBad = clean.length > 0 && !numberOk;
-  const bankOk = !m?.banks || m.banks.includes(f.bankName);
+  const bankOk = (!m?.banks || m.banks.includes(f.bankName)) && (!m?.accountTypes || m.accountTypes.includes(f.accountType));
 
   const pickCountry = (code: string) => {
     setCountry(code);
     setMethod(cat.data?.methods.find((x) => x.country === code)?.key ?? "");
   };
   const add = () => run(async () => {
-    await call("/pearl/v1/admin/accounts", { method: "POST", body: { bank: method, country, holderName: f.holderName, accountNumber: f.accountNumber, holderDocument: f.holderDocument || undefined, alias: f.alias || undefined, bankName: m?.banks ? f.bankName : undefined } });
+    await call("/pearl/v1/admin/accounts", { method: "POST", body: { bank: method, country, holderName: f.holderName, accountNumber: f.accountNumber, holderDocument: f.holderDocument || undefined, alias: f.alias || undefined, bankName: m?.banks ? f.bankName : undefined, accountType: m?.accountTypes ? f.accountType : undefined } });
     setF(EMPTY);
   }, "Cuenta agregada");
 
@@ -52,7 +52,7 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
               {a.country ? <span className="w-6 shrink-0 rounded bg-white/10 text-center text-[10px] font-bold leading-5 text-white/70">{a.country}</span> : <Landmark aria-hidden className="h-4 w-4 text-white/40" />}
               <div className="min-w-0 flex-1">
                 <div className="truncate">{a.alias && !am?.keyLike ? a.alias : a.holderName}</div>
-                <div className="truncate text-xs text-white/45">{am ? `${a.bankName ?? am.label} · ${masked(a, am)}` : a.alias || a.accountNumber}{a.alias && !am?.keyLike ? ` · ${a.holderName}` : ""}</div>
+                <div className="truncate text-xs text-white/45">{am ? `${a.bankName ?? am.label}${a.accountType ? ` ${a.accountType.toLowerCase()}` : ""} · ${masked(a, am)}` : a.alias || a.accountNumber}{a.alias && !am?.keyLike ? ` · ${a.holderName}` : ""}</div>
               </div>
               <button type="button" className="text-white/30 hover:text-red-300" aria-label={`Quitar ${a.holderName}`} onClick={() => void run(() => call(`/pearl/v1/admin/accounts/${a.id}`, { method: "DELETE" }), "Cuenta quitada")}><Trash2 aria-hidden className="h-4 w-4" /></button>
             </li>
@@ -81,6 +81,14 @@ export function AccountsCard({ accounts, run }: { accounts: Account[]; run: (fn:
               {m.banks.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </Field>
+        )}
+        {m?.accountTypes && (
+          <div className="flex gap-1.5" role="radiogroup" aria-label="Tipo de cuenta">
+            {m.accountTypes.map((t) => (
+              <button key={t} type="button" role="radio" aria-checked={f.accountType === t} onClick={() => setF({ ...f, accountType: t })}
+                className={`flex-1 rounded-lg border px-2 py-1.5 text-sm ${f.accountType === t ? "border-amber-400 bg-amber-400/10" : "border-white/10 hover:border-white/30"}`}>{t}</button>
+            ))}
+          </div>
         )}
         <Field label="Titular (como sale en el comprobante)" htmlFor="acc-holder">
           <input id="acc-holder" className={`${inputCls} w-full`} placeholder="JUAN CAMPOS" value={f.holderName} onChange={(e) => setF({ ...f, holderName: e.target.value })} />

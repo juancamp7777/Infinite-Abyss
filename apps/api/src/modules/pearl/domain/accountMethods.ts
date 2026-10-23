@@ -18,7 +18,12 @@ export interface AccountMethod {
   keyLike?: boolean;
   /** Si el método agrupa varios bancos, el operador elige uno de esta lista. */
   banks?: readonly string[];
+  /** Si aplica, el operador elige el tipo de cuenta (ahorros o corriente). */
+  accountTypes?: readonly string[];
 }
+
+const TYPES_CO = ['Ahorros', 'Corriente'];
+const TYPES_AR = ['Caja de ahorro', 'Cuenta corriente'];
 
 const BANKS_CO = [
   'Davivienda', 'Banco de Bogotá', 'BBVA Colombia', 'Banco de Occidente', 'Banco Popular', 'Banco AV Villas', 'Banco Caja Social',
@@ -53,13 +58,13 @@ export const ACCOUNT_COUNTRIES: readonly CountryDoc[] = [
 export const ACCOUNT_METHODS: readonly AccountMethod[] = [
   { key: 'nequi', country: 'CO', label: 'Nequi', numberLabel: 'Celular Nequi', placeholder: '3001234567', pattern: '^3\\d{9}$', hint: 'El celular de 10 dígitos asociado a Nequi.' },
   { key: 'daviplata', country: 'CO', label: 'Daviplata', numberLabel: 'Celular Daviplata', placeholder: '3001234567', pattern: '^3\\d{9}$', hint: 'El celular de 10 dígitos asociado a Daviplata.' },
-  { key: 'bancolombia', country: 'CO', label: 'Bancolombia', numberLabel: 'Número de cuenta', placeholder: '12345678901', pattern: '^\\d{11}$', hint: 'Cuenta de ahorros o corriente de 11 dígitos.' },
+  { key: 'bancolombia', country: 'CO', label: 'Bancolombia', numberLabel: 'Número de cuenta', placeholder: '12345678901', pattern: '^\\d{11}$', hint: 'Cuenta de ahorros o corriente de 11 dígitos.', accountTypes: TYPES_CO },
   { key: 'breb', country: 'CO', label: 'Llave Bre-B', numberLabel: 'Llave', placeholder: '@tunombre, celular, cédula o correo', pattern: '^\\S{4,60}$', hint: 'La llave tal como la registraste en Bre-B.', keyLike: true },
-  { key: 'banco_co', country: 'CO', label: 'Otro banco', numberLabel: 'Número de cuenta', placeholder: '000123456789', pattern: '^\\d{6,20}$', hint: 'Elige el banco y escribe el número de cuenta, sin guiones.', banks: BANKS_CO },
+  { key: 'banco_co', country: 'CO', label: 'Otro banco', numberLabel: 'Número de cuenta', placeholder: '000123456789', pattern: '^\\d{6,20}$', hint: 'Elige el banco y escribe el número de cuenta, sin guiones.', banks: BANKS_CO, accountTypes: TYPES_CO },
   { key: 'spei', country: 'MX', label: 'Transferencia SPEI', numberLabel: 'CLABE', placeholder: '012180001234567891', pattern: '^\\d{18}$', hint: 'La CLABE interbancaria de 18 dígitos.', banks: BANKS_MX },
   { key: 'tarjeta_mx', country: 'MX', label: 'Tarjeta de débito', numberLabel: 'Número de tarjeta', placeholder: '4152313412345678', pattern: '^\\d{16}$', hint: 'Los 16 dígitos de la tarjeta (para depósitos con tarjeta).' },
   { key: 'cvu', country: 'AR', label: 'CVU (otra billetera)', numberLabel: 'CVU', placeholder: '0000003100012345678901', pattern: '^\\d{22}$', hint: 'Ualá, Naranja X, Brubank, Lemon… 22 dígitos.' },
-  { key: 'cbu', country: 'AR', label: 'CBU (banco)', numberLabel: 'CBU', placeholder: '0170099220000067797370', pattern: '^\\d{22}$', hint: 'La CBU de tu cuenta bancaria, 22 dígitos.', banks: BANKS_AR },
+  { key: 'cbu', country: 'AR', label: 'CBU (banco)', numberLabel: 'CBU', placeholder: '0170099220000067797370', pattern: '^\\d{22}$', hint: 'La CBU de tu cuenta bancaria, 22 dígitos.', banks: BANKS_AR, accountTypes: TYPES_AR },
   { key: 'mercadopago', country: '*', label: 'Mercado Pago', numberLabel: 'CVU / CLABE / número de cuenta', placeholder: 'Argentina: CVU · México: CLABE', pattern: '^\\d{6,22}$', hint: 'En Mercado Pago: Tu perfil → Tus datos de cuenta (CVU en Argentina, CLABE en México). Pon tu alias abajo.' },
   { key: 'binance_pay', country: '*', label: 'Binance Pay', numberLabel: 'Pay ID de Binance', placeholder: '123456789', pattern: '^\\d{6,12}$', hint: 'En Binance: Pay → tu Pay ID (solo números).' },
   { key: 'binance_wallet', country: '*', label: 'Binance · billetera USDT', numberLabel: 'Dirección de la billetera', placeholder: 'TXyz… (TRC20) o 0x… (BEP20)', pattern: '^(T[1-9A-HJ-NP-Za-km-z]{33}|0x[0-9a-fA-F]{40})$', hint: 'Dirección USDT de depósito: red TRC20 (empieza por T) o BEP20 (empieza por 0x).', keyLike: true },
@@ -73,7 +78,8 @@ export function cleanAccountNumber(m: AccountMethod, raw: string): string {
 }
 
 /** Devuelve el error para mostrar, o null si los datos sirven. */
-export function checkAccount(m: AccountMethod, number: string, doc?: string, country?: string, bankName?: string): string | null {
+export function checkAccount(m: AccountMethod, number: string, doc?: string, country?: string, bankName?: string, accountType?: string): string | null {
+  if (m.accountTypes && !(accountType && m.accountTypes.includes(accountType))) return 'Elige si la cuenta es de ahorros o corriente.';
   if (m.banks && !(bankName && m.banks.includes(bankName))) return 'Elige el banco de la lista.';
   if (!new RegExp(m.pattern).test(number)) return `${m.numberLabel} no es válido: ${m.hint}`;
   const c = ACCOUNT_COUNTRIES.find((x) => x.country === (m.country === '*' ? country : m.country));

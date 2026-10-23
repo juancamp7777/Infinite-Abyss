@@ -26,7 +26,7 @@ describe('Cuentas de cobro por país', () => {
     expect(m.body.countries.map((c: { country: string }) => c.country)).toEqual(['CO', 'MX', 'AR']);
     expect(m.body.methods.find((x: { key: string }) => x.key === 'nequi')).toMatchObject({ country: 'CO', numberLabel: 'Celular Nequi' });
 
-    const nequi = await add({ bank: 'nequi', holderName: 'Juan Campos', accountNumber: '300 123 4567', holderDocument: '1.020.304.050' });
+    const nequi = await add({ bank: 'nequi', holderName: 'Juan Campos', accountNumber: '300 123 4567', holderDocument: '1.020 304-050' });
     expect(nequi.status).toBe(201);
     expect(nequi.body).toMatchObject({ country: 'CO', accountNumber: '3001234567', holderDocument: '1020304050' });
 
@@ -47,7 +47,8 @@ describe('Cuentas de cobro por país', () => {
 
     expect((await add({ bank: 'banco_co', holderName: 'Juan Campos', accountNumber: '0550123456' })).status).toBe(400);
     expect((await add({ bank: 'banco_co', bankName: 'Banco Inventado', holderName: 'Juan Campos', accountNumber: '0550123456' })).status).toBe(400);
-    expect((await add({ bank: 'banco_co', bankName: 'Davivienda', holderName: 'Juan Campos', accountNumber: '0550-1234-5678' })).body).toMatchObject({ bankName: 'Davivienda', accountNumber: '055012345678', country: 'CO' });
+    expect((await add({ bank: 'banco_co', bankName: 'Davivienda', holderName: 'Juan Campos', accountNumber: '0550-1234-5678' })).status).toBe(400);
+    expect((await add({ bank: 'banco_co', bankName: 'Davivienda', accountType: 'Ahorros', holderName: 'Juan Campos', accountNumber: '0550-1234-5678' })).body).toMatchObject({ accountType: 'Ahorros', bankName: 'Davivienda', accountNumber: '055012345678', country: 'CO' });
     expect((await add({ bank: 'spei', bankName: 'Banorte', holderName: 'Juan Campos', accountNumber: '072180001234567891' })).body).toMatchObject({ bankName: 'Banorte' });
 
     // Cuentas antiguas sin método siguen funcionando.

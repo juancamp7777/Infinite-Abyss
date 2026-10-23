@@ -245,6 +245,7 @@ export const NAV: NavItem[] = [
   { href: "/pearl", label: "Pearl · Caja", roles: ALL, section: "Jugadores" },
   { href: "/cajero", label: "Pearl · Cajero IA", roles: ADMINS, section: "Jugadores" },
   { href: "/limites", label: "Límites del casino", roles: ADMINS, section: "Jugadores" },
+  { href: "/leviathan", label: "Leviathan · Concursos", roles: ADMINS, section: "Jugadores" },
   { href: "/tickets", label: "Tickets", roles: ALL, section: "Jugadores" },
   { href: "/segments", label: "Segmentos", roles: ADMINS, section: "Jugadores" },
   { href: "/crew", label: "Crew · Mi turno", roles: ALL, section: "Equipo" },

@@ -34,6 +34,8 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
+# Archivos estáticos (logo, íconos): el modo standalone no los incluye solo.
+COPY --from=build --chown=node:node /app/public ./public
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \

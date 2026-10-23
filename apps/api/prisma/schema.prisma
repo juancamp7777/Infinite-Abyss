@@ -1862,3 +1862,40 @@ model IntegrationCredential {
   @@id([scope, key])
   @@map("integration_credentials")
 }
+
+// ───────────────────────── Nautilus: operador IA ─────────────────────────
+
+// Hallazgos de los vigilantes (reglas deterministas). key es estable: el mismo problema actualiza el mismo hallazgo.
+model NautilusFinding {
+  id          String    @id @default(uuid()) @db.Uuid
+  operatorId  String
+  key         String
+  kind        String
+  severity    String
+  title       String
+  detail      String
+  data        Json      @default("{}")
+  status      String    @default("open") // open | acknowledged | resolved
+  notifiedAt  DateTime?
+  ackBy       String?
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@unique([operatorId, key])
+  @@index([operatorId, status])
+  @@map("nautilus_findings")
+}
+
+// Resumen diario redactado por Claude (uno por casino y día).
+model NautilusReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  operatorId String
+  day        String // YYYY-MM-DD del casino
+  content    Json
+  model      String
+  createdAt  DateTime @default(now())
+
+  @@unique([operatorId, day])
+  @@map("nautilus_reports")
+}

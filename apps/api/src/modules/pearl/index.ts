@@ -7,6 +7,7 @@ import type { NymfoModule } from '../shared/module';
 import type { ExternalDepositPort } from '../shared/ports/ExternalDepositPort';
 import { BotConfigService } from './application/BotConfigService';
 import { ChatCashier } from './application/ChatCashier';
+import { PromoEngine } from './application/PromoEngine';
 import { PearlAi, type AiClientFactory } from './application/PearlAi';
 import { formatMoney } from './domain/money';
 import type { LeadService } from '../inbox/application/LeadService';
@@ -89,6 +90,25 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
 
       const bot = deps.prisma ? new BotConfigService(deps.prisma as PrismaClient) : undefined;
       if (bot) pearl.setPolicy((operatorId) => bot.creditPolicy(operatorId));
+      const promotions = deps.services['promotions'] as { grantCashback(op: string, player: string, amount: bigint, reason: string, o?: { currency?: string; wageringMultiplier?: number }): Promise<{ duplicate: boolean }> } | undefined;
+      if (bot && deps.prisma) {
+        const promos = new PromoEngine(deps.prisma as PrismaClient, bot, {
+          logger: deps.logger,
+          grant: promotions ? async (g) => ({ duplicate: (await promotions.grantCashback(g.operatorId, g.playerId, g.amount, g.reason, { currency: g.currency, wageringMultiplier: g.wagering })).duplicate }) : undefined,
+        });
+        pearl.onCredited(async (r) => {
+          if (!r.playerId || !r.amount) return;
+          const b = await promos.onCredited({ id: r.id, operatorId: r.operatorId, playerId: r.playerId, amount: r.amount, currency: r.currency, createdAt: r.createdAt });
+          if (b && r.conversationId && inbox) await inbox.botMessage(r.operatorId, r.conversationId, `🎁 ¡Te sumamos ${formatMoney(b.amount, r.currency)} de bono (${b.pct} % · ${b.label})!`);
+        });
+        // Entre Pearl (imágenes) y Tide (menús): la palabra o el emoji de una promo activa la deja lista.
+        inbox?.onEvent(async (e) => {
+          if (e.type !== 'contact_message' || e.message.attachmentId) return;
+          const out = await promos.onMessage(e.conversation.operatorId, e.conversation.playerId, e.message.body);
+          if (out.reply) await inbox.botMessage(e.conversation.operatorId, e.conversation.id, out.reply);
+          return out.handled ? 'handled' : undefined;
+        }, 5);
+      }
       app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, bot, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger }));
       const tickMs = opts.tickMs ?? Number(deps.env.PEARL_TICK_MS ?? 60_000);
       if (Number.isFinite(tickMs) && tickMs > 0) {

@@ -1627,6 +1627,9 @@ model PearlPromoClaim {
   playerKey  String
   observed   Boolean  @default(false)
   amount     BigInt?
+  /// % de bono ganado (Flash, a elección, flyer); se aplica en la próxima carga.
+  pct        Int?
+  consumedAt DateTime?
   refKey     String   @unique
   createdAt  DateTime @default(now())
 

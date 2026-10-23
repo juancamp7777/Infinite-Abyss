@@ -47,6 +47,7 @@ export class PearlService {
   private judge?: PearlJudge;
   private policy?: (operatorId: string) => Promise<CreditPolicy | null>;
   private readonly reviewed: Array<(r: Receipt) => Promise<unknown>> = [];
+  private readonly creditedHooks: Array<(r: Receipt) => Promise<unknown>> = [];
 
   constructor(
     private readonly repo: PearlRepository,
@@ -62,6 +63,10 @@ export class PearlService {
   /** Política publicada del Cajero IA (modo sin cargas, tope y mínimo): se consulta antes de acreditar solo. */
   setPolicy(p: (operatorId: string) => Promise<CreditPolicy | null>) {
     this.policy = p;
+  }
+  /** Toda carga acreditada (sola o por un cajero): bonos y promos del Cajero IA. Un fallo aquí no deshace la carga. */
+  onCredited(cb: (r: Receipt) => Promise<unknown>) {
+    this.creditedHooks.push(cb);
   }
   /** Comprobantes acreditados por un cajero (para KPIs y gamificación del equipo). */
   onReviewed(cb: (r: Receipt) => Promise<unknown>) {
@@ -363,6 +368,7 @@ export class PearlService {
       const next: Receipt = { ...r, status: 'credited', reason: undefined, bankTxId: tx?.id ?? r.bankTxId, depositId: dep.depositId, updatedAt: this.now() };
       await this.repo.transitionReceipt(next, [from]);
       await this.notify(next, 'credited');
+      for (const h of this.creditedHooks) await h(next).catch((e: Error) => this.opts.logger.error('[pearl] bono tras la carga', { receiptId: r.id, error: e.message }));
       return next;
     } catch (e) {
       if (tx) await this.repo.releaseBankTx(r.operatorId, tx.id, r.id);

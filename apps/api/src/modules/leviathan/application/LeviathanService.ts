@@ -367,7 +367,12 @@ export class LeviathanService {
   /** Lobby: concursos públicos abiertos o en juego del casino. */
   async lobby(operatorId: string) {
     const games = await this.db.levGame.findMany({ where: { operatorId, mode: 'QUICK', status: { in: ['OPEN', 'RUNNING'] } }, orderBy: { entriesCloseAt: 'asc' }, take: 50 });
-    return Promise.all(games.map((g) => this.summary(g)));
+    return Promise.all(games.map(async (g) => {
+      // Muestra de partidos (los próximos) para animar a entrar desde el lobby.
+      const links = await this.db.levGameEvent.findMany({ where: { gameId: g.id } });
+      const evs = await this.db.levEvent.findMany({ where: { id: { in: links.map((l) => l.eventId) } }, orderBy: { startsAt: 'asc' }, take: 4, select: { home: true, away: true, league: true, startsAt: true } });
+      return { ...(await this.summary(g)), events: evs, eventCount: links.length };
+    }));
   }
 
   async myGames(operatorId: string, playerId: string) {

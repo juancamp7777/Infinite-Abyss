@@ -39,6 +39,7 @@ import { HandleWebhookUseCase } from './application/cashier/HandleWebhookUseCase
 // Rutas
 import { createAuthRouter } from './infrastructure/http/routes/authRoutes';
 import { createBackofficeAuthRouter } from './infrastructure/http/routes/backofficeAuthRoutes';
+import { BackofficeTwoFactor } from './application/auth/BackofficeTwoFactor';
 import { createOperatorRouter } from './infrastructure/http/routes/operatorRoutes';
 import { createPlayerAccountRouter } from './infrastructure/http/routes/playerAccountRoutes';
 import { createLedgerAdminRouter } from './infrastructure/http/routes/ledgerAdminRoutes';
@@ -125,7 +126,10 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
   const registry = overrides.registry ?? PaymentProviderRegistry.fromConfig(config, overrides.fetch);
 
   const jwt = new JwtService({ secret: config.jwt.accessSecret, accessTtl: config.jwt.accessTtl });
+  // El secreto TOTP se cifra con INBOX_SECRETS_KEY (obligatoria en producción); en desarrollo, con el secreto JWT.
+  const twoFactor = new BackofficeTwoFactor(prisma, { key: process.env.INBOX_SECRETS_KEY || config.jwt.accessSecret });
   const authService = new AuthService(prisma, jwt, {
+    twoFactor,
     bcryptCost: overrides.bcryptCost,
     refreshTtlDays: config.jwt.refreshTtlDays,
     events: bus,
@@ -183,7 +187,7 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
 
   app.use(createOperatorRouter({ resolveTenant: guards.resolveTenant, prisma }));
   app.use(createAuthRouter({ ...guards, authService, prisma, wallet: walletService }));
-  app.use(createBackofficeAuthRouter({ rateLimit: guards.rateLimit, authService }));
+  app.use(createBackofficeAuthRouter({ rateLimit: guards.rateLimit, requireBackoffice: guards.requireBackoffice, authService, twoFactor }));
   app.use(
     createPlayerAccountRouter({
       resolveTenant: guards.resolveTenant,

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower, Workflow, Banknote, Clock3, UsersRound,
-  LayoutTemplate, Palette, Plug, Trophy, Users, X, Zap, type LucideIcon,
+  LayoutTemplate, Palette, Plug, ShieldCheck, Trophy, Users, X, Zap, type LucideIcon,
 } from "lucide-react";
 import { authClient, BASE_PATH, canAccess, homeFor, NAV, NAV_SECTIONS, ROLE_LABEL, type NavSection } from "@/lib/auth";
 import { CurrencyProvider, OperatorProvider, useOperator, useSession } from "@/lib/hooks";
@@ -16,7 +16,7 @@ const noop = () => () => {};
 const COLLAPSED_KEY = "abyss.bo.collapsedSections";
 
 const ICON: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/integrations": Plug, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tide": Workflow, "/pearl": Banknote, "/crew": Clock3, "/crew-admin": UsersRound, "/tickets": LifeBuoy, "/segments": Layers,
+  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/integrations": Plug, "/security": ShieldCheck, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tide": Workflow, "/pearl": Banknote, "/crew": Clock3, "/crew-admin": UsersRound, "/tickets": LifeBuoy, "/segments": Layers,
   "/campaigns": Megaphone, "/bonuses": Gift, "/tournaments": Trophy, "/jackpots": Zap, "/vip": Crown,
   "/catalog": Gamepad2, "/studios": BarChart3, "/reef": LayoutTemplate, "/skin": Palette,
 };
@@ -162,6 +162,14 @@ function Shell({ children, session }: { children: React.ReactNode; session: NonN
             )}
           </div>
         </div>
+        {session.role === "PLATFORM_ADMIN" && session.mfaEnabled === false && pathname !== "/security" && (
+          <div role="alert" className="mx-auto mt-4 max-w-[1400px] px-4 md:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              <span><strong>Tu cuenta tiene el máximo poder y todavía no tiene verificación en dos pasos.</strong> Actívala en 1 minuto.</span>
+              <Link href="/security" className="rounded-md bg-amber-400 px-3 py-1.5 font-semibold text-black">Activar ahora</Link>
+            </div>
+          </div>
+        )}
         <main className="mx-auto max-w-[1400px] p-4 md:p-6">{allowed ? children : <Spinner />}</main>
         <CrewNotices />
       </div>

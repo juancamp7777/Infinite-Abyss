@@ -54,6 +54,11 @@ const EXPECTED_ROUTES = new Set<string>([
   'POST /api/auth/logout',
   'GET /api/me',
   'POST /api/backoffice/auth/login',
+  // Verificación en dos pasos de la propia cuenta (no mueve dinero).
+  'GET /api/backoffice/auth/2fa',
+  'POST /api/backoffice/auth/2fa/setup',
+  'POST /api/backoffice/auth/2fa/enable',
+  'POST /api/backoffice/auth/2fa/disable',
   'GET /api/me/limits',
   'PUT /api/me/limits',
   'POST /api/me/self-exclusion',

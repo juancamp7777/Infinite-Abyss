@@ -259,6 +259,13 @@ model BackofficeUser {
   operatorId   String?        @db.Uuid
   operator     Operator?      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
   status       UserStatus     @default(ACTIVE)
+  // Verificación en dos pasos (TOTP): secreto cifrado (AES-256-GCM), pendiente hasta confirmarlo con un código,
+  // último paso usado (un código no se acepta dos veces) y hashes de los códigos de respaldo de un solo uso.
+  totpSecretEnc   String?
+  totpPendingEnc  String?
+  totpEnabledAt   DateTime?
+  totpLastStep    Int?
+  totpRecovery    String[]   @default([])
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

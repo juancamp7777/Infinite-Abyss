@@ -5,9 +5,12 @@ import type { BackofficeRoleName, TenantContext } from '../../domain/contracts';
 import { AppError } from '../../domain/errors/AppError';
 import { normalizeEmail } from '../../domain/accounts/passwordPolicy';
 import type { JwtService } from '../../infrastructure/auth/JwtService';
+import type { BackofficeTwoFactor } from './BackofficeTwoFactor';
 import { publishSafe, type DomainEventSink, type ErrorLogger } from '../../infrastructure/modules/events/publishSafe';
 
 export interface AuthServiceOptions {
+  /** Verificación en dos pasos del backoffice (si no se pasa, el login no la exige). */
+  twoFactor?: BackofficeTwoFactor;
   /** Coste de bcrypt (12 en producción; bajo solo en tests). */
   bcryptCost?: number;
   refreshTtlDays: number;
@@ -43,7 +46,7 @@ export interface PlayerAuthResult {
 
 export interface BackofficeAuthResult {
   accessToken: string;
-  user: { id: string; email: string; role: BackofficeRoleName; operatorId: string | null };
+  user: { id: string; email: string; role: BackofficeRoleName; operatorId: string | null; mfaEnabled: boolean };
 }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -174,12 +177,14 @@ export class AuthService {
     });
   }
 
-  async loginBackoffice(input: { email: string; password: string }): Promise<BackofficeAuthResult> {
+  async loginBackoffice(input: { email: string; password: string; code?: string }): Promise<BackofficeAuthResult> {
     const u = await this.prisma.backofficeUser.findUnique({ where: { email: normalizeEmail(input.email) } });
     const ok = await bcrypt.compare(input.password, u ? u.passwordHash : await this.getDummyHash());
     if (!u || !ok || u.status !== 'ACTIVE') throw AppError.unauthorized(GENERIC_LOGIN_ERROR);
+    // Con 2FA activo, la contraseña sola no alcanza: se pide el código de la app (o uno de respaldo).
+    await this.opts.twoFactor?.verifyLogin(u, input.code);
     const accessToken = this.jwt.signAccess({ sub: u.id, op: u.operatorId ?? '', typ: 'backoffice', role: u.role });
-    return { accessToken, user: { id: u.id, email: u.email, role: u.role, operatorId: u.operatorId } };
+    return { accessToken, user: { id: u.id, email: u.email, role: u.role, operatorId: u.operatorId, mfaEnabled: !!u.totpEnabledAt } };
   }
 
   // ───────────── internos ─────────────

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { authClient, BASE_PATH, homeFor, MOCK_AUTH, MOCK_ROLES, ROLE_LABEL, takeLoginNotice, type Role } from "@/lib/auth";
+import { authClient, BASE_PATH, homeFor, MfaRequiredError, MOCK_AUTH, MOCK_ROLES, ROLE_LABEL, takeLoginNotice, type Role } from "@/lib/auth";
 import { Button, ErrorBox, Field, inputCls, Notice } from "@/components/ui";
 
 export default function LoginPage() {
@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [operatorId, setOperatorId] = useState("demo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [needCode, setNeedCode] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,9 +28,14 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      const s = await authClient.login(MOCK_AUTH ? { role, operatorId: role === "PLATFORM_ADMIN" ? undefined : operatorId.trim() } : { email, password });
+      const s = await authClient.login(MOCK_AUTH ? { role, operatorId: role === "PLATFORM_ADMIN" ? undefined : operatorId.trim() } : { email, password, code: needCode ? code : undefined });
       router.replace(homeFor(s.role));
     } catch (err) {
+      if (err instanceof MfaRequiredError) {
+        setNeedCode(true);
+        setError(null);
+        return;
+      }
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
     } finally {
       setBusy(false);
@@ -70,6 +77,11 @@ export default function LoginPage() {
             <Field label="Contraseña" htmlFor="password">
               <input id="password" type="password" autoComplete="current-password" className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} required maxLength={200} />
             </Field>
+            {needCode && (
+              <Field label="Código de verificación" htmlFor="code" hint="Los 6 dígitos de tu app de autenticación, o un código de respaldo">
+                <input id="code" autoFocus autoComplete="one-time-code" inputMode="numeric" className={`${inputCls} tracking-[.3em]`} value={code} onChange={(e) => setCode(e.target.value)} required maxLength={20} />
+              </Field>
+            )}
           </>
         )}
         {error && <ErrorBox message={error} />}

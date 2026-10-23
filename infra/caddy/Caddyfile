@@ -29,9 +29,17 @@
 	encode zstd gzip
 }
 
+# Las rutas de administración del API (login y paneles del backoffice, /…/admin/…) solo existen en BACKOFFICE_DOMAIN,
+# que va detrás de Cloudflare Access. En el casino y en la API pública responden 404 (sin distinguir mayúsculas).
+(solo_publico) {
+	@admin_api path_regexp (?i)/(api/)?backoffice(/|$)|/admin(/|$)
+	respond @admin_api 404
+}
+
 # /api-proxy/* va directo a la API (también websockets de socket.io); el resto, a cada app.
 {$CASINO_DOMAIN} {
 	import seguridad
+	import solo_publico
 	handle_path /api-proxy/* {
 		reverse_proxy api:4000
 	}
@@ -59,5 +67,6 @@ www.{$CASINO_DOMAIN} {
 # API pública: callbacks de proveedores/agregadores, webhooks de pasarelas y outbound B2B.
 {$API_DOMAIN} {
 	import seguridad
+	import solo_publico
 	reverse_proxy api:4000
 }

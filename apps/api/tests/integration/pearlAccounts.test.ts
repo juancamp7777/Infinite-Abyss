@@ -38,6 +38,13 @@ describe('Cuentas de cobro por país', () => {
     const breb = await add({ bank: 'breb', holderName: 'Juan Campos', accountNumber: '@juancampos' });
     expect(breb.body).toMatchObject({ accountNumber: '@juancampos', alias: '@juancampos', country: 'CO' });
 
+    expect((await add({ bank: 'mercadopago', country: 'AR', holderName: 'Juan Campos', accountNumber: '0000003100012345678901', alias: 'juan.campos.mp' })).body).toMatchObject({ country: 'AR', alias: 'juan.campos.mp' });
+    expect((await add({ bank: 'binance_pay', holderName: 'Juan Campos', accountNumber: '123456789' })).status).toBe(400);
+    expect((await add({ bank: 'binance_pay', country: 'CO', holderName: 'Juan Campos', accountNumber: '123456789' })).body).toMatchObject({ country: 'CO', accountNumber: '123456789' });
+    const usdt = await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: '0x' + 'a'.repeat(40) });
+    expect(usdt.body).toMatchObject({ country: 'MX', alias: '0x' + 'a'.repeat(40) });
+    expect((await add({ bank: 'binance_wallet', country: 'MX', holderName: 'Juan Campos', accountNumber: 'no-es-billetera' })).status).toBe(400);
+
     // Cuentas antiguas sin método siguen funcionando.
     expect((await add({ holderName: 'Cuenta vieja', accountNumber: '0170099220000067797370' })).status).toBe(201);
   });

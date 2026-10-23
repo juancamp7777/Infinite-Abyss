@@ -6,7 +6,8 @@ export type AccountCountry = 'CO' | 'MX' | 'AR';
 
 export interface AccountMethod {
   key: string;
-  country: AccountCountry;
+  /** '*' = disponible en todos los países (p. ej. Binance); el país lo elige el operador. */
+  country: AccountCountry | '*';
   label: string;
   numberLabel: string;
   placeholder: string;
@@ -39,10 +40,12 @@ export const ACCOUNT_METHODS: readonly AccountMethod[] = [
   { key: 'breb', country: 'CO', label: 'Llave Bre-B', numberLabel: 'Llave', placeholder: '@tunombre, celular, cédula o correo', pattern: '^\\S{4,60}$', hint: 'La llave tal como la registraste en Bre-B.', keyLike: true },
   { key: 'banco_co', country: 'CO', label: 'Otro banco', numberLabel: 'Número de cuenta', placeholder: '000123456789', pattern: '^\\d{6,20}$', hint: 'Davivienda, BBVA, Banco de Bogotá, Nu, Lulo…' },
   { key: 'spei', country: 'MX', label: 'Transferencia SPEI', numberLabel: 'CLABE', placeholder: '012180001234567891', pattern: '^\\d{18}$', hint: 'La CLABE interbancaria de 18 dígitos.' },
-  { key: 'mercadopago_mx', country: 'MX', label: 'Mercado Pago', numberLabel: 'CLABE de Mercado Pago', placeholder: '722969010012345678', pattern: '^\\d{18}$', hint: 'En Mercado Pago: Tu perfil → Tu CLABE.' },
   { key: 'tarjeta_mx', country: 'MX', label: 'Tarjeta de débito', numberLabel: 'Número de tarjeta', placeholder: '4152313412345678', pattern: '^\\d{16}$', hint: 'Los 16 dígitos de la tarjeta (para depósitos con tarjeta).' },
-  { key: 'cvu', country: 'AR', label: 'CVU (billetera)', numberLabel: 'CVU', placeholder: '0000003100012345678901', pattern: '^\\d{22}$', hint: 'Mercado Pago, Ualá, Naranja X, Brubank… 22 dígitos.' },
+  { key: 'cvu', country: 'AR', label: 'CVU (otra billetera)', numberLabel: 'CVU', placeholder: '0000003100012345678901', pattern: '^\\d{22}$', hint: 'Ualá, Naranja X, Brubank, Lemon… 22 dígitos.' },
   { key: 'cbu', country: 'AR', label: 'CBU (banco)', numberLabel: 'CBU', placeholder: '0170099220000067797370', pattern: '^\\d{22}$', hint: 'La CBU de tu cuenta bancaria, 22 dígitos.' },
+  { key: 'mercadopago', country: '*', label: 'Mercado Pago', numberLabel: 'CVU / CLABE / número de cuenta', placeholder: 'Argentina: CVU · México: CLABE', pattern: '^\\d{6,22}$', hint: 'En Mercado Pago: Tu perfil → Tus datos de cuenta (CVU en Argentina, CLABE en México). Pon tu alias abajo.' },
+  { key: 'binance_pay', country: '*', label: 'Binance Pay', numberLabel: 'Pay ID de Binance', placeholder: '123456789', pattern: '^\\d{6,12}$', hint: 'En Binance: Pay → tu Pay ID (solo números).' },
+  { key: 'binance_wallet', country: '*', label: 'Binance · billetera USDT', numberLabel: 'Dirección de la billetera', placeholder: 'TXyz… (TRC20) o 0x… (BEP20)', pattern: '^(T[1-9A-HJ-NP-Za-km-z]{33}|0x[0-9a-fA-F]{40})$', hint: 'Dirección USDT de depósito: red TRC20 (empieza por T) o BEP20 (empieza por 0x).', keyLike: true },
 ];
 
 export const accountMethod = (key: string | undefined) => ACCOUNT_METHODS.find((m) => m.key === key);
@@ -53,9 +56,10 @@ export function cleanAccountNumber(m: AccountMethod, raw: string): string {
 }
 
 /** Devuelve el error para mostrar, o null si los datos sirven. */
-export function checkAccount(m: AccountMethod, number: string, doc?: string): string | null {
+export function checkAccount(m: AccountMethod, number: string, doc?: string, country?: string): string | null {
   if (!new RegExp(m.pattern).test(number)) return `${m.numberLabel} no es válido: ${m.hint}`;
-  const c = ACCOUNT_COUNTRIES.find((x) => x.country === m.country)!;
+  const c = ACCOUNT_COUNTRIES.find((x) => x.country === (m.country === '*' ? country : m.country));
+  if (!c) return 'Elige el país de la cuenta.';
   if (doc && !new RegExp(c.docPattern).test(doc)) return `${c.docLabel} no es válido.`;
   return null;
 }

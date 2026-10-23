@@ -5,6 +5,7 @@ import type { ModuleLogger } from '../../shared/module';
 import { isWalletError, type WalletPort } from '../../shared/ports/WalletPort';
 import { betReturn, MODE_SPEC, OPENING_CHIPS, RAKE_PPM, roomCode, settle, type GameMode } from '../domain/rules';
 import { MATCH_MINUTES, simFixture, simResult, SPORTS, type Sport } from '../domain/sim';
+import { winnersFor, type ApiFootball } from '../infrastructure/apiFootball';
 
 const MIN = 60_000;
 /** Partidos simulados por deporte que se mantienen programados hacia adelante. */
@@ -12,6 +13,15 @@ const FIXTURE_HORIZON_MIN = 240;
 const FIXTURE_GAP_MIN = 12;
 /** Si un concurso quedó con apuestas abiertas tanto tiempo después de terminar, se anulan y se reparte igual. */
 const STALL_VOID_MIN = 180;
+/** Fútbol real: duración estimada del partido (90' + descanso + adición). */
+const REAL_MATCH_MIN = 115;
+/** Presupuesto del plan gratis de API-Football (100 consultas/día): descubrir partidos cada 6 h y resultados cada 15 min. */
+const DISCOVER_EVERY_MIN = 360;
+const RESULTS_EVERY_MIN = 15;
+const MAX_NEW_FIXTURES = 10;
+
+/** Feed real conectado (API-Football) y las ligas elegidas. null = se usan partidos simulados. */
+export type RealFeed = { api: ApiFootball; leagues: number[] } | null;
 
 export interface CreateGameInput {
   operatorId: string;
@@ -37,8 +47,11 @@ export class LeviathanService {
   constructor(
     private readonly db: PrismaClient,
     private readonly wallet: WalletPort,
-    private readonly opts: { logger: ModuleLogger; now?: () => Date; rand?: () => number },
+    private readonly opts: { logger: ModuleLogger; now?: () => Date; rand?: () => number; realFeed?: () => Promise<RealFeed> },
   ) {}
+
+  private lastDiscovery = 0;
+  private lastResults = 0;
 
   private now() {
     return this.opts.now?.() ?? new Date();
@@ -65,10 +78,73 @@ export class LeviathanService {
     }
   }
 
+  private async realFeed(): Promise<RealFeed> {
+    try {
+      return (await this.opts.realFeed?.()) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Feed real: descubre partidos con cuotas de las ligas elegidas (hoy y mañana) y actualiza estados y resultados.
+   * Un partido terminado liquida sus selecciones con el marcador de los 90'; aplazado o cancelado, las anula
+   * (se devuelven las fichas).
+   */
+  async syncReal(feed: NonNullable<RealFeed>) {
+    const now = this.now();
+    if (now.getTime() - this.lastDiscovery >= DISCOVER_EVERY_MIN * MIN) {
+      this.lastDiscovery = now.getTime();
+      const leagues = new Set(feed.leagues);
+      const dates = [0, 1].map((d) => new Date(now.getTime() + d * 1440 * MIN).toISOString().slice(0, 10));
+      let created = 0;
+      for (const date of dates) {
+        for (const fx of await feed.api.fixturesByDate(date)) {
+          if (created >= MAX_NEW_FIXTURES) break;
+          if (!leagues.has(fx.leagueId) || fx.status !== 'SCHEDULED' || fx.startsAt.getTime() < now.getTime() + 10 * MIN) continue;
+          if (await this.db.levEvent.findUnique({ where: { source_externalId: { source: 'api-football', externalId: fx.externalId } } })) continue;
+          const sels = await feed.api.odds(fx.externalId, fx.home, fx.away);
+          if (sels.length < 3) continue; // sin cuotas no se puede apostar
+          const id = randomUUID();
+          await this.db.$transaction([
+            this.db.levEvent.create({ data: { id, sport: 'football', league: fx.league, home: fx.home, away: fx.away, startsAt: fx.startsAt, endsAt: new Date(fx.startsAt.getTime() + REAL_MATCH_MIN * MIN), source: 'api-football', externalId: fx.externalId } }),
+            this.db.levSelection.createMany({ data: sels.map((x) => ({ id: randomUUID(), eventId: id, market: x.market, line: x.line ?? null, key: x.key, label: x.label, oddsE2: x.oddsE2 })) }),
+          ]);
+          created++;
+        }
+      }
+    }
+    if (now.getTime() - this.lastResults < RESULTS_EVERY_MIN * MIN) return;
+    const pending = await this.db.levEvent.findMany({ where: { source: 'api-football', status: { in: ['SCHEDULED', 'LIVE'] }, startsAt: { lte: now } }, orderBy: { startsAt: 'asc' }, take: 20 });
+    if (!pending.length) return;
+    this.lastResults = now.getTime();
+    const byExt = new Map(pending.map((e) => [e.externalId, e]));
+    for (const fx of await feed.api.fixturesByIds(pending.map((e) => e.externalId!).filter(Boolean))) {
+      const ev = byExt.get(fx.externalId);
+      if (!ev) continue;
+      if (fx.status === 'LIVE' && ev.status !== 'LIVE') await this.db.levEvent.update({ where: { id: ev.id }, data: { status: 'LIVE' } });
+      else if (fx.status === 'FINISHED' && fx.homeScore !== null && fx.awayScore !== null) {
+        const won = winnersFor(fx.homeScore, fx.awayScore);
+        const sels = await this.db.levSelection.findMany({ where: { eventId: ev.id } });
+        await this.db.$transaction([
+          this.db.levEvent.update({ where: { id: ev.id }, data: { status: 'FINISHED', homeScore: fx.homeScore, awayScore: fx.awayScore } }),
+          ...sels.map((x) => this.db.levSelection.update({ where: { id: x.id }, data: { result: won.has(`${x.market}:${x.key}`) ? 'WON' : 'LOST' } })),
+        ]);
+        await this.resolveBets(ev.id);
+      } else if (fx.status === 'CANCELLED') {
+        await this.db.$transaction([
+          this.db.levEvent.update({ where: { id: ev.id }, data: { status: 'CANCELLED' } }),
+          this.db.levSelection.updateMany({ where: { eventId: ev.id }, data: { result: 'VOID' } }),
+        ]);
+        await this.resolveBets(ev.id);
+      }
+    }
+  }
+
   /** Arranca los partidos que empezaron y resuelve los que terminaron (con el resultado simulado). */
   async advanceEvents() {
     const now = this.now();
-    await this.db.levEvent.updateMany({ where: { status: 'SCHEDULED', startsAt: { lte: now } }, data: { status: 'LIVE' } });
+    await this.db.levEvent.updateMany({ where: { status: 'SCHEDULED', startsAt: { lte: now }, source: 'sim' }, data: { status: 'LIVE' } });
     for (const ev of await this.db.levEvent.findMany({ where: { status: 'LIVE', endsAt: { lte: now }, source: 'sim' }, take: 100 })) {
       const sels = await this.db.levSelection.findMany({ where: { eventId: ev.id } });
       const r = simResult(ev.sport as Sport, sels, this.opts.rand);
@@ -103,13 +179,14 @@ export class LeviathanService {
     if (input.entry < 0n) throw new HttpError(400, 'BAD_REQUEST', 'La entrada no puede ser negativa');
     const closeAt = new Date(this.now().getTime() + Math.max(1, input.startsInMin ?? 10) * MIN);
     const endsAt = new Date(closeAt.getTime() + (input.durationMin ?? spec.durationMin) * MIN);
-    await this.ensureFixtures(endsAt);
-    // Menú: partidos que empiezan durante el concurso y alcanzan a terminar antes de que cierre.
+    const real = await this.realFeed();
+    if (!real) await this.ensureFixtures(endsAt);
+    // Menú: partidos que empiezan durante el concurso y alcanzan a terminar antes de que cierre (reales si hay feed).
     const events = (await this.db.levEvent.findMany({
-      where: { status: 'SCHEDULED', startsAt: { gte: closeAt, lt: endsAt }, ...(input.sport ? { sport: input.sport } : {}) },
+      where: { status: 'SCHEDULED', source: real ? 'api-football' : 'sim', startsAt: { gte: closeAt, lt: endsAt }, ...(input.sport ? { sport: input.sport } : {}) },
       orderBy: { startsAt: 'asc' },
     })).filter((e) => e.endsAt <= endsAt);
-    if (!events.length) throw new HttpError(409, 'NO_EVENTS', 'No hay partidos para ese horario');
+    if (!events.length) throw new HttpError(409, 'NO_EVENTS', real ? 'No hay partidos reales que empiecen y terminen en ese horario: amplía la duración (un partido dura unas 2 horas) o prueba más tarde' : 'No hay partidos para ese horario');
     const id = randomUUID();
     const maxPlayers = Math.min(spec.maxPlayers, Math.max(spec.minPlayers, input.maxPlayers ?? spec.maxPlayers));
     let code: string | null = null;
@@ -249,7 +326,9 @@ export class LeviathanService {
     if (this.ticking) return;
     this.ticking = true;
     try {
-      await this.ensureFixtures();
+      const real = await this.realFeed();
+      if (real) await this.syncReal(real);
+      else await this.ensureFixtures();
       await this.advanceEvents();
       const now = this.now();
       for (const g of await this.db.levGame.findMany({ where: { status: 'OPEN', entriesCloseAt: { lte: now } } })) {

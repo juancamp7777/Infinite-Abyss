@@ -44,6 +44,8 @@ export async function testHttpIntegration(key: string, v: Record<string, string>
       return models(fetchImpl, 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { 'x-goog-api-key': v.apiKey });
     case 'bold':
       return models(fetchImpl, 'Bold', 'https://integrations.api.bold.co/online/link/v1/payment_methods', { Authorization: `x-api-key ${v.identityKey}` });
+    case 'api-football':
+      return models(fetchImpl, 'API-Football', 'https://v3.football.api-sports.io/status', { 'x-apisports-key': v.apiKey });
     case 'deepseek':
       return models(fetchImpl, 'DeepSeek', 'https://api.deepseek.com/models', { Authorization: `Bearer ${v.apiKey}` });
     case 'telegram-alerts': {

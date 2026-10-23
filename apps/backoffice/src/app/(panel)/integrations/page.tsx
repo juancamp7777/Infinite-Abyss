@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Bot, CreditCard, Gamepad2, MessageCircle, Plug, Siren, type LucideIcon } from "lucide-react";
+import { Bot, CreditCard, Gamepad2, MessageCircle, Plug, Siren, Trophy, type LucideIcon } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient, useOperator, useSession } from "@/lib/hooks";
 import { Badge, Button, Card, ErrorBox, Field, NeedOperator, Notice, PageHeader, Spinner, Tabs, inputCls } from "@/components/ui";
 
-type Category = "ai" | "games" | "payments" | "alerts";
+type Category = "ai" | "games" | "payments" | "sports" | "alerts";
 interface FieldDef { name: string; label: string; secret?: boolean; required?: boolean; url?: boolean; placeholder?: string }
 interface Def { key: string; category: Category; name: string; description: string; scope: "platform" | "operator" | "both"; readiness: "live" | "contract" | "soon"; test: "http" | "catalog" | "none"; fields: FieldDef[] }
 interface View { key: string; connected: boolean; fields: Record<string, string>; status: "none" | "saved" | "ok" | "error"; message: string | null; lastTestAt: string | null; inherited: boolean }
@@ -17,6 +17,7 @@ const SECTIONS: Array<{ id: Category; title: string; icon: LucideIcon; hint: str
   { id: "ai", title: "Inteligencia artificial", icon: Bot, hint: "La usan Pearl para leer comprobantes y Nautilus, el operador IA." },
   { id: "games", title: "Proveedores de juegos", icon: Gamepad2, hint: "Al guardar, el proveedor se enciende en vivo en el catálogo, sin reiniciar." },
   { id: "payments", title: "Pagos", icon: CreditCard, hint: "Cada casino con su propia cuenta." },
+  { id: "sports", title: "Datos deportivos", icon: Trophy, hint: "Partidos reales para Leviathan. Sin conectar, se usan partidos simulados." },
   { id: "alerts", title: "Alertas", icon: Siren, hint: "Avisos de caídas, saldos bajos y el resumen diario." },
 ];
 const READINESS: Record<Def["readiness"], { label: string; tone: "good" | "warn" | "neutral" }> = {

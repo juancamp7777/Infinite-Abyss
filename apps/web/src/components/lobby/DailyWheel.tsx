@@ -1,10 +1,12 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useState } from 'react';
 import { api, errorMessage } from '@/lib/lobby/api';
 import type { WheelStatus } from '@/lib/lobby/types';
 import { rewardLabel } from '@/lib/lobby/format';
 
 export function DailyWheel({ status, onSpun }: { status: WheelStatus; onSpun: () => void }) {
+  const { t } = useT();
   const [angle, setAngle] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function DailyWheel({ status, onSpun }: { status: WheelStatus; onSpun: ()
         <div className="h-full w-full rounded-full border-4" style={{ background: `conic-gradient(${grad || 'var(--nf-primary) 0 360deg'})`, borderColor: 'var(--nf-accent)', transform: `rotate(${angle}deg)`, transition: spinning ? 'transform 4s cubic-bezier(.15,.7,.1,1)' : 'none' }} />
       </div>
       <ul className="flex flex-wrap justify-center gap-1 text-[11px] opacity-80">{prizes.map((p) => <li key={p.id} className="rounded bg-white/10 px-1.5 py-0.5">{p.label}</li>)}</ul>
-      {!status.enabled ? <p className="text-sm opacity-70">La rueda no está disponible.</p>
+      {!status.enabled ? <p className="text-sm opacity-70">{t("La rueda no está disponible.")}</p>
         : <button type="button" className="nf-btn nf-btn-primary" disabled={!status.canSpin || spinning} onClick={spin}>{spinning ? 'Girando…' : status.canSpin ? 'Girar rueda diaria' : 'Vuelve más tarde'}</button>}
       {!status.canSpin && next && <p className="text-xs opacity-70">Próximo giro: {next}</p>}
       <p role="status" className="min-h-5 text-sm font-semibold">{result}</p>

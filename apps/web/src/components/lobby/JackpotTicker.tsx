@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useEffect, useRef, useState } from 'react';
 import type { Jackpot } from '@/lib/lobby/types';
 import { formatMoney } from '@/lib/lobby/format';
@@ -30,11 +31,12 @@ function Counting({ minor, currency }: { minor: string; currency: string }) {
 const LABEL: Record<string, string> = { mini: 'Mini', minor: 'Minor', major: 'Major', mega: 'Mega', grand: 'Grand' };
 
 export function JackpotTicker({ jackpots, loading, connected }: { jackpots: Jackpot[] | null; loading?: boolean; connected?: boolean }) {
-  if (loading && !jackpots) return <div role="status" aria-label="Cargando jackpots" className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>;
+  const { t } = useT();
+  if (loading && !jackpots) return <div role="status" aria-label={t("Cargando jackpots")} className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>;
   const levels = (jackpots ?? []).flatMap((j) => j.levels.map((l) => ({ ...l, cur: j.currency, name: j.name, id: j.id })));
   if (levels.length === 0) return null;
   return (
-    <section aria-label="Jackpots progresivos" className="space-y-1">
+    <section aria-label={t("Jackpots progresivos")} className="space-y-1">
       <div className="flex items-center gap-2 text-xs opacity-70"><span aria-hidden className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-zinc-500'}`} />{connected ? 'En vivo' : 'Sin conexión en vivo'}</div>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {levels.map((l) => (

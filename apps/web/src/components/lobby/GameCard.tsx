@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useState } from 'react';
 import Link from 'next/link';
 import { Heart, Play } from 'lucide-react';
@@ -9,6 +10,7 @@ import { useFavorites } from '@/lib/lobby/storage';
 
 /** Tarjeta vertical (3:4) del catálogo: arte, insignias, favorito y título debajo. */
 export function GameCard({ game }: { game: Game }) {
+  const { t } = useT();
   const [broken, setBroken] = useState(false);
   const fav = useFavorites();
   const isFav = fav.has(game.id);
@@ -27,8 +29,8 @@ export function GameCard({ game }: { game: Game }) {
           </span>
         </Link>
         <div className="pointer-events-none absolute left-2 top-2 flex gap-1">
-          {game.isNew && <span className="nf-badge" style={{ background: 'var(--nf-secondary)', color: 'var(--nf-on-secondary)' }}>Nuevo</span>}
-          {game.popularity >= 80 && <span className="nf-badge" style={{ background: 'var(--nf-primary)' }}>Top</span>}
+          {game.isNew && <span className="nf-badge" style={{ background: 'var(--nf-secondary)', color: 'var(--nf-on-secondary)' }}>{t("Nuevo")}</span>}
+          {game.popularity >= 80 && <span className="nf-badge" style={{ background: 'var(--nf-primary)' }}>{t("Top")}</span>}
         </div>
         <button
           type="button" aria-pressed={isFav} aria-label={isFav ? `Quitar ${game.title} de favoritos` : `Añadir ${game.title} a favoritos`}

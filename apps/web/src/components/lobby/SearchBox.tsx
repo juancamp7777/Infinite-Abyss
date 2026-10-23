@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
@@ -9,6 +10,7 @@ import { useDebounce } from '@/lib/lobby/hooks';
  * con `onSubmitted` (panel móvil) solo al confirmar, para no cerrar el panel a mitad de palabra.
  */
 export function SearchBox({ onSubmitted }: { onSubmitted?: () => void }) {
+  const { t } = useT();
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
@@ -36,7 +38,7 @@ export function SearchBox({ onSubmitted }: { onSubmitted?: () => void }) {
       <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" />
       <input
         type="search" value={value} onChange={(e) => setValue(e.target.value)} enterKeyHint="search"
-        placeholder="Buscar juegos o proveedores" aria-label="Buscar juegos" className="nf-input w-full pl-9"
+        placeholder={t("Buscar juegos o proveedores")} aria-label={t("Buscar juegos")} className="nf-input w-full pl-9"
       />
     </form>
   );

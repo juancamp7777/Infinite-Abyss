@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
@@ -9,6 +10,7 @@ const short = (s: string, n = 14) => (s.length > n * 2 ? `${s.slice(0, n)}…${s
 
 /** Panel provably fair compartido: hash del servidor, client seed, nonce, rotar y verificar. */
 export default function FairnessPanel({ game, lastRound, defaultOpen = false }: { game: StudioGameProps; lastRound?: PublicRound | null; defaultOpen?: boolean }) {
+  const { t } = useT();
   const { gameId, mode, session } = game;
   const [view, setView] = useState<FairnessView | null>(null);
   const [seedInput, setSeedInput] = useState('');
@@ -104,24 +106,24 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
             {error}
           </p>
         )}
-        {!view && !error && <p className="text-xs text-slate-500">Cargando…</p>}
+        {!view && !error && <p className="text-xs text-slate-500">{t("Cargando…")}</p>}
         {view && (
           <dl className="space-y-1 text-xs">
             <div>
-              <dt className="text-slate-400">Hash de la semilla del servidor (SHA-256)</dt>
+              <dt className="text-slate-400">{t("Hash de la semilla del servidor (SHA-256)")}</dt>
               <dd className="break-all font-mono" title={view.serverSeedHash}>
                 {short(view.serverSeedHash, 20)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-400">Nonce actual</dt>
+              <dt className="text-slate-400">{t("Nonce actual")}</dt>
               <dd className="font-mono">{view.nonce}</dd>
             </div>
           </dl>
         )}
         <div>
           <label htmlFor={`cs-${gameId}`} className="mb-1 block text-xs text-slate-400">
-            Client seed
+            {t("Client seed")}
           </label>
           <div className="flex gap-1">
             <input
@@ -137,8 +139,8 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
           </div>
         </div>
         <div className="flex gap-2">
-          <button type="button" disabled={busy || !view} onClick={rotate} aria-label="Rotar semilla del servidor y revelar la anterior" className="flex-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
-            Rotar semilla
+          <button type="button" disabled={busy || !view} onClick={rotate} aria-label={t("Rotar semilla del servidor y revelar la anterior")} className="flex-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold hover:bg-slate-700 disabled:opacity-50">
+            {t("Rotar semilla")}
           </button>
           <button type="button" disabled={busy || !revealed} onClick={verify} className="flex-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">
             Verificar
@@ -147,12 +149,12 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
         {revealed && (
           <div className="rounded-lg bg-slate-950 p-2 text-xs">
             <p className="text-slate-400">Semilla anterior revelada (rondas con nonce 0–{revealed.lastNonce}):</p>
-            <p className="break-all font-mono" aria-label="Semilla del servidor revelada">
+            <p className="break-all font-mono" aria-label={t("Semilla del servidor revelada")}>
               {revealed.serverSeed}
             </p>
           </div>
         )}
-        {!revealed && <p className="text-xs text-slate-500">Rota la semilla para revelar la anterior y verificar tus últimas rondas.</p>}
+        {!revealed && <p className="text-xs text-slate-500">{t("Rota la semilla para revelar la anterior y verificar tus últimas rondas.")}</p>}
         {result && (
           <div role="status" className="rounded-lg bg-slate-950 p-2 text-xs">
             <p className={result.hashMatches === false ? 'text-rose-300' : 'text-emerald-300'}>

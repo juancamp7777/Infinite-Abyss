@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useState } from 'react';
 import { Bomb, Gem } from 'lucide-react';
@@ -18,6 +19,7 @@ interface MinesView {
 }
 
 export default function MinesGame(props: StudioGameProps) {
+  const { t } = useT();
   const session = useStudioSession(props);
   const history = useRoundHistory(props);
   const openRound = useOpenRound(props, session, true);
@@ -119,7 +121,7 @@ export default function MinesGame(props: StudioGameProps) {
       <OpenRoundNotice state={openRound} />
       <BetInput value={bet} onChange={setBet} disabled={playing || busy} />
       <NumberField id="mines-count" label="Minas" value={mines} onChange={(v) => setMines(Math.round(v))} min={1} max={24} disabled={playing || busy} />
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Minas rápidas">
+      <div className="flex flex-wrap gap-1" role="group" aria-label={t("Minas rápidas")}>
         {[1, 3, 5, 10, 24].map((n) => (
           <button key={n} type="button" disabled={playing || busy} onClick={() => setMines(n)} className="rounded bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700 disabled:opacity-50">
             {n}
@@ -128,11 +130,11 @@ export default function MinesGame(props: StudioGameProps) {
       </div>
       <TurboToggle value={turbo} onChange={setTurbo} />
       {playing ? (
-        <PrimaryButton tone="stop" disabled={busy || (view?.revealed.length ?? 0) === 0} onClick={cashout} aria-label="Retirar ganancias">
+        <PrimaryButton tone="stop" disabled={busy || (view?.revealed.length ?? 0) === 0} onClick={cashout} aria-label={t("Retirar ganancias")}>
           Retirar {potential !== '—' ? potential : ''}
         </PrimaryButton>
       ) : (
-        <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={start} aria-label="Empezar ronda de minas">
+        <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={start} aria-label={t("Empezar ronda de minas")}>
           {busy ? 'Iniciando…' : 'Apostar'}
         </PrimaryButton>
       )}
@@ -142,14 +144,14 @@ export default function MinesGame(props: StudioGameProps) {
 
   const won = last ? BigInt(last.win) > BigInt(0) : null;
   return (
-    <GameShell title="Abyss Mines" session={session} aside={aside}>
+    <GameShell title={t("Abyss Mines")} session={session} aside={aside}>
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Multiplicador" value={`${(view?.currentMultiplier ?? 1).toFixed(2)}×`} tone={playing ? 'win' : undefined} />
           <Stat label="Siguiente" value={playing && view ? `${view.nextMultiplier.toFixed(2)}×` : '—'} />
-          <Stat label="Gemas / minas" value={`${safeCount - (view ? view.revealed.filter((c) => !view.minePositions?.includes(c)).length : 0)} / ${view?.mines ?? mines}`} />
+          <Stat label={t("Gemas / minas")} value={`${safeCount - (view ? view.revealed.filter((c) => !view.minePositions?.includes(c)).length : 0)} / ${view?.mines ?? mines}`} />
         </div>
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2" role="grid" aria-label="Tablero de minas 5 por 5">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1.5 sm:gap-2" role="grid" aria-label={t("Tablero de minas 5 por 5")}>
           {Array.from({ length: 25 }, (_, i) => {
             const isMine = view?.minePositions?.includes(i) && (done ? shown.has(i) : false);
             const isGem = view?.revealed.includes(i) && !(done && view.minePositions?.includes(i));
@@ -172,7 +174,7 @@ export default function MinesGame(props: StudioGameProps) {
             );
           })}
         </div>
-        <ResultBanner win={done && last ? !!won : null} text={last ? (won ? `¡Retiraste ${Number(last.multiplier).toFixed(2)}×: +${formatMinor(last.win, last.currency)}!` : '¡Mina! Sin premio.') : ''} />
+        <ResultBanner win={done && last ? !!won : null} text={last ? (won ? `¡Retiraste ${Number(last.multiplier).toFixed(2)}×: +${formatMinor(last.win, last.currency)}!` : t("¡Mina! Sin premio.")) : ''} />
         <HistoryStrip rounds={history.rounds} loading={history.loading} />
       </div>
     </GameShell>

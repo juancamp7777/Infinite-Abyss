@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StudioGameProps } from '../types';
@@ -22,6 +23,7 @@ const POLL_MS = 250;
 const nowMs = () => performance.now();
 
 export default function CrashGame(props: StudioGameProps) {
+  const { t } = useT();
   const session = useStudioSession(props);
   const history = useRoundHistory(props);
   const openRound = useOpenRound(props, session, true);
@@ -199,16 +201,16 @@ export default function CrashGame(props: StudioGameProps) {
       <BetInput value={bet} onChange={setBet} disabled={running || phase === 'starting'} />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={useAuto} disabled={running} onChange={(e) => setUseAuto(e.target.checked)} className="h-4 w-4 accent-emerald-500" />
-        Retiro automático
+        {t("Retiro automático")}
       </label>
-      {useAuto && <NumberField id="crash-auto" label="Retirar en" value={auto} onChange={setAuto} min={1.01} max={1000} step={0.1} suffix="×" disabled={running} />}
+      {useAuto && <NumberField id="crash-auto" label={t("Retirar en")} value={auto} onChange={setAuto} min={1.01} max={1000} step={0.1} suffix="×" disabled={running} />}
       <TurboToggle value={turbo} onChange={setTurbo} />
       {running ? (
-        <PrimaryButton tone="stop" disabled={phase === 'cashing'} onClick={cashout} aria-label="Retirar ganancias ahora">
+        <PrimaryButton tone="stop" disabled={phase === 'cashing'} onClick={cashout} aria-label={t("Retirar ganancias ahora")}>
           {phase === 'cashing' ? 'Retirando…' : `Retirar ${minor ? formatMinor(winUnits(BigInt(minor), display)) : ''}`}
         </PrimaryButton>
       ) : (
-        <PrimaryButton disabled={!minor || !session.ready || phase === 'starting' || !!openRound.open} onClick={start} aria-label="Iniciar ronda de crash">
+        <PrimaryButton disabled={!minor || !session.ready || phase === 'starting' || !!openRound.open} onClick={start} aria-label={t("Iniciar ronda de crash")}>
           {phase === 'starting' ? 'Iniciando…' : 'Apostar'}
         </PrimaryButton>
       )}
@@ -217,20 +219,20 @@ export default function CrashGame(props: StudioGameProps) {
   );
 
   return (
-    <GameShell title="Abyss Crash" session={session} aside={aside}>
+    <GameShell title={t("Abyss Crash")} session={session} aside={aside}>
       <div className="space-y-3">
         <div className="relative">
-          <canvas ref={canvasRef} width={800} height={420} role="img" aria-label="Curva de multiplicador de Crash" className="aspect-[40/21] w-full rounded-2xl border border-white/10" />
+          <canvas ref={canvasRef} width={800} height={420} role="img" aria-label={t("Curva de multiplicador de Crash")} className="aspect-[40/21] w-full rounded-2xl border border-white/10" />
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" aria-live="off">
             <div className={`font-mono text-5xl font-black tabular-nums drop-shadow sm:text-7xl ${crashed ? 'text-rose-400' : phase === 'done' ? 'text-emerald-400' : 'text-white'}`}>{display.toFixed(2)}×</div>
             {phase === 'done' && <div className="mt-1 text-sm font-semibold text-slate-200">{crashed ? 'Crash' : 'Retirado'}</div>}
-            {phase === 'starting' && <div className="mt-1 text-sm text-slate-300">Preparando ronda…</div>}
+            {phase === 'starting' && <div className="mt-1 text-sm text-slate-300">{t("Preparando ronda…")}</div>}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Stat label="Apuesta" value={minor ? formatMinor(minor, session.currency) : '—'} />
-          <Stat label="Ganancia potencial" value={minor ? formatMinor(winUnits(BigInt(minor), display)) : '—'} tone={running ? 'win' : undefined} />
-          <Stat label="Retiro auto" value={useAuto ? `${auto.toFixed(2)}×` : 'Manual'} />
+          <Stat label={t("Ganancia potencial")} value={minor ? formatMinor(winUnits(BigInt(minor), display)) : '—'} tone={running ? 'win' : undefined} />
+          <Stat label={t("Retiro auto")} value={useAuto ? `${auto.toFixed(2)}×` : 'Manual'} />
         </div>
         <ResultBanner win={phase === 'done' && last ? !!won : null} text={last ? (won ? `Retiraste a ${Number(last.multiplier).toFixed(2)}×: +${formatMinor(last.win, last.currency)}` : `Crash en ${(view?.crashPoint ?? 1).toFixed(2)}×. Sin premio.`) : ''} />
         <HistoryStrip rounds={history.rounds} loading={history.loading} />

@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 
 /**
  * Shell común de las slots de Studios: saldo, apuesta, giro, turbo, autoplay, bonus buy, historial,
@@ -43,6 +44,7 @@ interface Celebration {
 const useSound = () => useSyncExternalStore(sound.subscribe.bind(sound), () => sound.enabled, () => false);
 
 export default function SlotShell<O extends { totalWin: number }>({ game, title, accent, createScene, bonusBuy, description }: SlotShellProps<O>) {
+  const { t } = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<Stage | null>(null);
   const sceneRef = useRef<SlotScene<O> | null>(null);
@@ -340,11 +342,11 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
       <header className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
         <h1 className="truncate text-base font-extrabold tracking-wide" style={{ color: accent }}>
           {title}
-          {game.mode === 'demo' && <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">DEMO</span>}
+          {game.mode === 'demo' && <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{t("DEMO")}</span>}
         </h1>
         <div className="flex items-center gap-1">
           <div className="mr-2 text-right leading-tight" aria-live="polite">
-            <div className="text-[10px] uppercase text-slate-400">Saldo</div>
+            <div className="text-[10px] uppercase text-slate-400">{t("Saldo")}</div>
             <div className="font-mono text-sm font-bold" aria-label={`Saldo ${money(balance)} ${currency}`}>
               {money(balance)} <span className="text-[10px] text-slate-400">{currency}</span>
             </div>
@@ -368,7 +370,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
         {boot === 'loading' && (
           <div className="absolute inset-0 grid place-items-center bg-slate-950/70" role="status">
             <Loader2 className="animate-spin" aria-hidden />
-            <span className="sr-only">Cargando juego</span>
+            <span className="sr-only">{t("Cargando juego")}</span>
           </div>
         )}
         {boot === 'error' && (
@@ -393,7 +395,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
         )}
 
         {celebration && (
-          <button type="button" onClick={closeCelebration} aria-label="Cerrar celebración" className="absolute inset-0 grid place-items-center bg-black/55 text-center outline-none" style={{ cursor: 'pointer' }}>
+          <button type="button" onClick={closeCelebration} aria-label={t("Cerrar celebración")} className="absolute inset-0 grid place-items-center bg-black/55 text-center outline-none" style={{ cursor: 'pointer' }}>
             <span>
               <span className="block text-4xl font-black tracking-widest sm:text-6xl" style={{ color: celebration.color, textShadow: `0 0 24px ${celebration.color}` }}>
                 {celebration.name}
@@ -416,15 +418,15 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
             </div>
             {panel === 'history' ? (
               history.length === 0 ? (
-                <p className="py-4 text-center text-sm text-slate-400">Aún no hay giros. ¡Haz tu primera apuesta!</p>
+                <p className="py-4 text-center text-sm text-slate-400">{t("Aún no hay giros. ¡Haz tu primera apuesta!")}</p>
               ) : (
                 <table className="w-full text-xs">
                   <thead className="text-left text-slate-400">
                     <tr>
-                      <th className="py-1">Hora</th>
-                      <th>Apuesta</th>
-                      <th>Multi</th>
-                      <th className="text-right">Ganancia</th>
+                      <th className="py-1">{t("Hora")}</th>
+                      <th>{t("Apuesta")}</th>
+                      <th>{t("Multi")}</th>
+                      <th className="text-right">{t("Ganancia")}</th>
                     </tr>
                   </thead>
                   <tbody className="font-mono">
@@ -449,17 +451,17 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
       <footer className="border-t border-white/10 bg-slate-900/80 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="min-w-[6.5rem] leading-tight" aria-live="polite">
-            <div className="text-[10px] uppercase text-slate-400">Ganancia</div>
+            <div className="text-[10px] uppercase text-slate-400">{t("Ganancia")}</div>
             <div className={`font-mono text-lg font-extrabold ${winAmount > BigInt(0) ? 'text-emerald-300' : 'text-slate-300'}`}>{money(winAmount)}</div>
             {winMult > 0 && <div className="text-[10px] text-slate-400">{winMult.toLocaleString('es', { maximumFractionDigits: 2 })}x</div>}
           </div>
 
-          <div className="flex items-center gap-1" role="group" aria-label="Selector de apuesta">
+          <div className="flex items-center gap-1" role="group" aria-label={t("Selector de apuesta")}>
             <IconBtn label="Bajar apuesta" disabled={busy || betIdx === 0} onClick={() => changeBet(-1)}>
               <Minus size={16} />
             </IconBtn>
             <div className="min-w-[5rem] text-center leading-tight">
-              <div className="text-[10px] uppercase text-slate-400">Apuesta</div>
+              <div className="text-[10px] uppercase text-slate-400">{t("Apuesta")}</div>
               <div className="font-mono text-base font-bold">{money(stake)}</div>
             </div>
             <IconBtn label="Subir apuesta" disabled={busy || betIdx === steps.length - 1} onClick={() => changeBet(1)}>
@@ -470,10 +472,10 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
           <div className="flex items-center gap-2">
             {bonusBuy && (
               <button type="button" aria-label={`Comprar bonus por ${money(buyCost)}`} disabled={busy || boot !== 'ready'} onClick={() => setBuyOpen(true)} className="flex h-11 items-center gap-1 rounded-xl border border-white/15 bg-slate-800 px-3 text-xs font-bold hover:bg-slate-700 disabled:opacity-40">
-                <ShoppingCart size={16} aria-hidden /> <span className="hidden sm:inline">Bonus</span> {bonusBuy.cost}x
+                <ShoppingCart size={16} aria-hidden /> <span className="hidden sm:inline">{t("Bonus")}</span> {bonusBuy.cost}x
               </button>
             )}
-            <button type="button" aria-label="Modo turbo" aria-pressed={turbo} onClick={() => setTurbo((v) => !v)} className={`grid h-11 w-11 place-items-center rounded-xl border border-white/15 ${turbo ? 'bg-amber-500 text-black' : 'bg-slate-800 hover:bg-slate-700'}`}>
+            <button type="button" aria-label={t("Modo turbo")} aria-pressed={turbo} onClick={() => setTurbo((v) => !v)} className={`grid h-11 w-11 place-items-center rounded-xl border border-white/15 ${turbo ? 'bg-amber-500 text-black' : 'bg-slate-800 hover:bg-slate-700'}`}>
               <Zap size={18} />
             </button>
             <div className="relative">
@@ -489,8 +491,8 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
                 {auto ? <Square size={14} aria-hidden /> : <Play size={14} aria-hidden />} {auto ? autoLeft : 'Auto'}
               </button>
               {autoOpen && (
-                <div role="dialog" aria-label="Autoplay" className="absolute bottom-14 right-0 z-20 w-64 rounded-xl border border-white/10 bg-slate-950 p-3 text-xs shadow-xl">
-                  <p className="mb-2 font-bold">Número de giros</p>
+                <div role="dialog" aria-label={t("Autoplay")} className="absolute bottom-14 right-0 z-20 w-64 rounded-xl border border-white/10 bg-slate-950 p-3 text-xs shadow-xl">
+                  <p className="mb-2 font-bold">{t("Número de giros")}</p>
                   <div className="mb-3 grid grid-cols-4 gap-1">
                     {AUTO_OPTIONS.map((n) => (
                       <button key={n} type="button" onClick={() => void startAuto(n)} className="rounded-lg bg-slate-800 py-2 font-bold hover:bg-slate-700">
@@ -499,7 +501,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
                     ))}
                   </div>
                   <label className="mb-2 block">
-                    <span className="text-slate-400">Parar si una ganancia supera (x apuesta, 0 = no)</span>
+                    <span className="text-slate-400">{t("Parar si una ganancia supera (x apuesta, 0 = no)")}</span>
                     <input inputMode="decimal" value={stopWin} onChange={(e) => setStopWin(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 outline-none focus:border-[var(--accent)]" />
                   </label>
                   <label className="block">
@@ -524,10 +526,10 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
       </footer>
 
       {buyOpen && bonusBuy && (
-        <div className="fixed inset-0 z-30 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Confirmar bonus buy">
+        <div className="fixed inset-0 z-30 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label={t("Confirmar bonus buy")}>
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 text-center">
             <h2 className="mb-1 text-lg font-extrabold" style={{ color: accent }}>
-              Comprar bonus
+              {t("Comprar bonus")}
             </h2>
             <p className="mb-4 text-sm text-slate-300">
               Pagas <b>{bonusBuy.cost}x</b> tu apuesta y entras directo a los giros gratis.
@@ -535,7 +537,7 @@ export default function SlotShell<O extends { totalWin: number }>({ game, title,
             <p className="mb-4 font-mono text-2xl font-black">
               {money(buyCost)} <span className="text-sm text-slate-400">{currency}</span>
             </p>
-            {balance < buyCost && <p className="mb-3 text-sm text-rose-300">Saldo insuficiente.</p>}
+            {balance < buyCost && <p className="mb-3 text-sm text-rose-300">{t("Saldo insuficiente.")}</p>}
             <div className="flex gap-2">
               <button type="button" autoFocus onClick={() => setBuyOpen(false)} className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-bold hover:bg-slate-700">
                 Cancelar

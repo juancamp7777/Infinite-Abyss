@@ -1,4 +1,5 @@
 'use client';
+import { useT } from "@/lib/i18n";
 import { useId, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { Activity } from 'lucide-react';
@@ -23,17 +24,18 @@ function signedMoney(v: bigint, currency: string): string {
 
 /** Tabla de apuestas en vivo del lobby (módulo feed). */
 export function LiveBets() {
+  const { t } = useT();
   const { status } = useAuth();
   const { lists, connected, fresh } = useLiveBets();
-  const tabs = TABS.filter((t) => !t.authOnly || status === 'authenticated');
+  const tabs = TABS.filter((tv) => !tv.authOnly || status === 'authenticated');
   const [tab, setTab] = useState<LiveTab>('all');
-  const current = tabs.some((t) => t.id === tab) ? tab : 'all';
+  const current = tabs.some((tv) => tv.id === tab) ? tab : 'all';
   const base = useId();
   const rows = lists[current].slice(0, ROWS);
-  const meta = TABS.find((t) => t.id === current)!;
+  const meta = TABS.find((tv) => tv.id === current)!;
 
   const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const i = tabs.findIndex((t) => t.id === current);
+    const i = tabs.findIndex((tv) => tv.id === current);
     const to = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
       : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
     if (to < 0) return;
@@ -51,12 +53,12 @@ export function LiveBets() {
         <span className="flex items-center gap-1.5 text-xs text-[var(--nf-muted)]" role="status">
           <span aria-hidden className="nf-live-dot" data-off={!connected} />{connected ? 'En vivo' : 'Conectando…'}
         </span>
-        <div role="tablist" aria-label="Tipo de apuestas" className="nf-tabs sm:ml-auto">
-          {tabs.map((t) => (
+        <div role="tablist" aria-label={t("Tipo de apuestas")} className="nf-tabs sm:ml-auto">
+          {tabs.map((tv) => (
             <button
-              key={t.id} id={`${base}-tab-${t.id}`} type="button" role="tab" aria-selected={current === t.id}
-              aria-controls={`${base}-panel`} tabIndex={current === t.id ? 0 : -1} onClick={() => setTab(t.id)} onKeyDown={onKey} className="nf-tab"
-            >{t.label}</button>
+              key={tv.id} id={`${base}-tab-${tv.id}`} type="button" role="tab" aria-selected={current === tv.id}
+              aria-controls={`${base}-panel`} tabIndex={current === tv.id ? 0 : -1} onClick={() => setTab(tv.id)} onKeyDown={onKey} className="nf-tab"
+            >{tv.label}</button>
           ))}
         </div>
       </div>
@@ -68,12 +70,12 @@ export function LiveBets() {
             <caption className="sr-only">{meta.label}</caption>
             <thead>
               <tr>
-                <th scope="col">Juego</th>
-                <th scope="col">Jugador</th>
-                <th scope="col" className="hidden md:table-cell">Hora</th>
-                <th scope="col" className="nf-num hidden sm:table-cell">Apuesta</th>
-                <th scope="col" className="nf-num">Multiplicador</th>
-                <th scope="col" className="nf-num">Ganancia</th>
+                <th scope="col">{t("Juego")}</th>
+                <th scope="col">{t("Jugador")}</th>
+                <th scope="col" className="hidden md:table-cell">{t("Hora")}</th>
+                <th scope="col" className="nf-num hidden sm:table-cell">{t("Apuesta")}</th>
+                <th scope="col" className="nf-num">{t("Multiplicador")}</th>
+                <th scope="col" className="nf-num">{t("Ganancia")}</th>
               </tr>
             </thead>
             <tbody>
@@ -85,7 +87,7 @@ export function LiveBets() {
                     <td className="max-w-[9rem] truncate font-semibold sm:max-w-[14rem]">
                       <Link href={`/lobby/game/${encodeURIComponent(b.gameId)}`} className="hover:underline">{b.gameTitle}</Link>
                     </td>
-                    <td className="max-w-[8rem] truncate text-[var(--nf-muted)]">{b.isMe || current === 'mine' ? <span className="font-semibold text-[var(--nf-text)]">Tú</span> : b.player}</td>
+                    <td className="max-w-[8rem] truncate text-[var(--nf-muted)]">{b.isMe || current === 'mine' ? <span className="font-semibold text-[var(--nf-text)]">{t("Tú")}</span> : b.player}</td>
                     <td className="hidden text-[var(--nf-muted)] md:table-cell">{timeOf(b.at)}</td>
                     <td className="nf-num hidden sm:table-cell">{formatMoney(b.amount, b.currency)}</td>
                     <td className="nf-num">{formatMultiplier(b.multiplier)}</td>

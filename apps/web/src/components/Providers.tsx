@@ -12,7 +12,7 @@ import { PushPrompt } from "./PushPrompt";
 const PROTECTED = ["/lobby/vip", "/slots", "/roulette", "/blackjack", "/mines", "/crash", "/plinko", "/cashier", "/account"];
 
 /** Páginas sin la estructura del casino (footer, aviso +18, push): la landing comercial. */
-const BARE = ["/", "/landing"];
+const BARE = ["/", "/landing", "/plataforma"];
 
 function isProtected(pathname: string) {
   return PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/"));

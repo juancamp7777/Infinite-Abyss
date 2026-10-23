@@ -12,3 +12,11 @@ export function landingLinks(): { demoUrl: string; contactUrl: string } {
     contactUrl: process.env.LANDING_CONTACT_URL || "/webchat",
   };
 }
+
+/** Textos opcionales de la landing del casino: sin configurar no se muestra oferta ni licencia (nunca se inventan). */
+export function casinoLandingConfig(): { bonus?: string; license?: string } {
+  return {
+    bonus: process.env.LANDING_BONUS?.trim() || undefined,
+    license: process.env.LANDING_LICENSE?.trim() || undefined,
+  };
+}

@@ -28,6 +28,8 @@ export function buildCrewRouter(d: { auth: AuthPort; crew: CrewService; ascend: 
     return { operatorId, member: await d.crew.me(operatorId, getPrincipal(req).userId) };
   };
 
+  r.post('/me/join', ...admin, asyncHandler(async (req, res) => sendJson(res, await d.crew.joinSelf(op(req), getPrincipal(req).userId), 201)));
+
   /* ─── Mi turno (personal) ─── */
   r.get('/me', ...staff, asyncHandler(async (req, res) => {
     const { operatorId, member } = await me(req);

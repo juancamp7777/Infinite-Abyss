@@ -69,6 +69,19 @@ export class CrewService {
     return m;
   }
 
+  /** Un administrador se suma a sí mismo al equipo (o se reactiva) para usar Mi turno sin pedírselo a nadie. */
+  async joinSelf(operatorId: string, backofficeUserId: string) {
+    const existing = await this.db.crewMember.findFirst({ where: { operatorId, backofficeUserId } });
+    if (existing) return existing.active ? existing : this.db.crewMember.update({ where: { id: existing.id }, data: { active: true } });
+    const [user, operator] = await Promise.all([
+      this.db.backofficeUser.findUnique({ where: { id: backofficeUserId } }),
+      this.db.operator.findUnique({ where: { id: operatorId } }),
+    ]);
+    if (!operator) throw notFound('Operador');
+    const name = (user?.email.split('@')[0] || 'Administración').slice(0, 80);
+    return this.db.crewMember.create({ data: { operatorId, backofficeUserId, name, role: 'Administración', currency: operator.defaultCurrency } });
+  }
+
   async saveMember(operatorId: string, input: MemberInput) {
     if (input.timezone) {
       try {

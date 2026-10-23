@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
-import { useApi, useApiClient } from "@/lib/hooks";
+import { useApi, useApiClient, useSession } from "@/lib/hooks";
 import { dateTime, int, money } from "@/lib/format";
 import { Badge, Button, Card, DataTable, Empty, ErrorBox, Field, inputCls, NeedOperator, PageHeader, Spinner, Tabs, type Column } from "@/components/ui";
 
 interface PlayerRow {
   playerId: string;
+  email?: string;
   country?: string;
   currency?: string;
   ltv?: string;
@@ -38,7 +39,68 @@ interface Detail {
   tickets: Array<{ id: string; subject: string; status: string; priority: string; updatedAt: string }>;
 }
 
-const RISK_TONE = { low: "good", medium: "warn", high: "bad" } as const;
+/** Roles que pueden mover saldo a mano (lo mismo que exige el API). */
+const CAN_ADJUST = new Set(["PLATFORM_ADMIN", "OPERATOR_ADMIN", "OPERATOR_FINANCE"]);
+
+/** "50.000", "50.000,50" o "50000.5" → centavos (string), sin floats. */
+function toMinor(input: string): string | null {
+  const t = input.trim().replace(/\s/g, "");
+  const m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/.exec(t) ?? /^(\d+)(?:\.(\d{1,2}))?$/.exec(t);
+  if (!m) return null;
+  const v = (m[1].replace(/\./g, "") + (m[2] ?? "").padEnd(2, "0")).replace(/^0+(?=\d)/, "");
+  return /^0+$/.test(v) ? null : v;
+}
+
+/** Cargar o descontar saldo a mano: queda en el ledger con motivo y autor, y no se duplica si se reintenta. */
+function AdjustBalance({ playerId, currency, onDone }: { playerId: string; currency?: string; onDone(): void }) {
+  const { call } = useApiClient();
+  const [dir, setDir] = useState<"credit" | "debit">("credit");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const minor = toMinor(amount);
+
+  async function submit() {
+    if (!minor || !reason.trim()) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await call(`/api/backoffice/players/${encodeURIComponent(playerId)}/adjustments`, {
+        method: "POST",
+        body: { amount: dir === "debit" ? `-${minor}` : minor, reason: reason.trim(), currency },
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      });
+      setMsg({ ok: true, text: `${dir === "credit" ? "Cargado" : "Descontado"}: ${money(minor, currency)}` });
+      setAmount("");
+      setReason("");
+      onDone();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof ApiError ? e.message : "Error inesperado" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="space-y-2 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <div className="text-sm font-semibold">Ajustar saldo a mano</div>
+      <div className="flex gap-2">
+        <Button type="button" variant={dir === "credit" ? "primary" : "ghost"} onClick={() => setDir("credit")}>Cargar</Button>
+        <Button type="button" variant={dir === "debit" ? "primary" : "ghost"} onClick={() => setDir("debit")}>Descontar</Button>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field label={`Monto${currency ? ` (${currency})` : ""}`} htmlFor="adj-amount"><input id="adj-amount" inputMode="decimal" className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.000" /></Field>
+        <Field label="Motivo (queda registrado)" htmlFor="adj-reason"><input id="adj-reason" className={inputCls} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Recarga por Nequi, cortesía…" /></Field>
+      </div>
+      {amount && !minor && <p className="text-xs text-red-300">Monto inválido. Escribe por ejemplo 50.000 o 50.000,50</p>}
+      <Button type="submit" disabled={busy || !minor || !reason.trim()}>{busy ? "Guardando…" : `${dir === "credit" ? "Cargar" : "Descontar"} ${minor ? money(minor, currency) : ""}`}</Button>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</p>}
+    </form>
+  );
+}
+
+const RISK_TONE ={ low: "good", medium: "warn", high: "bad" } as const;
 
 export default function PlayersPage() {
   const { operatorId } = useApiClient();
@@ -55,7 +117,7 @@ export default function PlayersPage() {
   if (!operatorId) return <><PageHeader title="Jugadores" /><NeedOperator /></>;
 
   const cols: Column<PlayerRow>[] = [
-    { key: "playerId", label: "Jugador", render: (r) => <span className="font-mono text-xs">{r.playerId.slice(0, 12)}</span> },
+    { key: "playerId", label: "Jugador", render: (r) => (r.email ? <span className="text-xs">{r.email}</span> : <span className="font-mono text-xs">{r.playerId.slice(0, 12)}</span>) },
     { key: "country", label: "País" },
     { key: "ltv", label: "LTV", render: (r) => money(r.ltv, r.currency) },
     { key: "ggr", label: "GGR", render: (r) => money(r.ggr, r.currency) },
@@ -141,6 +203,7 @@ function SendMessage({ playerId }: { playerId: string }) {
 
 function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const { call } = useApiClient();
+  const session = useSession();
   const d = useApi<Detail>(`/crm/v1/admin/players/${encodeURIComponent(playerId)}`);
   const [tab, setTab] = useState<"resumen" | "timeline" | "notas" | "tickets">("resumen");
   const [note, setNote] = useState("");
@@ -165,10 +228,11 @@ function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => 
       {err && <ErrorBox message={err} />}
       {d.data && (
         <>
-          <div className="mb-2 break-all font-mono text-xs text-white/60">{playerId}</div>
+          <div className="mb-2 break-all text-xs text-white/60">{d.data.profile.email && <span className="mr-2 text-sm text-white">{d.data.profile.email}</span>}<span className="font-mono">{playerId}</span></div>
           <Tabs tabs={[{ id: "resumen", label: "Resumen" }, { id: "timeline", label: "Timeline" }, { id: "notas", label: "Notas" }, { id: "tickets", label: `Tickets (${d.data.tickets.length})` }]} value={tab} onChange={setTab} />
           {tab === "resumen" && (
             <div className="space-y-3 text-sm">
+              {session && CAN_ADJUST.has(session.role) && <AdjustBalance playerId={playerId} currency={d.data.profile.currency} onDone={d.reload} />}
               <SendMessage playerId={playerId} />
               <dl className="grid grid-cols-2 gap-2">
                 {([

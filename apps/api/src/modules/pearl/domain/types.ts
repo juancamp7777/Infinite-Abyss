@@ -1,6 +1,7 @@
 /** Pearl: caja asistida. Comprobantes conciliados contra el feed bancario del operador. */
 
-export type FeedType = 'quikipay' | 'hgcash' | 'generic';
+/** binance = depósitos USDT leídos con la llave de solo lectura del operador (sin webhook). */
+export type FeedType = 'quikipay' | 'hgcash' | 'generic' | 'binance';
 export type BankTxStatus = 'available' | 'used' | 'ignored';
 /**
  * credited = fichas cargadas · pending_review = a revisión humana · waiting_bank = el pago aún no llegó al feed
@@ -24,6 +25,8 @@ export interface PearlSettings {
   utcOffsetMinutes: number;
   /** Crear la cuenta de casino del lead que manda su primer comprobante (y enviarle usuario y contraseña). */
   autoRegisterLeads: boolean;
+  /** Pesos (moneda del casino) por 1 USDT para acreditar depósitos en USDT, p. ej. "3950". Sin tasa: a revisión. */
+  usdtRate?: string | null;
   updatedAt: Date;
 }
 
@@ -52,6 +55,10 @@ export interface Feed {
   tokenHash: string;
   enabled: boolean;
   lastEventAt?: Date;
+  /** Llave de API cifrada (feeds que se consultan, como Binance). Nunca sale del servidor. */
+  secretEnc?: string;
+  /** Última consulta exitosa (los feeds que se consultan piden desde aquí). */
+  polledAt?: Date;
   createdAt: Date;
 }
 
@@ -66,6 +73,9 @@ export interface BankTx {
   senderTaxId?: string;
   senderAccount?: string;
   receiverAccount?: string;
+  /** Depósitos cripto: activo y monto original ("USDT", "25.37"); `amount` queda en la moneda del casino a la tasa del día. */
+  asset?: string;
+  assetAmount?: string;
   occurredAt: Date;
   status: BankTxStatus;
   receiptId?: string;
@@ -82,6 +92,10 @@ export interface ExtractedReceipt {
   senderName: string;
   senderTaxId?: string;
   receiverAccount?: string;
+  /** "USDT" si el comprobante es de un envío de USDT (Binance u otra billetera). */
+  asset?: 'USDT';
+  /** Hash de la transacción (TxID) si el comprobante lo muestra. */
+  txId?: string;
   /** Captura que no es un comprobante terminado (p. ej. pantalla de "confirmar transferencia"). */
   notAReceipt?: boolean;
   /** Indicios de edición detectados al leer la imagen. */
@@ -126,6 +140,8 @@ export interface PearlRepository {
   deleteAccount(operatorId: string, id: string): Promise<boolean>;
   listFeeds(operatorId: string): Promise<Feed[]>;
   findFeed(id: string): Promise<Feed | null>;
+  /** Feeds activos de un tipo en todos los operadores (los que se consultan periódicamente). */
+  enabledFeedsOfType(type: FeedType): Promise<Feed[]>;
   saveFeed(f: Feed): Promise<Feed>;
   deleteFeed(operatorId: string, id: string): Promise<boolean>;
   /** Idempotente por (feedId, externalId): `created=false` si ya existía. */

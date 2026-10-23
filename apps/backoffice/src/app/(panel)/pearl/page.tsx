@@ -13,7 +13,7 @@ interface Receipt {
   id: string;
   conversationId?: string;
   playerId?: string;
-  extracted: { amount: string; date?: string; time?: string; senderName: string; receiverAccount?: string; tamperSignals?: string[] };
+  extracted: { amount: string; date?: string; time?: string; senderName: string; receiverAccount?: string; asset?: "USDT"; txId?: string; tamperSignals?: string[] };
   amount?: string;
   currency: string;
   status: ReceiptStatus;
@@ -25,8 +25,21 @@ interface Receipt {
   reviewerId?: string;
   createdAt: string;
 }
-interface BankTx { id: string; externalId: string; amount: string; currency: string; senderName: string; senderTaxId?: string; occurredAt: string; status: "available" | "used" | "ignored" }
-interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean }
+interface BankTx { id: string; externalId: string; amount: string; currency: string; senderName: string; senderTaxId?: string; asset?: string; assetAmount?: string; occurredAt: string; status: "available" | "used" | "ignored" }
+
+/** Monto de un movimiento: los depósitos USDT muestran lo que llegó y su valor en pesos. */
+const txAmount = (t: BankTx) => (t.asset ? `${t.asset} ${t.assetAmount}${t.amount !== "0" ? ` ≈ ${t.currency} ${minor(t.amount)}` : ""}` : `${t.currency} ${minor(t.amount)}`);
+
+/** Motivos de revisión en palabras del cajero. */
+const REASONS: Record<string, string> = {
+  usdt_por_red: "USDT enviado por la red TRON: confirma en Binance que el TxID es del jugador",
+  usdt_sin_txid: "USDT sin TxID en la captura: pide al jugador el TxID o confirma en Binance",
+  usdt_monto_distinto: "El monto USDT de la captura no coincide con lo que llegó a Binance",
+  sin_tasa_usdt: "Falta la tasa USDT en Configuración",
+  pago_no_encontrado: "El pago no apareció en el banco",
+};
+const reasonText = (r?: string) => (r ? REASONS[r] ?? r : "");
+interface Settings { mode: "auto" | "review_all"; currency: string; autoMaxAmount: string; minAmount: string; maxAgeHours: number; waitBankMinutes: number; utcOffsetMinutes: number; autoRegisterLeads?: boolean; usdtRate?: string | null }
 interface Feed { id: string; type: string; name: string; enabled: boolean; lastEventAt?: string }
 interface AiView { enabled: boolean; provider: "anthropic" | "gemini" | "deepseek"; readerModel: string; judgeModel: string; hasKey: boolean; keyFromEnv: boolean }
 const PROVIDER_LABEL = { anthropic: "Claude (Anthropic)", gemini: "Gemini (Google)", deepseek: "DeepSeek" } as const;
@@ -54,13 +67,14 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
   const [edit, setEdit] = useState<Receipt["extracted"] | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const r = list.data?.items.find((x) => x.id === sel);
-  const candidates = (txs.data?.items ?? []).filter((t) => !r?.amount || t.amount === r.amount);
+  // USDT: los depósitos de Binance (el monto en pesos sale del depósito); pesos: los del mismo monto.
+  const candidates = (txs.data?.items ?? []).filter((t) => (r?.extracted.asset === "USDT" ? !!t.asset : !t.asset && (!r?.amount || t.amount === r.amount)));
 
   const act = async (fn: () => Promise<Receipt>) => {
     setMsg(null);
     try {
       const out = await fn();
-      setMsg({ tone: out.status === "credited" ? "ok" : "warn", text: `${STATUS[out.status].label}${out.reason ? ` · ${out.reason}` : ""}` });
+      setMsg({ tone: out.status === "credited" ? "ok" : "warn", text: `${STATUS[out.status].label}${out.reason ? ` · ${reasonText(out.reason)}` : ""}` });
       list.reload();
       txs.reload();
     } catch (e) {
@@ -80,8 +94,8 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
             className={`flex w-full flex-wrap items-center gap-3 rounded-xl border bg-panel/80 p-3 text-left transition-colors hover:border-white/25 ${sel === x.id ? "border-[var(--color-brand)]" : "border-white/10"}`}>
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--color-brand)]/15 text-[var(--color-brand)]"><Banknote aria-hidden className="h-5 w-5" /></span>
             <div className="min-w-0 flex-1">
-              <div className="font-semibold">{x.currency} {minor(x.amount)} <span className="font-normal text-white/50">· {x.extracted.senderName || "sin titular"}</span></div>
-              <div className="truncate text-xs text-white/45">{when(x.createdAt)} · {x.source === "ai" ? "leído por IA" : "cargado a mano"}{x.reason ? ` · ${x.reason}` : ""}</div>
+              <div className="font-semibold">{x.extracted.asset === "USDT" ? `USDT ${x.extracted.amount}` : `${x.currency} ${minor(x.amount)}`} <span className="font-normal text-white/50">· {x.extracted.asset === "USDT" ? "Binance" : x.extracted.senderName || "sin titular"}</span></div>
+              <div className="truncate text-xs text-white/45">{when(x.createdAt)} · {x.source === "ai" ? "leído por IA" : "cargado a mano"}{x.reason ? ` · ${reasonText(x.reason)}` : ""}</div>
             </div>
             <Badge tone={STATUS[x.status].tone}>{STATUS[x.status].label}</Badge>
           </button>
@@ -129,7 +143,7 @@ function Review({ status }: { status: ReceiptStatus | "all" }) {
                 <Field label="Pago del banco" htmlFor="tx">
                   <select id="tx" className={`${inputCls} w-full`} value={pick} onChange={(e) => setPick(e.target.value)}>
                     <option value="">Sin movimiento (bajo mi responsabilidad)</option>
-                    {candidates.map((t) => <option key={t.id} value={t.id}>{t.currency} {minor(t.amount)} · {t.senderName} · {when(t.occurredAt)}</option>)}
+                    {candidates.map((t) => <option key={t.id} value={t.id}>{txAmount(t)} · {t.asset ? t.externalId.slice(0, 24) : t.senderName} · {when(t.occurredAt)}</option>)}
                   </select>
                 </Field>
                 <Button className="w-full" onClick={() => void act(() => call(`/pearl/v1/admin/receipts/${r.id}/approve`, { method: "POST", body: pick ? { bankTxId: pick } : {} }))}>
@@ -165,8 +179,8 @@ function BankFeed() {
               {items.map((t) => (
                 <tr key={t.id} className="border-t border-white/5">
                   <td className="py-2 text-white/60">{when(t.occurredAt)}</td>
-                  <td>{t.senderName}</td>
-                  <td className="text-right font-mono">{t.currency} {minor(t.amount)}</td>
+                  <td>{t.asset ? `Binance · ${t.externalId.slice(0, 24)}` : t.senderName}</td>
+                  <td className="text-right font-mono">{txAmount(t)}</td>
                   <td className="pl-4"><Badge tone={t.status === "available" ? "warn" : t.status === "used" ? "good" : "neutral"}>{t.status === "available" ? "Sin usar" : t.status === "used" ? "Conciliado" : "Ignorado"}</Badge></td>
                 </tr>
               ))}
@@ -187,6 +201,7 @@ function Config() {
   const [aiForm, setAiForm] = useState<{ provider?: AiView["provider"]; readerModel?: string; judgeModel?: string; apiKey?: string; enabled?: boolean }>({});
   const [form, setForm] = useState<Partial<Settings>>({});
   const [feedType, setFeedType] = useState("quikipay");
+  const [bnc, setBnc] = useState({ apiKey: "", apiSecret: "" });
   const [newFeed, setNewFeed] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const run = async (fn: () => Promise<unknown>, ok: string) => {
@@ -218,6 +233,10 @@ function Config() {
           <Field label="Depósito mínimo (unidades mínimas)" htmlFor="min"><input id="min" className={`${inputCls} w-full`} value={s.minAmount} onChange={(e) => setForm({ ...form, minAmount: e.target.value.replace(/\D/g, "") })} /></Field>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.autoRegisterLeads ?? true} onChange={(e) => setForm({ ...form, autoRegisterLeads: e.target.checked })} /> Crear la cuenta del lead con su primer comprobante</label>
           <Field label="Esperar al banco (minutos)" htmlFor="wait"><input id="wait" type="number" className={`${inputCls} w-full`} value={s.waitBankMinutes} onChange={(e) => setForm({ ...form, waitBankMinutes: Number(e.target.value) })} /></Field>
+          <Field label={`Tasa USDT (${s.currency} por 1 USDT)`} htmlFor="usdt-rate">
+            <input id="usdt-rate" inputMode="decimal" className={`${inputCls} w-full`} placeholder="Ej. 3950" value={s.usdtRate ?? ""} onChange={(e) => setForm({ ...form, usdtRate: e.target.value.replace(/[^\d.]/g, "") || null })} />
+            <span className="mt-1 block text-xs text-white/45">Con esta tasa se acreditan los depósitos en USDT. Actualízala cuando cambie el precio.</span>
+          </Field>
           <Button className="w-full" onClick={() => void run(() => call("/pearl/v1/admin/settings", { method: "PUT", body: form }), "Reglas guardadas")}>Guardar reglas</Button>
         </div>
       </Card>
@@ -228,17 +247,25 @@ function Config() {
         <ul className="mb-3 space-y-1.5 text-sm">
           {(feeds.data?.items ?? []).map((f) => (
             <li key={f.id} className="flex items-center gap-2 rounded-lg bg-white/[.03] px-2.5 py-1.5">
-              <div className="min-w-0 flex-1"><div className="truncate">{f.name}</div><div className="text-xs text-white/45">{f.type} · {f.lastEventAt ? `último pago ${when(f.lastEventAt)}` : "sin eventos"}</div></div>
+              <div className="min-w-0 flex-1"><div className="truncate">{f.name}</div><div className="text-xs text-white/45">{f.type === "binance" ? "Binance · USDT" : f.type} · {f.lastEventAt ? `último pago ${when(f.lastEventAt)}` : "sin eventos"}</div></div>
               <Badge tone={f.enabled ? "good" : "neutral"}>{f.enabled ? "Activo" : "Pausado"}</Badge>
             </li>
           ))}
         </ul>
         <div className="flex gap-2">
           <select className={`${inputCls} min-w-0 flex-1`} value={feedType} onChange={(e) => setFeedType(e.target.value)} aria-label="Proveedor">
-            <option value="quikipay">Quikipay</option><option value="hgcash">HG Cash</option><option value="generic">Genérico (JSON)</option>
+            <option value="quikipay">Quikipay</option><option value="hgcash">HG Cash</option><option value="generic">Genérico (JSON)</option><option value="binance">Binance (depósitos USDT)</option>
           </select>
-          <Button onClick={() => void run(async () => { const r = await call<{ webhookPath: string }>("/pearl/v1/admin/feeds", { method: "POST", body: { type: feedType } }); setNewFeed(`${base}/api-proxy${r.webhookPath}`); }, "Feed creado")}>Conectar</Button>
+          {feedType !== "binance" && <Button onClick={() => void run(async () => { const r = await call<{ webhookPath: string }>("/pearl/v1/admin/feeds", { method: "POST", body: { type: feedType } }); setNewFeed(`${base}/api-proxy${r.webhookPath}`); }, "Feed creado")}>Conectar</Button>}
         </div>
+        {feedType === "binance" && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs text-white/55">En Binance: Perfil → Gestión de API → Crear API. Deja marcada <b>solo</b> “Habilitar lectura” (sin retiros ni trading) y pega aquí las dos llaves. Se guardan cifradas.</p>
+            <input className={`${inputCls} w-full`} placeholder="API Key" autoComplete="off" value={bnc.apiKey} onChange={(e) => setBnc({ ...bnc, apiKey: e.target.value.trim() })} aria-label="API Key de Binance" />
+            <input className={`${inputCls} w-full`} type="password" placeholder="Secret Key" autoComplete="off" value={bnc.apiSecret} onChange={(e) => setBnc({ ...bnc, apiSecret: e.target.value.trim() })} aria-label="Secret Key de Binance" />
+            <Button className="w-full" disabled={bnc.apiKey.length < 20 || bnc.apiSecret.length < 20} onClick={() => void run(async () => { await call("/pearl/v1/admin/feeds", { method: "POST", body: { type: "binance", ...bnc } }); setBnc({ apiKey: "", apiSecret: "" }); }, "Binance conectado: Pearl revisará los depósitos USDT cada minuto")}>Conectar Binance</Button>
+          </div>
+        )}
         {newFeed && (
           <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/5 p-2.5 text-xs">
             <p className="mb-1 font-semibold text-amber-300">Copia esta URL ahora: no se vuelve a mostrar.</p>

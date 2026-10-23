@@ -1488,6 +1488,8 @@ model PearlSettings {
   waitBankMinutes  Int      @default(20)
   utcOffsetMinutes Int      @default(-180)
   autoRegisterLeads Boolean @default(true)
+  /// Pesos por 1 USDT (depósitos en USDT).
+  usdtRate         String?
   updatedAt        DateTime
 
   @@map("pearl_settings")
@@ -1522,6 +1524,9 @@ model PearlFeed {
   tokenHash   String
   enabled     Boolean   @default(true)
   lastEventAt DateTime?
+  /// Llave de API cifrada (Binance) y última consulta.
+  secretEnc   String?
+  polledAt    DateTime?
   createdAt   DateTime  @default(now())
 
   @@index([operatorId])
@@ -1539,6 +1544,9 @@ model PearlBankTx {
   senderTaxId     String?
   senderAccount   String?
   receiverAccount String?
+  /// Depósitos cripto: activo (USDT) y monto original.
+  asset           String?
+  assetAmount     String?
   occurredAt      DateTime
   status          String
   receiptId       String?  @db.Uuid

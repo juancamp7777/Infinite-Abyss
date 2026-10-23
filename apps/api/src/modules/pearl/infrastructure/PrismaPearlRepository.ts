@@ -1,4 +1,4 @@
-import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
+import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type FeedType, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
 
 /** Subconjunto del PrismaClient usado (evita depender de los tipos generados). */
 interface Delegate {
@@ -54,12 +54,15 @@ export class PrismaPearlRepository implements PearlRepository {
   async listFeeds(operatorId: string) {
     return (await this.db.pearlFeed.findMany({ where: { operatorId }, orderBy: { createdAt: 'asc' } })).map((r) => noNulls<Feed>(r));
   }
+  async enabledFeedsOfType(type: FeedType) {
+    return (await this.db.pearlFeed.findMany({ where: { type, enabled: true } })).map((r) => noNulls<Feed>(r));
+  }
   async findFeed(id: string) {
     const r = await this.db.pearlFeed.findUnique({ where: { id } });
     return r ? noNulls<Feed>(r) : null;
   }
   async saveFeed(f: Feed) {
-    const data = { ...f, lastEventAt: f.lastEventAt ?? null };
+    const data = { ...f, lastEventAt: f.lastEventAt ?? null, secretEnc: f.secretEnc ?? null, polledAt: f.polledAt ?? null };
     const { id, ...rest } = data;
     return noNulls<Feed>(await this.db.pearlFeed.upsert({ where: { id }, create: data, update: rest }));
   }
@@ -69,7 +72,7 @@ export class PrismaPearlRepository implements PearlRepository {
 
   async insertBankTx(tx: BankTx) {
     try {
-      const data = { ...tx, senderTaxId: tx.senderTaxId ?? null, senderAccount: tx.senderAccount ?? null, receiverAccount: tx.receiverAccount ?? null, receiptId: tx.receiptId ?? null };
+      const data = { ...tx, senderTaxId: tx.senderTaxId ?? null, senderAccount: tx.senderAccount ?? null, receiverAccount: tx.receiverAccount ?? null, asset: tx.asset ?? null, assetAmount: tx.assetAmount ?? null, receiptId: tx.receiptId ?? null };
       return { tx: noNulls<BankTx>(await this.db.pearlBankTx.create({ data })), created: true };
     } catch (e) {
       if (!isUnique(e)) throw e;

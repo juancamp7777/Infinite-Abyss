@@ -223,6 +223,8 @@ export interface PushSubscription {
   endpoint: string;
   keys: { p256dh: string; auth: string };
   createdAt: string;
+  /** El servicio de push la dio por vencida (404/410): no se usa y el navegador debe crear una nueva. */
+  dead?: boolean;
 }
 
 export interface PlayerState {

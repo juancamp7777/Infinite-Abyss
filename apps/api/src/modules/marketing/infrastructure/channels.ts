@@ -154,7 +154,7 @@ export class PushChannel implements Channel {
 
   async send(msg: ChannelMessage): Promise<{ providerMessageId: string }> {
     if (!this.vapid) throw new ChannelError('NOT_CONFIGURED', 'Push sin claves VAPID');
-    const subs = await this.subs.list({ operatorId: msg.operatorId, playerId: msg.playerId });
+    const subs = (await this.subs.list({ operatorId: msg.operatorId, playerId: msg.playerId })).filter((s) => !s.dead);
     if (subs.length === 0) throw new ChannelError('NO_ADDRESS', 'El jugador no tiene suscripciones push');
     const design = (msg.meta?.push ?? {}) as PushDesign;
     const internalPath = (u: unknown) => (typeof u === 'string' && u.startsWith('/') && !u.startsWith('//') ? u : undefined);
@@ -169,7 +169,8 @@ export class PushChannel implements Channel {
       try {
         const r = await this.sender({ endpoint: s.endpoint, keys: s.keys }, payload, this.vapid);
         if (r.statusCode >= 200 && r.statusCode < 300) delivered++;
-        else if (r.statusCode === 404 || r.statusCode === 410) await this.subs.delete(s.id);
+        // Vencida: se marca (no se borra) para que el navegador del jugador cree una nueva al volver.
+        else if (r.statusCode === 404 || r.statusCode === 410) await this.subs.put({ ...s, dead: true });
         else this.logger?.warn('[marketing:push] el servicio de push rechazó el envío', { sendId: msg.sendId, status: r.statusCode });
       } catch (e) {
         this.logger?.warn('[marketing:push] envío fallido', { sendId: msg.sendId, error: (e as Error).message });

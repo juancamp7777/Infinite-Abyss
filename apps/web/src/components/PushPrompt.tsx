@@ -3,7 +3,7 @@
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Bell, Download, Share, SquarePlus, X } from "lucide-react";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const DISMISS_KEY = "abyss.push.dismissed";
@@ -32,11 +32,35 @@ async function subscribe(): Promise<boolean> {
   if (!publicKey) return false;
   const reg = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
-  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) }));
-  const json = sub.toJSON();
-  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
-  await api.post("/marketing/v1/push/subscribe", { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+  const key = urlBase64ToUint8Array(publicKey);
+  const fresh = () => reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  let sub = await reg.pushManager.getSubscription();
+  // Si cambió la llave del servidor, la suscripción vieja ya no sirve: se reemplaza.
+  if (sub && !sameKey(sub.options.applicationServerKey, key)) {
+    await sub.unsubscribe().catch(() => undefined);
+    sub = null;
+  }
+  sub ??= await fresh();
+  const send = (s: PushSubscription) => {
+    const json = s.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) throw new Error("Suscripción incompleta");
+    return api.post("/marketing/v1/push/subscribe", { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+  };
+  try {
+    await send(sub);
+  } catch (e) {
+    // 409 = el servicio de push dio por vencida esta suscripción: se crea una nueva y se registra.
+    if (!(e instanceof ApiError && e.status === 409)) throw e;
+    await sub.unsubscribe().catch(() => undefined);
+    await send(await fresh());
+  }
   return true;
+}
+
+function sameKey(a: ArrayBuffer | null, b: Uint8Array): boolean {
+  if (!a) return false;
+  const x = new Uint8Array(a);
+  return x.length === b.length && x.every((v, i) => v === b[i]);
 }
 
 /**

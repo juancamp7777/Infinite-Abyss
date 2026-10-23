@@ -90,6 +90,15 @@ export const INTEGRATIONS: IntegrationDef[] = [
 
   // ───── Pagos (cada casino con su cuenta) ─────
   {
+    key: 'bold', category: 'payments', name: 'Bold (PSE, Nequi, tarjetas)',
+    description: 'Cobra en la caja con PSE, Nequi, Botón Bancolombia y tarjetas; se acredita solo al confirmarse el pago. En Bold: Integraciones → Llaves de integración (Botón de pagos). Webhook a configurar en Bold: https://infinite-abyss.com/api/webhooks/bold',
+    scope: 'operator', readiness: 'live', test: 'http',
+    fields: [
+      { name: 'identityKey', label: 'Llave de identidad', required: true },
+      { name: 'secretKey', label: 'Llave secreta', secret: true, required: true },
+    ],
+  },
+  {
     key: 'binance-pay', category: 'payments', name: 'Binance Pay', description: 'Depósitos en cripto con confirmación automática. El conector llega en el bloque de pagos cripto.', scope: 'operator', readiness: 'soon', test: 'none',
     fields: [{ name: 'apiKey', label: 'API key', secret: true, required: true }, { name: 'secretKey', label: 'Secret key', secret: true, required: true }],
   },

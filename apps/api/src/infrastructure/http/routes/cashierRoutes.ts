@@ -30,7 +30,7 @@ const amountSchema = z
     }
   });
 
-const providerSchema = z.enum(['PASSIMPAY', 'WOMPI']);
+const providerSchema = z.enum(['PASSIMPAY', 'WOMPI', 'BOLD']);
 const currencySchema = z.string().regex(/^[A-Z]{3,5}$/);
 
 const depositBody = z.object({
@@ -67,16 +67,20 @@ function clientIp(req: Request): string | null {
   return req.ip ?? null;
 }
 
+/** Nombre que ve el jugador en la caja. */
+const METHOD_LABELS: Record<string, string> = { BOLD: 'PSE, Nequi o tarjeta', WOMPI: 'Wompi', PASSIMPAY: 'Cripto' };
+
 /** Cajero del jugador. Todas las rutas exigen jugador autenticado + rate limit de cajero. */
 export function createCashierRouter(deps: CashierRoutesDeps): Router {
   const router = Router();
   router.use(deps.resolveTenant, deps.requirePlayer, deps.rateLimit.cashier);
 
-  router.get('/methods', (req, res) => {
+  router.get('/methods', async (req, res) => {
     const tenant = req.tenant!;
     res.json({
-      methods: deps.registry.listEnabled().map((p) => ({
+      methods: (await deps.registry.listEnabledFor(tenant.operatorId)).map((p) => ({
         provider: p.code,
+        ...(METHOD_LABELS[p.code] ? { label: METHOD_LABELS[p.code] } : {}),
         currencies: tenant.currencies,
         minDeposit: tenant.limits.minDeposit ?? null,
         maxDeposit: tenant.limits.maxDeposit ?? null,

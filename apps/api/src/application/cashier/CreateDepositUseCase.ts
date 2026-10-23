@@ -41,7 +41,9 @@ export class CreateDepositUseCase {
     const { auth, tenant } = input;
 
     const provider = registry.getEnabled(input.provider);
-    if (!provider) throw new AppError('Proveedor de pagos no disponible', 503, true, 'PROVIDER_DISABLED');
+    if (!provider || (provider.isEnabledFor && !(await provider.isEnabledFor(input.tenant.operatorId)))) {
+      throw new AppError('Proveedor de pagos no disponible', 503, true, 'PROVIDER_DISABLED');
+    }
 
     if (auth.isDemo) throw AppError.forbidden('Las cuentas demo no pueden depositar');
     if (input.currency !== auth.currency || !tenant.currencies.includes(input.currency)) {
@@ -88,7 +90,8 @@ export class CreateDepositUseCase {
       });
       await prisma.deposit.updateMany({
         where: { id: depositId, status: 'CREATED' },
-        data: { status: 'PENDING', rawCreateResponse: toJson(res.raw) },
+        // externalId (p. ej. el link de pago de Bold) sirve para confirmar el estado con el PSP antes de acreditar.
+        data: { status: 'PENDING', rawCreateResponse: toJson(res.raw), ...(res.externalId ? { externalId: res.externalId } : {}) },
       });
       return {
         depositId,

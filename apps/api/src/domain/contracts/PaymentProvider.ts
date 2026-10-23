@@ -1,5 +1,5 @@
-/** Contrato de pasarela de pago. Implementan s4 (Passimpay, Wompi). */
-export type PaymentProviderName = 'PASSIMPAY' | 'WOMPI';
+/** Contrato de pasarela de pago. Implementan Passimpay, Wompi y Bold. */
+export type PaymentProviderName = 'PASSIMPAY' | 'WOMPI' | 'BOLD';
 
 export interface CreateDepositInput {
   operatorId: string;
@@ -71,6 +71,8 @@ export interface PaymentProvider {
   readonly code: PaymentProviderName;
   /** false si faltan credenciales de entorno. */
   isEnabled(): boolean;
+  /** Pasarelas con llaves por casino (Integraciones): si este casino la conectó. */
+  isEnabledFor?(operatorId: string): Promise<boolean>;
   createDeposit(input: CreateDepositInput): Promise<CreateDepositResult>;
   verifyWebhook(input: WebhookVerificationInput): WebhookVerificationResult | Promise<WebhookVerificationResult>;
   requestPayout(input: RequestPayoutInput): Promise<RequestPayoutResult>;

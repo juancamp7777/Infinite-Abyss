@@ -5,7 +5,7 @@ export interface WebhookRoutesDeps {
   handleWebhook: HandleWebhookUseCase;
 }
 
-const PROVIDERS: Record<string, string> = { passimpay: 'PASSIMPAY', wompi: 'WOMPI' };
+const PROVIDERS: Record<string, string> = { passimpay: 'PASSIMPAY', wompi: 'WOMPI', bold: 'BOLD' };
 
 /**
  * Webhooks de PSP. IMPORTANTE: montar este router ANTES de `express.json()` global (o excluir

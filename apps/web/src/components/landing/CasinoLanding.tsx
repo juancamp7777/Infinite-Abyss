@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ArrowRight, BadgeCheck, ChevronDown, Crown, Fingerprint, Gamepad2, Headphones, HeartHandshake, Lock, ShieldCheck, Smartphone, Sparkles, Trophy, UserPlus, Wallet, Zap } from "lucide-react";
 import { assetUrl } from "@/lib/lobby/api";
 import { LanguageSwitcher, useT } from "@/lib/i18n";
+import { LEGAL_LINKS } from "@/lib/legal";
 import { useGames, useJackpots } from "@/lib/lobby/hooks";
 import { LiveFeedProvider, formatMultiplier, timeOf, useLiveBets } from "@/lib/lobby/liveBets";
 import { fallbackThumb, formatMoney, toNumber } from "@/lib/lobby/format";
@@ -521,6 +522,7 @@ function CasinoPage({ bonus, license, telegram }: CasinoLandingProps) {
           </div>
           <div><h4>{t("Jugar")}</h4><ul>{NAV.slice(0, 4).map((n) => <li key={n.href}><Link href={n.href}>{t(n.label)}</Link></li>)}</ul></div>
           <div><h4>{t("Ayuda")}</h4><ul><li><Link href="/webchat">{t("Soporte 24/7")}</Link></li>{telegram && <li><a href={telegram} target="_blank" rel="noopener noreferrer">{t("Telegram")}</a></li>}<li><Link href="/account">{t("Mi cuenta y límites")}</Link></li><li><Link href="/plataforma">{t("Para operadores")}</Link></li></ul></div>
+          <div><h4>{t("Recursos")}</h4><ul>{LEGAL_LINKS.map((l) => <li key={l.href}><Link href={l.href}>{t(l.label)}</Link></li>)}</ul></div>
         </div>
         <div className="cx-wrap cx-paystrip" aria-label={t("Métodos de pago")}>{Object.keys(METHODS).map((m) => <PayBadge key={m} id={m} />)}</div>
         <div className="cx-wrap cx-footer-bottom">

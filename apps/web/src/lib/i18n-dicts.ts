@@ -182,6 +182,13 @@ const MORE: Record<string, [string, string]> = {
 };
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
+  "Recursos": ["Resources","Recursos"],
+  "Acerca de nosotros": ["About us","Sobre nós"],
+  "KYC y AML": ["KYC & AML","KYC e AML"],
+  "Política antispam": ["Anti-spam policy","Política antispam"],
+  "Política de reembolso": ["Refund policy","Política de reembolso"],
+  "Política de privacidad": ["Privacy policy","Política de privacidade"],
+  "Última actualización": ["Last updated","Última atualização"],
   "Transfiere el monto que quieras a una de estas cuentas.": ["Transfer any amount to one of these accounts.","Transfira o valor que quiser para uma destas contas."],
   "Sube aquí la foto del comprobante.": ["Upload a photo of the receipt here.","Envie aqui a foto do comprovante."],
   "Lo verificamos con el pago real y se acredita solo.": ["We check it against the real payment and credit it automatically.","Conferimos com o pagamento real e o crédito é automático."],

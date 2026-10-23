@@ -73,7 +73,7 @@ export interface CreditDepositInput extends WalletOpBase {
   amount: bigint;
   depositId: string;
   /** PEARL = caja asistida (comprobante conciliado contra el banco del operador). */
-  provider: 'PASSIMPAY' | 'WOMPI' | 'PEARL';
+  provider: 'PASSIMPAY' | 'WOMPI' | 'PEARL' | 'BOLD';
 }
 
 export interface WithdrawalLedgerInput extends WalletOpBase {

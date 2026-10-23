@@ -82,6 +82,7 @@ enum PaymentProviderCode {
   PASSIMPAY
   WOMPI
   PEARL
+  BOLD
 }
 
 enum DepositStatus {

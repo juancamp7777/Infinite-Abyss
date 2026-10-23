@@ -65,6 +65,7 @@ import { SocketServer } from './infrastructure/sockets/SocketServer';
 // Módulos Infinite Abyss (Hub, Studios, promociones, CRM, marketing, gamificación, backoffice-api)
 import { registerModules, captureRawBody } from './modules';
 import { InMemoryEventBus } from './modules/shared/events/EventBus';
+import type { IntegrationsPort } from './modules/shared/ports/IntegrationsPort';
 import { buildModuleDeps, Phase1GameEvents } from './infrastructure/modules';
 
 export interface AppOverrides {
@@ -123,7 +124,16 @@ export function createApp(config: AppConfig, overrides: AppOverrides = {}): Crea
   // Los juegos de la Fase 1 usan la billetera decorada (emite bet.placed/bet.settled tras el commit).
   const gameWallet = gameEvents.wrapWallet(walletService);
   const reconciliationService = new ReconciliationService(prisma);
-  const registry = overrides.registry ?? PaymentProviderRegistry.fromConfig(config, overrides.fetch);
+  // Bold: llaves por casino desde Integraciones (servicio de módulos, se lee al momento de cada pago).
+  const integrations = () => moduleServices['integrations.service'] as IntegrationsPort | undefined;
+  const registry = overrides.registry ?? PaymentProviderRegistry.fromConfig(config, overrides.fetch, {
+    keys: async (operatorId) => {
+      const svc = integrations();
+      const [identityKey, secretKey] = svc ? await Promise.all([svc.value(operatorId, 'bold', 'identityKey'), svc.value(operatorId, 'bold', 'secretKey')]) : [];
+      return identityKey && secretKey ? { identityKey, secretKey } : null;
+    },
+    deposit: (providerReference) => prisma.deposit.findFirst({ where: { provider: 'BOLD', providerReference }, select: { operatorId: true, externalId: true } }),
+  });
 
   const jwt = new JwtService({ secret: config.jwt.accessSecret, accessTtl: config.jwt.accessTtl });
   // El secreto TOTP se cifra con INBOX_SECRETS_KEY (obligatoria en producción); en desarrollo, con el secreto JWT.

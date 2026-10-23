@@ -42,6 +42,8 @@ export async function testHttpIntegration(key: string, v: Record<string, string>
       return models(fetchImpl, 'Claude', 'https://api.anthropic.com/v1/models?limit=1', { 'x-api-key': v.apiKey, 'anthropic-version': '2023-06-01' });
     case 'gemini':
       return models(fetchImpl, 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { 'x-goog-api-key': v.apiKey });
+    case 'bold':
+      return models(fetchImpl, 'Bold', 'https://integrations.api.bold.co/online/link/v1/payment_methods', { Authorization: `x-api-key ${v.identityKey}` });
     case 'deepseek':
       return models(fetchImpl, 'DeepSeek', 'https://api.deepseek.com/models', { Authorization: `Bearer ${v.apiKey}` });
     case 'telegram-alerts': {

@@ -2,6 +2,7 @@ import type { PaymentProvider, PaymentProviderName } from '../../domain/contract
 import type { AppConfig } from '../../config/env';
 import { PassimpayProvider } from './PassimpayProvider';
 import { WompiProvider } from './WompiProvider';
+import { BoldProvider, type BoldDeps } from './BoldProvider';
 import { FetchLike, defaultFetch } from './types';
 
 /** Catálogo de pasarelas. Las que no tienen credenciales quedan deshabilitadas. */
@@ -15,8 +16,10 @@ export class PaymentProviderRegistry {
   static fromConfig(
     config: Pick<AppConfig, 'passimpay' | 'wompi' | 'publicWebUrl'>,
     fetchFn: FetchLike = defaultFetch,
+    bold?: Omit<BoldDeps, 'returnUrl'>,
   ): PaymentProviderRegistry {
     return new PaymentProviderRegistry([
+      ...(bold ? [new BoldProvider({ ...bold, returnUrl: config.publicWebUrl ? `${config.publicWebUrl}/cashier` : undefined }, fetchFn)] : []),
       new PassimpayProvider(config.passimpay, fetchFn),
       new WompiProvider(
         {
@@ -40,5 +43,12 @@ export class PaymentProviderRegistry {
 
   listEnabled(): PaymentProvider[] {
     return [...this.byCode.values()].filter((p) => p.isEnabled());
+  }
+
+  /** Las habilitadas para un casino (las de llaves por casino, solo si las conectó). */
+  async listEnabledFor(operatorId: string): Promise<PaymentProvider[]> {
+    const out: PaymentProvider[] = [];
+    for (const p of this.listEnabled()) if (!p.isEnabledFor || (await p.isEnabledFor(operatorId))) out.push(p);
+    return out;
   }
 }

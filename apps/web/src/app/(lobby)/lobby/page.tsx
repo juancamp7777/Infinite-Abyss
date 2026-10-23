@@ -8,6 +8,7 @@ import { BannerCarousel } from '@/components/lobby/BannerCarousel';
 import { GameRow } from '@/components/lobby/GameRow';
 import { JackpotTicker } from '@/components/lobby/JackpotTicker';
 import { LastWins } from '@/components/lobby/LastWins';
+import { LeviathanSpotlight } from '@/components/lobby/LeviathanSpotlight';
 import { LiveBets } from '@/components/lobby/LiveBets';
 import { useLobby } from '@/components/lobby/LobbyProvider';
 import { MissionsPanel } from '@/components/lobby/MissionsPanel';
@@ -106,9 +107,12 @@ function Lobby() {
 
   const sections: Record<ReefSection, ReactNode> = {
     hero: (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1fr)]">
-        <BannerCarousel banners={skin.banners} />
-        <SideCards />
+      <div className="space-y-4">
+        <LeviathanSpotlight />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1fr)]">
+          <BannerCarousel banners={skin.banners} />
+          <SideCards />
+        </div>
       </div>
     ),
     tiles: (

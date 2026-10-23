@@ -18,6 +18,9 @@ export interface LevGame {
   roomCode: string | null;
   entriesCloseAt: string;
   endsAt: string;
+  /** Solo en el lobby: próximos partidos y cuántos tiene el concurso. */
+  events?: Array<{ home: string; away: string; league: string; startsAt: string }>;
+  eventCount?: number;
 }
 export interface LevEntry { id: string; chips: string; bets: number; rank: number | null; prize: string | null; qualified: boolean | null }
 export interface LevSelection { id: string; market: string; line: string | null; key: string; label: string; oddsE2: number; result: string }

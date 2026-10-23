@@ -11,7 +11,7 @@ export type WithdrawOutcome = { ok: true; withdrawalId: string } | { ok: false; 
 const REPLY: Record<string, string> = {
   NO_PLAYER: 'Para retirar primero necesitas una cuenta. Envíanos tu primer comprobante de carga y te la creamos al instante. 🙌',
   INVALID_AMOUNT: 'No entendí el monto. Escríbelo solo con números, por ejemplo 15000.',
-  INVALID_ACCOUNT: 'Necesito el CBU, CVU o alias de la cuenta donde quieres recibir el retiro.',
+  INVALID_ACCOUNT: 'Necesito la cuenta donde quieres recibir el retiro (Nequi, Daviplata, cuenta bancaria, CBU/CVU o alias).',
   KYC_REQUIRED: 'Para retirar necesitamos verificar tu identidad. Un asesor te escribe por aquí para completarlo. 🔐',
   INSUFFICIENT_FUNDS: 'Tu saldo disponible no alcanza para ese retiro. Revisa tu saldo en la cuenta e intenta con otro monto.',
   LIMIT_EXCEEDED: 'Ese monto está fuera de los límites de retiro (mínimo, máximo o diario). Un asesor te ayuda si lo necesitas.',

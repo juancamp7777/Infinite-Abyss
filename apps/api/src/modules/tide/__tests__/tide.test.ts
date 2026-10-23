@@ -100,6 +100,21 @@ function setup() {
 }
 
 describe('motor de Tide', () => {
+  it('un operador sin flujos no queda mudo: la bienvenida se activa de fábrica una sola vez; si la desactivan, se respeta', async () => {
+    const t = setup();
+    const c = await t.say('v0', 'hola, ¿hay alguien?');
+    expect(await t.bot(c)).toEqual(['out:¡Hola Ana! 👋 Soy el asistente virtual.', 'out:¿En qué te ayudo? Elige una opción o escribe tu pregunta.']);
+    const flows = await t.flows.list(OP);
+    expect(flows).toHaveLength(1);
+    expect(flows[0]).toMatchObject({ name: 'Bienvenida (automático)', enabled: true, publishedVersion: 1 });
+    await t.say('v0b', 'hola');
+    expect(await t.flows.list(OP)).toHaveLength(1);
+    await t.flows.setEnabled(OP, flows[0].id, false);
+    const quiet = await t.say('v0c', 'hola');
+    expect(await t.bot(quiet)).toEqual([]);
+    expect(await t.flows.list(OP)).toHaveLength(1);
+  });
+
   it('bienvenida → menú → opción → ¿algo más? → cierre', async () => {
     const t = setup();
     const f = await t.flows.create(OP, 'Bienvenida', 'welcome');
@@ -108,7 +123,7 @@ describe('motor de Tide', () => {
     expect(await t.bot(c)).toEqual(['out:¡Hola Ana! 👋 Soy el asistente virtual.', 'out:¿En qué te ayudo? Elige una opción o escribe tu pregunta.']);
     expect(await t.repo.findSession(c)).toMatchObject({ status: 'waiting', nodeId: 'menu' });
     await t.say('v1', '1');
-    expect((await t.bot(c)).slice(2)).toEqual(['out:Para depositar entra a Caja → Depositar. Se acredita al instante una vez confirmado el pago.', 'out:¿Te ayudo con algo más?']);
+    expect((await t.bot(c)).slice(2)).toEqual(['out:Para recargar, haz tu transferencia y envíame aquí la foto del comprobante 📸. La verificamos y te acreditamos en minutos. También puedes depositar desde Caja → Depositar.', 'out:¿Te ayudo con algo más?']);
     expect((await t.repo.findSession(c))?.vars).toEqual({ motivo: '1' });
     await t.say('v1', 'no, gracias');
     expect((await t.bot(c)).at(-1)).toMatch(/Gracias por escribirnos/);

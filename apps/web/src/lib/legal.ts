@@ -18,13 +18,13 @@ export const LEGAL_PAGES: LegalPage[] = [
   {
     slug: "acerca-de-nosotros",
     title: "Acerca de nosotros",
-    intro: "{casino} es un casino en línea pensado para Latinoamérica: juegos de calidad, pagos locales y atención humana a cualquier hora.",
+    intro: "{casino} es un casino en línea internacional: juegos de calidad, pagos locales en cada país donde operamos y atención humana a cualquier hora.",
     sections: [
       {
         title: "Qué ofrecemos",
         body: [
           "Slots de los principales proveedores, juegos originales con resultados verificables (provably fair), mesas, torneos y jackpots.",
-          "Recargas y retiros con los métodos que usas todos los días: transferencias, billeteras, PSE, tarjetas y USDT.",
+          "Recargas y retiros con los métodos de cada país: transferencias, billeteras, PSE, SPEI, tarjetas y USDT, en tu moneda local o en USDT.",
         ],
       },
       {
@@ -36,7 +36,7 @@ export const LEGAL_PAGES: LegalPage[] = [
       },
       {
         title: "Licencia y cumplimiento",
-        body: ["{casino} opera bajo la siguiente licencia de juego: {licencia}.", "Cumplimos las normas de prevención de lavado de activos, protección de datos y juego responsable aplicables a nuestra operación."],
+        body: ["{casino} opera bajo la siguiente licencia de juego: {licencia}.", "Cumplimos las normas internacionales de prevención de lavado de activos y, en cada país donde ofrecemos el servicio, sus reglas locales de juego, protección de datos y juego responsable."],
       },
       { title: "Contacto", body: ["Escríbenos por el chat de soporte del sitio o por nuestro Telegram oficial. Nunca te pediremos tu contraseña."] },
     ],
@@ -56,7 +56,7 @@ export const LEGAL_PAGES: LegalPage[] = [
       {
         title: "Documentos",
         body: [
-          "Documento de identidad vigente con foto (cédula de ciudadanía, INE, DNI o pasaporte).",
+          "Documento de identidad vigente con foto: cédula de ciudadanía (Colombia), INE (México), DNI (Argentina), licencia de conducir o identificación estatal (EE. UU.) o pasaporte.",
           "Una selfie sosteniendo el documento, para confirmar que eres tú.",
           "Cuando sea necesario: comprobante de domicilio de los últimos tres meses y prueba de titularidad del medio de pago.",
         ],
@@ -71,8 +71,8 @@ export const LEGAL_PAGES: LegalPage[] = [
       {
         title: "Monitoreo y reporte",
         body: [
-          "Revisamos las transacciones de forma continua. Ante operaciones sospechosas podemos pedir información adicional, suspender la cuenta, retener fondos y reportar a la autoridad competente, como exige la ley, sin aviso previo al jugador.",
-          "No aceptamos como clientes a personas incluidas en listas restrictivas nacionales o internacionales. Las personas expuestas políticamente pasan por una revisión reforzada.",
+          "Revisamos las transacciones de forma continua. Ante operaciones sospechosas podemos pedir información adicional, suspender la cuenta, retener fondos y reportar a la autoridad competente del país que corresponda (por ejemplo, la UIAF en Colombia, la UIF en México y en Argentina o FinCEN en EE. UU.), como exige la ley, sin aviso previo al jugador.",
+          "No aceptamos como clientes a personas incluidas en listas restrictivas nacionales o internacionales (como las de la ONU o la OFAC). Las personas expuestas políticamente pasan por una revisión reforzada.",
         ],
       },
       { title: "Conservación", body: ["Guardamos los registros de identidad y transacciones durante el plazo que exige la normativa aplicable, con acceso restringido y cifrado."] },
@@ -86,8 +86,17 @@ export const LEGAL_PAGES: LegalPage[] = [
       {
         title: "1. Elegibilidad",
         body: [
-          "Debes tener al menos 18 años, o la mayoría de edad de tu país si es mayor, y estar en un lugar donde el juego en línea sea legal para ti.",
+          "Debes tener al menos 18 años, o la edad mínima para jugar de tu país o estado si es mayor (por ejemplo, 21 años en varios estados de EE. UU.), y estar en un lugar donde el juego en línea sea legal para ti.",
           "Solo se permite una cuenta por persona, hogar, dispositivo y medio de pago. Las cuentas duplicadas pueden cerrarse y sus ganancias anularse.",
+        ],
+      },
+      {
+        title: "1.1 Jurisdicciones",
+        body: [
+          "Ofrecemos el servicio en los países y territorios autorizados por nuestra licencia, entre ellos Colombia, México y Argentina, aplicando sus reglas locales de juego, pagos e impuestos.",
+          "Estados Unidos: el juego de casino en línea solo es legal en algunos estados y con licencia estatal. No aceptamos jugadores ubicados en estados donde no esté permitido o donde no tengamos autorización.",
+          "No ofrecemos el servicio en Brasil ni en ningún país o territorio donde el juego en línea esté prohibido, ni a personas en listas de sanciones internacionales. Usar VPN u otros medios para ocultar tu ubicación está prohibido y da lugar al cierre de la cuenta.",
+          "Es tu responsabilidad conocer y cumplir la ley de tu lugar de residencia, incluidas las obligaciones tributarias sobre tus ganancias.",
         ],
       },
       {
@@ -102,7 +111,7 @@ export const LEGAL_PAGES: LegalPage[] = [
         body: [
           "Puedes recargar con los métodos que aparecen en la caja. Cada método puede tener montos mínimos y máximos.",
           "El saldo se acredita cuando el pago se confirma. En recargas por transferencia, el comprobante se verifica contra el pago real; un comprobante alterado o ajeno se rechaza y la cuenta puede suspenderse.",
-          "Los depósitos en USDT se acreditan en la moneda de tu cuenta a la tasa vigente publicada por el casino al momento de la confirmación.",
+          "Los depósitos en otra moneda (por ejemplo ARS, MXN o USDT) se acreditan en la moneda de tu cuenta a la tasa vigente publicada por el casino al momento de la confirmación.",
         ],
       },
       {
@@ -150,7 +159,7 @@ export const LEGAL_PAGES: LegalPage[] = [
       },
       {
         title: "10. Licencia y ley aplicable",
-        body: ["{casino} opera bajo la licencia {licencia}.", "Las reclamaciones se presentan primero por el chat de soporte. Si no quedas conforme, puedes acudir a la autoridad competente según la ley aplicable a la licencia."],
+        body: ["{casino} opera bajo la licencia {licencia}.", "Estos términos se rigen por la ley de la jurisdicción de la licencia, sin perjuicio de los derechos que te otorgue como consumidor la ley de tu país. Las reclamaciones se presentan primero por el chat de soporte; si no quedas conforme, puedes acudir al regulador de la licencia o a la autoridad de protección al consumidor de tu país."],
       },
       { title: "11. Cambios", body: ["Podemos actualizar estos términos. Te avisaremos de los cambios importantes y la versión vigente siempre estará publicada en esta página."] },
     ],
@@ -179,7 +188,7 @@ export const LEGAL_PAGES: LegalPage[] = [
           "También puedes pedir una pausa o la autoexclusión: durante ese tiempo no podrás jugar ni recibirás publicidad.",
         ],
       },
-      { title: "Menores de edad", body: ["El juego está prohibido para menores de 18 años. Verificamos la edad y cerramos cualquier cuenta de un menor."] },
+      { title: "Menores de edad", body: ["El juego está prohibido para menores de 18 años, o de la edad mínima de tu país o estado si es mayor (21 en varios estados de EE. UU.). Verificamos la edad y cerramos cualquier cuenta de un menor."] },
       { title: "Busca ayuda", body: ["Si sientes que el juego dejó de ser diversión, habla con alguien de confianza y busca apoyo profesional. Nuestro equipo de soporte también puede orientarte y aplicar una autoexclusión de inmediato."] },
     ],
   },
@@ -263,7 +272,11 @@ export const LEGAL_PAGES: LegalPage[] = [
       },
       {
         title: "Tus derechos",
-        body: ["Puedes conocer, actualizar, rectificar y pedir la eliminación de tus datos, y retirar tu autorización de publicidad, según la ley de protección de datos de tu país. Escríbenos por el chat de soporte."],
+        body: [
+          "Puedes conocer, actualizar, rectificar y pedir la eliminación de tus datos, y retirar tu autorización de publicidad. Escríbenos por el chat de soporte.",
+          "Respetamos la ley de protección de datos de cada país donde operamos: en Colombia, la Ley 1581 de 2012 (habeas data); en México, la Ley Federal de Protección de Datos Personales en Posesión de los Particulares; en Argentina, la Ley 25.326; en EE. UU., las leyes estatales aplicables, como la de California (CCPA); y, si resides en la Unión Europea, el RGPD.",
+          "Algunos datos pueden procesarse en servidores fuera de tu país, siempre con medidas de seguridad equivalentes.",
+        ],
       },
       { title: "Cookies y notificaciones", body: ["Usamos cookies necesarias para que el sitio funcione y recordar tus preferencias. Las notificaciones push solo se activan si das permiso en tu navegador."] },
     ],

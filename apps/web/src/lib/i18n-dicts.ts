@@ -183,6 +183,15 @@ const MORE: Record<string, [string, string]> = {
 /** Caja, cuenta, lobby y juegos. */
 const GAME: Record<string, [string, string]> = {
   "Modo": ["Mode", "Modo"], "Siguiente": ["Next", "Próximo"],
+  "Proveedor": ["Provider", "Provedor"], "Enviar a revisión": ["Send for review", "Enviar para análise"], "Guardando…": ["Saving…", "Salvando…"], "Guardar límites": ["Save limits", "Salvar limites"],
+  "Solicitar retiro": ["Request withdrawal", "Solicitar saque"], "Ver más": ["See more", "Ver mais"], "Cerrar sesión": ["Log out", "Sair"], "Cargar más": ["Load more", "Carregar mais"],
+  "Sin conexión en vivo": ["No live connection", "Sem conexão ao vivo"], "Conectando…": ["Connecting…", "Conectando…"], "Apuestas en vivo": ["Live bets", "Apostas ao vivo"],
+  "Expandir menú": ["Expand menu", "Expandir menu"], "Contraer menú": ["Collapse menu", "Recolher menu"], "Diaria": ["Daily", "Diária"], "Semanal": ["Weekly", "Semanal"],
+  "Repartiendo…": ["Dealing…", "Distribuindo…"], "Repartir": ["Deal", "Distribuir"], "Iniciando…": ["Starting…", "Iniciando…"], "Apostar": ["Bet", "Apostar"], "Crash": ["Crash", "Crash"],
+  "Retirado": ["Cashed out", "Sacado"], "Lanzando…": ["Rolling…", "Lançando…"], "El hash NO coincide": ["Hash does NOT match", "O hash NÃO confere"], "El hash coincide": ["Hash matches", "O hash confere"],
+  "Cerrando…": ["Closing…", "Fechando…"], "Cerrar ronda abierta": ["Close open round", "Fechar rodada aberta"], "ON": ["ON", "ON"], "OFF": ["OFF", "OFF"],
+  "Silenciar sonido": ["Mute sound", "Silenciar som"], "Activar sonido": ["Turn sound on", "Ativar som"], "Historial": ["History", "Histórico"], "Historial de giros": ["Spin history", "Histórico de giros"],
+  "Detener autoplay": ["Stop autoplay", "Parar autoplay"], "Configurar autoplay": ["Set up autoplay", "Configurar autoplay"],
   "Faltan {n} pts para {level}": ["{n} pts to reach {level}", "Faltam {n} pts para {level}"], "Girar": ["Spin", "Girar"], "Girando…": ["Spinning…", "Girando…"],
   "Girar rueda diaria": ["Spin daily wheel", "Girar roda diária"], "Vuelve más tarde": ["Come back later", "Volte mais tarde"], "Vuelve más tarde.": ["Come back later.", "Volte mais tarde."],
   "Auto": ["Auto", "Auto"], "Guardar": ["Save", "Salvar"], "Verificar": ["Verify", "Verificar"], "Saltar animación": ["Skip animation", "Pular animação"], "Buscar": ["Search", "Buscar"],

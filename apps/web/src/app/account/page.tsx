@@ -191,7 +191,7 @@ export default function AccountPage() {
           </p>
           {(kyc === "NONE" || kyc === "REJECTED") && (
             <button onClick={() => void submitKyc()} disabled={kycBusy} className="self-start bg-gold-gradient text-black font-bold px-5 py-2 rounded-lg disabled:opacity-60">
-              {kycBusy ? "Enviando…" : "Enviar a revisión"}
+              {kycBusy ? t("Enviando…") : t("Enviar a revisión")}
             </button>
           )}
           <MsgLine msg={kycMsg} />
@@ -214,7 +214,7 @@ export default function AccountPage() {
               <Field label={t("Tiempo máximo de sesión (minutos)")} inputMode="numeric" value={form.sessionTimeLimitMinutes ?? ""} onChange={(v) => setForm((f) => ({ ...f, sessionTimeLimitMinutes: v }))} hint={t("Vacío = sin límite")} />
               <div className="sm:col-span-2 flex flex-col gap-2">
                 <button type="submit" disabled={saving} className="self-start bg-gold-gradient text-black font-bold px-5 py-2 rounded-lg disabled:opacity-60">
-                  {saving ? "Guardando…" : "Guardar límites"}
+                  {saving ? t("Guardando…") : t("Guardar límites")}
                 </button>
                 <MsgLine msg={saveMsg} />
               </div>

@@ -71,7 +71,7 @@ export function AccountMenu() {
           <Link role="menuitem" href="/classic" className={item} onClick={() => setOpen(false)}><Gamepad2 aria-hidden className="h-4 w-4" />{t("Juegos clásicos")}</Link>
           <hr aria-hidden className="my-1 border-[var(--nf-border)]" />
           <button role="menuitem" type="button" className={`${item} w-full text-left`} onClick={() => { setOpen(false); void logout(); }}>
-            <LogOut aria-hidden className="h-4 w-4" />Cerrar sesión
+            <LogOut aria-hidden className="h-4 w-4" />{t("Cerrar sesión")}
           </button>
         </div>
       )}

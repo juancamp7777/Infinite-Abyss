@@ -158,7 +158,7 @@ export default function FairnessPanel({ game, lastRound, defaultOpen = false }: 
         {result && (
           <div role="status" className="rounded-lg bg-slate-950 p-2 text-xs">
             <p className={result.hashMatches === false ? 'text-rose-300' : 'text-emerald-300'}>
-              {result.hashMatches === false ? 'El hash NO coincide' : 'El hash coincide'}
+              {result.hashMatches === false ? t("El hash NO coincide") : t("El hash coincide")}
               {result.round ? (result.round.outcomeMatches === false ? ' · resultado distinto' : ' · resultado reproducido') : ''}
             </p>
             <p className="mt-1 break-all font-mono text-slate-400">{JSON.stringify(result.outcome)}</p>

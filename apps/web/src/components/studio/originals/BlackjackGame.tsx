@@ -134,7 +134,7 @@ export default function BlackjackGame(props: StudioGameProps) {
         </div>
       ) : (
         <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={deal} aria-label={t("Repartir cartas")}>
-          {busy ? 'Repartiendo…' : 'Repartir'}
+          {busy ? t("Repartiendo…") : t("Repartir")}
         </PrimaryButton>
       )}
       {playing && minor && <p className="text-[11px] text-slate-500">Doblar y dividir cobran una apuesta adicional de {formatMinor(minor)} (saldo: {formatMinor(bal)}).</p>}

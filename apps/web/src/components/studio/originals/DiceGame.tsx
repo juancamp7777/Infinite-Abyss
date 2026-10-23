@@ -100,7 +100,7 @@ export default function DiceGame(props: StudioGameProps) {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={single} aria-label={t("Lanzar dado")}>
-            {busy ? 'Lanzando…' : 'Apostar'}
+            {busy ? t("Lanzando…") : t("Apostar")}
           </PrimaryButton>
           <PrimaryButton disabled={busy || !minor || !chanceOk || !session.ready} onClick={auto} aria-label={t("Iniciar autoplay")}>
             {t("Auto")}

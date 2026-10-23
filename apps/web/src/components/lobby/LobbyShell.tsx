@@ -88,7 +88,7 @@ function Shell({ children }: { children: ReactNode }) {
       {!topbar && <aside data-collapsed={collapsed} className="nf-side sticky top-0 hidden h-screen shrink-0 flex-col lg:flex" aria-label={t("Menú lateral")}>
         <div className={`flex h-16 items-center border-b border-[var(--nf-border)] px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
           {!collapsed && <Link href="/lobby" aria-label={t("Ir al inicio")}><Logo variant="full" className="h-9 w-auto" /></Link>}
-          <button type="button" onClick={toggleCollapsed} className="nf-square-btn" aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'} aria-expanded={!collapsed}>
+          <button type="button" onClick={toggleCollapsed} className="nf-square-btn" aria-label={collapsed ? t("Expandir menú") : t("Contraer menú")} aria-expanded={!collapsed}>
             {collapsed ? <PanelLeftOpen aria-hidden className="h-4 w-4" /> : <PanelLeftClose aria-hidden className="h-4 w-4" />}
           </button>
         </div>

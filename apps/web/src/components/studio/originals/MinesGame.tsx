@@ -135,7 +135,7 @@ export default function MinesGame(props: StudioGameProps) {
         </PrimaryButton>
       ) : (
         <PrimaryButton disabled={!minor || busy || !session.ready || !!openRound.open} onClick={start} aria-label={t("Empezar ronda de minas")}>
-          {busy ? 'Iniciando…' : 'Apostar'}
+          {busy ? t("Iniciando…") : t("Apostar")}
         </PrimaryButton>
       )}
       <FairnessPanel game={props} lastRound={last} />

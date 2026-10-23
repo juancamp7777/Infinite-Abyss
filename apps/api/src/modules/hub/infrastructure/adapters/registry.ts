@@ -16,6 +16,10 @@ export class ProviderAdapterRegistry {
     this.adapters.set(adapter.id, adapter);
   }
 
+  unregister(id: string): void {
+    this.adapters.delete(id);
+  }
+
   get(id: string): ProviderAdapter | undefined {
     return this.adapters.get(id);
   }
@@ -59,22 +63,33 @@ export function buildAdapters(env: NodeJS.ProcessEnv, deps: { logger?: ModuleLog
     else mock = undefined;
   }
 
-  for (const a of [new PragmaticPlayAdapter(env), new EvolutionAdapter(env), new GenericAggregatorAdapter(env)]) {
-    if (a.enabled) registry.register(a);
-  }
+  const external = buildExternalAdapters(env, { logger, nonces });
+  for (const a of external.adapters) registry.register(a);
+  return { registry, studios, mock, aggregators: external.aggregators };
+}
 
+/**
+ * Proveedores externos (contratos directos y agregadores) a partir del entorno. Se usa al arrancar y cada vez que se
+ * conecta un proveedor desde Integraciones (sin tocar Abyss Studios ni el proveedor mock).
+ */
+export function buildExternalAdapters(env: NodeJS.ProcessEnv, deps: { logger: ModuleLogger; nonces: NonceStore }): { adapters: ProviderAdapter[]; aggregators: BuiltAdapters['aggregators'] } {
+  const { logger, nonces } = deps;
+  const adapters: ProviderAdapter[] = [];
+  for (const a of [new PragmaticPlayAdapter(env), new EvolutionAdapter(env), new GenericAggregatorAdapter(env)]) {
+    if (a.enabled) adapters.push(a);
+  }
   const aggregators: BuiltAdapters['aggregators'] = [];
   const apiMatic = ApiMaticAdapter.fromEnv(env, { nonces, logger });
   if (apiMatic) {
-    registry.register(apiMatic);
+    adapters.push(apiMatic);
     aggregators.push({ id: apiMatic.id, name: 'API-Matic' });
     logger.info('hub: API-Matic habilitado', { environment: apiMatic.environment, host: apiMatic.apiHost });
   }
   const apiSlots = ApiSlotsAdapter.fromEnv(env, { logger });
   if (apiSlots) {
-    registry.register(apiSlots);
+    adapters.push(apiSlots);
     aggregators.push({ id: apiSlots.id, name: 'API-Slots' });
     logger.info('hub: API-Slots habilitado');
   }
-  return { registry, studios, mock, aggregators };
+  return { adapters, aggregators };
 }

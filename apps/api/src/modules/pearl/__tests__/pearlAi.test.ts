@@ -26,6 +26,7 @@ describe('Pearl IA de punta a punta (webchat → lectura → conciliación → a
   let base: string;
   let pearl: PearlService;
   let ai: PearlAi;
+  let services: Record<string, unknown>;
   let feed: { id: string; token: string };
   const credited: string[] = [];
   let nextRead: ExtractedReceipt = { amount: '0', senderName: '' };
@@ -51,6 +52,7 @@ describe('Pearl IA de punta a punta (webchat → lectura → conciliación → a
     server = createServer(app);
     const deposits: ExternalDepositPort = { credit: async (req) => { credited.push(req.reference); return { depositId: `d-${req.reference}`, txId: 't', duplicate: false }; } };
     const deps: ModuleDeps = { wallet: new InMemoryWallet(), bus: new InMemoryEventBus(), auth: new MockAuth({ NODE_ENV: 'test' }), compliance: new InMemoryPlayerCompliance(), logger: silentLogger, env: { INBOX_SECRETS_KEY: 'k'.repeat(40) }, services: {} };
+    services = deps.services;
     Object.assign(deps.services, await createInboxModule().register(app, undefined, deps));
     Object.assign(deps.services, await createTideModule({ tickMs: 0 }).register(app, undefined, deps));
     const published = await createPearlModule({
@@ -83,6 +85,10 @@ describe('Pearl IA de punta a punta (webchat → lectura → conciliación → a
     expect(JSON.stringify(saved.body)).not.toContain('sk-test');
     const gem = await call('PUT', '/pearl/v1/admin/ai', { token: admin, body: { provider: 'gemini' } });
     expect(gem.body).toMatchObject({ provider: 'gemini', readerModel: 'gemini-2.5-flash', hasKey: false });
+    // Sin llave propia, usa la conectada en Integraciones (del casino o de la plataforma).
+    services['integrations.service'] = { value: async (_op: string | null, key: string) => (key === 'gemini' ? 'gm-conectada' : undefined), envOverlay: async () => ({}) };
+    expect((await call('GET', '/pearl/v1/admin/ai', { token: admin })).body).toMatchObject({ provider: 'gemini', hasKey: true, keyFromEnv: true });
+    delete services['integrations.service'];
     await call('PUT', '/pearl/v1/admin/ai', { token: admin, body: { provider: 'anthropic', apiKey: 'sk-test-only-0123456789' } });
   });
 

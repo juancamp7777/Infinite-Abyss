@@ -5,6 +5,7 @@ import type { BetCheckRequest, BetGuardPort } from './shared/ports/BetGuardPort'
 import type { GameCatalogPort } from './shared/ports/GameCatalogPort';
 import type { SegmentPort } from './shared/ports/SegmentPort';
 import { hubModule } from './hub';
+import { integrationsModule } from './integrations';
 import { studioModule } from './studio';
 import { promotionsModule } from './promotions';
 import { crmModule } from './crm';
@@ -23,6 +24,7 @@ export type { ModuleDeps, NymfoModule } from './shared/module';
 
 /** Orden de montaje: los proveedores de servicios van antes que sus consumidores (los consumidores igualmente resuelven en cada llamada). */
 export const ALL_MODULES: NymfoModule[] = [
+  integrationsModule,
   hubModule,
   studioModule,
   promotionsModule,

@@ -240,6 +240,7 @@ export const NAV: NavItem[] = [
   { href: "/reef", label: "Reef · Plantillas", roles: ADMINS, section: "Marca" },
   { href: "/skin", label: "Skin clásica", roles: ADMINS, section: "Marca" },
   { href: "/reports", label: "Reportes", roles: ADMINS, section: "Principal" },
+  { href: "/integrations", label: "Integraciones", roles: ADMINS, section: "Principal" },
 ];
 
 export const canAccess = (role: Role | null, href: string) => !!role && NAV.some((n) => n.href === href && n.roles.includes(role));

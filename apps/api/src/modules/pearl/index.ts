@@ -14,6 +14,7 @@ import type { PearlRepository, Receipt } from './domain/types';
 import { buildPearlRouter } from './http/routes';
 import { InMemoryPearlRepository } from './infrastructure/InMemoryPearlRepository';
 import { PrismaPearlRepository, type PearlPrismaLike } from './infrastructure/PrismaPearlRepository';
+import type { IntegrationsPort } from '../shared/ports/IntegrationsPort';
 
 export const PEARL_PREFIX = '/pearl/v1';
 
@@ -62,6 +63,7 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
         const box = new SecretBox(deps.env.INBOX_SECRETS_KEY || randomBytes(32).toString('hex'));
         ai = new PearlAi(repo, pearl, inbox, box, {
           logger: deps.logger, envKey: deps.env.PEARL_ANTHROPIC_API_KEY || deps.env.ANTHROPIC_API_KEY || undefined, factory: opts.aiFactory,
+          keyResolver: async (operatorId, provider) => (deps.services['integrations.service'] as IntegrationsPort | undefined)?.value(operatorId, provider, 'apiKey'),
           ensurePlayer: () => {
             const leads = deps.services['inbox.leads'] as LeadService | undefined;
             return leads ? (conv, name) => leads.ensurePlayer(conv, name) : undefined;

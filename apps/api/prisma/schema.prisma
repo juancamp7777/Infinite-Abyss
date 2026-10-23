@@ -1835,3 +1835,23 @@ model ReefAsset {
   @@index([operatorId])
   @@map("reef_assets")
 }
+
+// ───────────────────────── Integraciones (Abyss Command) ─────────────────────────
+
+// Credenciales de servicios externos (IA, proveedores de juegos, pagos, alertas). scope = 'platform' o el id del casino.
+// Los secretos van cifrados (AES-256-GCM, INBOX_SECRETS_KEY); publicFields guarda solo datos no sensibles (URLs, IDs).
+model IntegrationCredential {
+  scope        String
+  key          String
+  secretsEnc   String?
+  publicFields Json      @default("{}")
+  status       String    @default("saved")
+  lastError    String?
+  lastTestAt   DateTime?
+  updatedBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@id([scope, key])
+  @@map("integration_credentials")
+}

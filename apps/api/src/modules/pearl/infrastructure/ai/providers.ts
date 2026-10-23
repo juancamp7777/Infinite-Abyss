@@ -20,6 +20,8 @@ export const ReceiptSchema = z.object({
   sender_name: z.string(),
   sender_tax_id: z.string(),
   receiver_account: z.string(),
+  asset: z.string(),
+  tx_id: z.string(),
   tamper_signals: z.array(z.string()),
 });
 export const VerdictSchema = z.object({ approve: z.boolean(), reason: z.string() });
@@ -32,7 +34,9 @@ Devuelve exactamente los datos visibles, sin inventar:
 - time: hora de la operación en formato HH:MM de 24 h ("" si no aparece).
 - sender_name: titular de la cuenta ORIGEN (quien paga), nunca el destinatario. "" si no aparece.
 - sender_tax_id: CUIT/CUIL/documento del que paga ("" si no aparece).
-- receiver_account: cuenta DESTINO tal como se ve, aunque esté parcial: CBU/CVU o alias (Argentina), número de cuenta, llave o celular Nequi/Daviplata (Colombia) ("" si no aparece).
+- receiver_account: cuenta DESTINO tal como se ve, aunque esté parcial: CBU/CVU o alias (Argentina), número de cuenta, llave o celular Nequi/Daviplata (Colombia), o la dirección de la billetera si es cripto ("" si no aparece).
+- asset: "USDT" si es un envío/retiro de USDT (Binance u otra billetera cripto); "" si es dinero en pesos.
+- tx_id: el TxID / hash de la transacción si aparece (en Binance: "TxID" o "Transferencia interna" con su número); "" si no aparece.
 - tamper_signals: solo indicios CLAROS de edición (tipografías o alineaciones distintas en el monto o la fecha, números superpuestos, recortes sobre datos clave). Lista vacía si no hay evidencia.`;
 
 export const JUDGE_PROMPT = `Eres el juez de una caja de casino. Una regla automática quiere acreditar un depósito porque el comprobante coincide con un pago real del banco.
@@ -46,6 +50,8 @@ const toExtracted = (r: z.infer<typeof ReceiptSchema>): ExtractedReceipt => ({
   senderName: r.sender_name.trim().slice(0, 120),
   ...(r.sender_tax_id.trim() ? { senderTaxId: r.sender_tax_id.trim().slice(0, 30) } : {}),
   ...(r.receiver_account.trim() ? { receiverAccount: r.receiver_account.trim().slice(0, 60) } : {}),
+  ...(/usdt/i.test(r.asset) ? { asset: 'USDT' as const } : {}),
+  ...(r.tx_id.trim() ? { txId: r.tx_id.trim().slice(0, 120) } : {}),
   notAReceipt: !r.is_completed_transfer_receipt,
   tamperSignals: r.tamper_signals.map((s) => s.slice(0, 200)).slice(0, 10),
 });

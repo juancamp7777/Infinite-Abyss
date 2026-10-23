@@ -5,6 +5,8 @@ import type { ModuleLogger } from '../../shared/module';
 import { ExternalDepositError, type ExternalDepositPort } from '../../shared/ports/ExternalDepositPort';
 import type { CreditPolicy } from './BotConfigService';
 import { parseFeedPayload } from '../domain/feeds';
+import { isCryptoTx, matchCryptoTx, usdtMicro, usdtToMinor } from '../domain/crypto';
+import type { CryptoDeposit } from '../infrastructure/binance';
 import { isOwnAccount, isWalletOrOwnName, matchBankTx, parseAmountToMinor, receiptKey } from '../domain/matching';
 import {
   DUPLICATE_RECEIPT, type BankAccount, type BankTx, type Check, type ExtractedReceipt, type Feed, type FeedType, type PearlRepository,
@@ -51,7 +53,14 @@ export class PearlService {
 
   constructor(
     private readonly repo: PearlRepository,
-    private readonly opts: { deposits?: ExternalDepositPort; logger: ModuleLogger; defaultCurrency: string; now?: () => Date },
+    private readonly opts: {
+      deposits?: ExternalDepositPort;
+      logger: ModuleLogger;
+      defaultCurrency: string;
+      now?: () => Date;
+      /** Lee los depósitos USDT de un feed de Binance (con su llave cifrada) desde una fecha. */
+      cryptoSource?: (feed: Feed, since: Date) => Promise<CryptoDeposit[]>;
+    },
   ) {}
 
   setNotifier(n: PearlNotifier) {
@@ -108,9 +117,9 @@ export class PearlService {
     return this.repo.listFeeds(operatorId);
   }
   /** Crea un feed y devuelve el token del webhook UNA sola vez (se guarda su hash). */
-  async createFeed(operatorId: string, type: FeedType, name: string): Promise<{ feed: Feed; token: string }> {
+  async createFeed(operatorId: string, type: FeedType, name: string, secretEnc?: string): Promise<{ feed: Feed; token: string }> {
     const token = randomBytes(24).toString('base64url');
-    const feed = await this.repo.saveFeed({ id: randomUUID(), operatorId, type, name: name.trim().slice(0, 80) || type, tokenHash: sha256(token), enabled: true, createdAt: this.now() });
+    const feed = await this.repo.saveFeed({ id: randomUUID(), operatorId, type, name: name.trim().slice(0, 80) || type, tokenHash: sha256(token), enabled: true, ...(secretEnc ? { secretEnc } : {}), createdAt: this.now() });
     return { feed, token };
   }
   async setFeedEnabled(operatorId: string, id: string, enabled: boolean): Promise<Feed> {
@@ -127,7 +136,7 @@ export class PearlService {
   /** Webhook del proveedor: token de la URL obligatorio; movimientos idempotentes por id externo. */
   async ingest(feedId: string, token: string, body: unknown): Promise<{ received: number; created: number }> {
     const feed = await this.repo.findFeed(feedId);
-    if (!feed || !feed.enabled || !safeEq(sha256(token), feed.tokenHash)) throw new HttpError(404, 'NOT_FOUND', 'Feed no encontrado');
+    if (!feed || !feed.enabled || feed.type === 'binance' || !safeEq(sha256(token), feed.tokenHash)) throw new HttpError(404, 'NOT_FOUND', 'Feed no encontrado');
     const s = await this.settings(feed.operatorId);
     const items = parseFeedPayload(feed.type, body, currencyDecimals(s.currency), s.utcOffsetMinutes);
     let created = 0;
@@ -202,15 +211,20 @@ export class PearlService {
     const r = await this.getReceipt(operatorId, id);
     if (TERMINAL.includes(r.status)) throw new HttpError(409, 'ALREADY_FINAL', 'El comprobante ya está resuelto');
     if (!r.playerId) throw new HttpError(409, 'NO_PLAYER', 'Vincula la conversación a un jugador antes de acreditar');
-    if (!r.amount) throw new HttpError(409, 'NO_AMOUNT', 'El comprobante no tiene un monto válido');
     let tx: BankTx | null = null;
+    let amount = r.amount;
     const chosen = bankTxId ?? r.bankTxId;
     if (chosen) {
       tx = await this.repo.findBankTx(operatorId, chosen);
       if (!tx || tx.status !== 'available') throw new HttpError(409, 'TX_UNAVAILABLE', 'Ese movimiento no está disponible');
-      if (tx.amount !== r.amount) throw new HttpError(409, 'AMOUNT_MISMATCH', 'El monto del movimiento no coincide con el comprobante');
+      if (isCryptoTx(tx)) {
+        // USDT: se acredita lo que llegó a Binance, a la tasa del operador.
+        amount = this.cryptoAmount(tx, await this.settings(operatorId)) ?? undefined;
+        if (!amount) throw new HttpError(409, 'NO_USDT_RATE', 'Configura la tasa USDT en Pearl antes de acreditar');
+      } else if (tx.amount !== r.amount) throw new HttpError(409, 'AMOUNT_MISMATCH', 'El monto del movimiento no coincide con el comprobante');
     }
-    const out = await this.credit({ ...r, reviewerId }, tx, r.status);
+    if (!amount) throw new HttpError(409, 'NO_AMOUNT', 'El comprobante no tiene un monto válido');
+    const out = await this.credit({ ...r, amount, reviewerId }, tx, r.status);
     if (out.status === 'credited') for (const cb of this.reviewed) await cb(out).catch(() => undefined);
     return out;
   }
@@ -224,7 +238,49 @@ export class PearlService {
   }
 
   /** Comprobantes esperando al banco: reintenta; vencida la espera, a revisión humana. */
+  /**
+   * Consulta los feeds de Binance: cada depósito USDT nuevo queda como movimiento disponible (idempotente por TxID),
+   * convertido a la moneda del casino con la tasa del operador. Un depósito nuevo destraba comprobantes en espera.
+   */
+  async pollCrypto(): Promise<number> {
+    if (!this.opts.cryptoSource) return 0;
+    let total = 0;
+    for (const feed of await this.repo.enabledFeedsOfType('binance')) {
+      try {
+        const s = await this.settings(feed.operatorId);
+        const startedAt = this.now();
+        // 30 min de solape: los depósitos se insertan una sola vez, así que repetir no duplica.
+        const since = new Date((feed.polledAt ?? feed.createdAt).getTime() - 30 * 60_000);
+        let created = 0;
+        for (const d of await this.opts.cryptoSource(feed, since)) {
+          const micro = usdtMicro(d.amount);
+          if (micro === null) continue;
+          const amount = (s.usdtRate ? usdtToMinor(micro, s.usdtRate, currencyDecimals(s.currency)) : null) ?? 0n;
+          const r = await this.repo.insertBankTx({
+            id: randomUUID(), operatorId: feed.operatorId, feedId: feed.id, externalId: d.externalId, amount, currency: s.currency, senderName: '',
+            ...(d.address ? { receiverAccount: d.address } : {}), asset: 'USDT', assetAmount: d.amount, occurredAt: d.occurredAt, status: 'available', createdAt: this.now(),
+          });
+          if (r.created) created++;
+        }
+        await this.repo.saveFeed({ ...feed, polledAt: startedAt, ...(created ? { lastEventAt: this.now() } : {}) });
+        if (created) await this.retryWaiting(feed.operatorId);
+        total += created;
+      } catch (e) {
+        this.opts.logger.warn('[pearl] no se pudo consultar Binance', { feedId: feed.id, error: (e as Error).message });
+      }
+    }
+    return total;
+  }
+
+  /** Pesos que vale un depósito USDT: lo calculado al llegar o, si entonces no había tasa, con la tasa actual. */
+  private cryptoAmount(tx: BankTx, s: PearlSettings): bigint | null {
+    if (tx.amount > 0n) return tx.amount;
+    const micro = tx.assetAmount ? usdtMicro(tx.assetAmount) : null;
+    return micro !== null && s.usdtRate ? usdtToMinor(micro, s.usdtRate, currencyDecimals(s.currency)) : null;
+  }
+
   async tick(): Promise<number> {
+    await this.pollCrypto().catch((e: Error) => this.opts.logger.error('[pearl] consulta de feeds cripto', { error: e.message }));
     const waiting = await this.repo.waitingReceipts(100);
     for (const r of waiting) {
       try {
@@ -262,17 +318,25 @@ export class PearlService {
 
   /** Controles deterministas del comprobante y su estado inicial. */
   private async assess(operatorId: string, x: ExtractedReceipt, s: PearlSettings) {
-    const amount = parseAmountToMinor(x.amount, currencyDecimals(s.currency)) ?? undefined;
-    const key = amount && x.senderName ? receiptKey({ amount, senderName: x.senderName, date: x.date, time: x.time }) : undefined;
+    const crypto = x.asset === 'USDT';
+    const micro = crypto ? usdtMicro(x.amount) : null;
+    const amount = crypto
+      ? (micro !== null && s.usdtRate ? usdtToMinor(micro, s.usdtRate, currencyDecimals(s.currency)) ?? undefined : undefined)
+      : parseAmountToMinor(x.amount, currencyDecimals(s.currency)) ?? undefined;
+    // USDT: sin titular; la huella es el TxID (o fecha y hora exactas), para no confundir dos envíos del mismo monto.
+    const key = crypto
+      ? (micro !== null && (x.txId || (x.date && x.time)) ? `usdt|${x.txId ?? ''}|${x.date ?? ''}|${x.time ?? ''}|${micro}` : undefined)
+      : amount && x.senderName ? receiptKey({ amount, senderName: x.senderName, date: x.date, time: x.time }) : undefined;
     const accounts = (await this.repo.listAccounts(operatorId)).filter((acc) => acc.active);
     const at = this.receiptDate(x, s);
     const checks: Check[] = [];
     const add = (code: string, ok: boolean, detail?: string) => checks.push({ code, ok, ...(detail ? { detail } : {}) });
     add('es_comprobante', !x.notAReceipt, x.notAReceipt ? 'Parece una pantalla previa a la transferencia, no un comprobante final' : undefined);
     add('sin_edicion', !x.tamperSignals?.length, x.tamperSignals?.join('; '));
-    add('monto_legible', !!amount);
+    add('monto_legible', crypto ? micro !== null : !!amount);
+    if (crypto) add('tasa_usdt', !!s.usdtRate, s.usdtRate ? undefined : 'Configura la tasa USDT en Pearl');
     if (amount) add('monto_minimo', amount >= s.minAmount);
-    add('titular', !!x.senderName && !isWalletOrOwnName(x.senderName, accounts.map((acc) => acc.holderName)), x.senderName ? undefined : 'Sin titular');
+    if (!crypto) add('titular', !!x.senderName && !isWalletOrOwnName(x.senderName, accounts.map((acc) => acc.holderName)), x.senderName ? undefined : 'Sin titular');
     if (x.receiverAccount) add('cuenta_destino', isOwnAccount(x.receiverAccount, accounts), x.receiverAccount);
     if (at) {
       const age = this.now().getTime() - at.getTime();
@@ -293,11 +357,31 @@ export class PearlService {
   }
 
   private async reconcile(r: Receipt, s: PearlSettings, first: boolean): Promise<Receipt> {
-    const names = [r.extracted.senderName, ...(r.playerId ? await this.repo.knownSenderNames(r.operatorId, r.playerId) : [])];
     const since = new Date(this.now().getTime() - Math.max(s.maxAgeHours, 24) * 3_600_000);
-    const feed = await this.repo.listBankTxs(r.operatorId, { status: 'available', since, amount: r.amount, limit: 200 });
     // La hora desempata solo si el comprobante la trae (sin hora no se inventa una).
-    const m = matchBankTx({ amount: r.amount!, names, at: r.extracted.time ? this.receiptDate(r.extracted, s) ?? undefined : undefined }, feed);
+    const at = r.extracted.time ? this.receiptDate(r.extracted, s) ?? undefined : undefined;
+    const crypto = r.extracted.asset === 'USDT';
+    let m: { kind: 'unique'; tx: BankTx; by?: 'txid' | 'amount' } | { kind: 'ambiguous' } | { kind: 'none' };
+    if (crypto) {
+      const micro = usdtMicro(r.extracted.amount);
+      const feed = (await this.repo.listBankTxs(r.operatorId, { status: 'available', since, limit: 200 })).filter(isCryptoTx);
+      m = micro === null ? { kind: 'none' } : matchCryptoTx({ micro, txId: r.extracted.txId, at }, feed);
+    } else {
+      const names = [r.extracted.senderName, ...(r.playerId ? await this.repo.knownSenderNames(r.operatorId, r.playerId) : [])];
+      const feed = (await this.repo.listBankTxs(r.operatorId, { status: 'available', since, amount: r.amount, limit: 200 })).filter((t) => !isCryptoTx(t));
+      m = matchBankTx({ amount: r.amount!, names, at }, feed);
+    }
+    if (m.kind === 'unique' && crypto) {
+      // Se acredita lo que Binance reporta que llegó. Solo se acredita solo una transferencia interna de Binance
+      // (su ID no es público) con TxID y monto iguales: por monto, otro jugador podría reclamar un depósito ajeno con
+      // una captura del mismo valor, y el TxID de la red TRON se puede copiar de un explorador público.
+      const amount = this.cryptoAmount(m.tx, s);
+      if (!amount) return this.toReview(r, 'sin_tasa_usdt', m.tx);
+      r = { ...r, amount };
+      if (m.by !== 'txid') return this.toReview(r, 'usdt_sin_txid', m.tx);
+      if (usdtMicro(m.tx.assetAmount ?? '') !== usdtMicro(r.extracted.amount)) return this.toReview(r, 'usdt_monto_distinto', m.tx);
+      if (!/internal/i.test(m.tx.externalId)) return this.toReview(r, 'usdt_por_red', m.tx);
+    }
     if (m.kind === 'unique') {
       if (s.mode !== 'auto') return this.toReview(r, 'modo_revision', m.tx);
       const p = await this.policy?.(r.operatorId).catch(() => null);
@@ -309,7 +393,7 @@ export class PearlService {
       }
       if (r.amount! > s.autoMaxAmount) return this.toReview(r, 'supera_tope_automatico', m.tx);
       if (!r.playerId) return this.toReview(r, 'sin_jugador_vinculado', m.tx);
-      if (this.judge) {
+      if (this.judge && !crypto) {
         const verdict = await this.judge({ receipt: r, bankTx: m.tx, settings: s }).catch((e: Error) => ({ approve: false, reason: `juez no disponible: ${e.message}` }));
         if (!verdict.approve) return this.toReview(r, `juez: ${verdict.reason ?? 'vetado'}`.slice(0, 300), m.tx);
       }

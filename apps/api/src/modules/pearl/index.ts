@@ -16,6 +16,7 @@ import { PearlService, type PearlOutcome } from './application/PearlService';
 import type { PearlRepository, Receipt } from './domain/types';
 import { buildPearlRouter } from './http/routes';
 import { InMemoryPearlRepository } from './infrastructure/InMemoryPearlRepository';
+import { fetchBinanceDeposits, type BinanceCreds } from './infrastructure/binance';
 import { PrismaPearlRepository, type PearlPrismaLike } from './infrastructure/PrismaPearlRepository';
 import type { IntegrationsPort } from '../shared/ports/IntegrationsPort';
 
@@ -26,6 +27,8 @@ export interface PearlModuleOptions {
   deposits?: ExternalDepositPort;
   /** Barrido de comprobantes esperando al banco (ms); 0 = apagado. Por defecto PEARL_TICK_MS o 60000. */
   tickMs?: number;
+  /** fetch para la API de Binance (pruebas). */
+  binanceFetch?: typeof fetch;
   /** Clientes de IA (las pruebas inyectan uno falso). */
   aiFactory?: AiClientFactory;
 }
@@ -58,12 +61,19 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
       const repo = opts.repo ?? (deps.prisma ? new PrismaPearlRepository(deps.prisma as PearlPrismaLike) : new InMemoryPearlRepository());
       const deposits = opts.deposits ?? (deps.services['cashier.externalDeposits'] as ExternalDepositPort | undefined);
       if (!deposits) deps.logger.warn('[pearl] sin cashier.externalDeposits: todo comprobante irá a revisión humana');
-      const pearl = new PearlService(repo, { deposits, logger: deps.logger, defaultCurrency: deps.env.PEARL_DEFAULT_CURRENCY || 'ARS' });
+      // Llaves de terceros (IA, Binance) cifradas con la misma bóveda que Sonar.
+      const box = new SecretBox(deps.env.INBOX_SECRETS_KEY || randomBytes(32).toString('hex'));
+      const pearl = new PearlService(repo, {
+        deposits, logger: deps.logger, defaultCurrency: deps.env.PEARL_DEFAULT_CURRENCY || 'ARS',
+        cryptoSource: (feed, since) => {
+          if (!feed.secretEnc) throw new Error('El feed de Binance no tiene llave');
+          return fetchBinanceDeposits(box.open<BinanceCreds>(feed.secretEnc), since, opts.binanceFetch);
+        },
+      });
 
       const inbox = deps.services['inbox.service'] as InboxService | undefined;
       let ai: PearlAi | undefined;
       if (inbox) {
-        const box = new SecretBox(deps.env.INBOX_SECRETS_KEY || randomBytes(32).toString('hex'));
         ai = new PearlAi(repo, pearl, inbox, box, {
           logger: deps.logger, envKey: deps.env.PEARL_ANTHROPIC_API_KEY || deps.env.ANTHROPIC_API_KEY || undefined, factory: opts.aiFactory,
           keyResolver: async (operatorId, provider) => (deps.services['integrations.service'] as IntegrationsPort | undefined)?.value(operatorId, provider, 'apiKey'),
@@ -109,7 +119,7 @@ export function createPearlModule(opts: PearlModuleOptions = {}): NymfoModule {
           return out.handled ? 'handled' : undefined;
         }, 5);
       }
-      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, bot, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger }));
+      app.use(PEARL_PREFIX, buildPearlRouter({ auth: deps.auth, pearl, ai, bot, attachment: inbox ? (op, id) => inbox.attachment(op, id) : undefined, logger: deps.logger, sealSecret: (v) => box.seal(v) }));
       const tickMs = opts.tickMs ?? Number(deps.env.PEARL_TICK_MS ?? 60_000);
       if (Number.isFinite(tickMs) && tickMs > 0) {
         const t = setInterval(() => void pearl.tick().catch((e) => deps.logger.error('[pearl] barrido', { error: (e as Error).message })), tickMs);

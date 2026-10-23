@@ -1,4 +1,4 @@
-import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
+import { DUPLICATE_RECEIPT, type AiConfig, type BankAccount, type BankTx, type Feed, type FeedType, type PearlRepository, type PearlSettings, type Receipt, type ReceiptStatus } from '../domain/types';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -30,6 +30,9 @@ export class InMemoryPearlRepository implements PearlRepository {
   }
   async listFeeds(op: string) {
     return [...this.feeds.values()].filter((f) => f.operatorId === op).map(clone);
+  }
+  async enabledFeedsOfType(type: FeedType) {
+    return [...this.feeds.values()].filter((f) => f.type === type && f.enabled).map(clone);
   }
   async findFeed(id: string) {
     const f = this.feeds.get(id);

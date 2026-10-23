@@ -20,6 +20,23 @@ afterAll(async () => {
 
 const add = (body: Record<string, unknown>) => request(created.app).post('/pearl/v1/admin/accounts').set(bearer(admin)).send(body);
 
+describe('Binance USDT', () => {
+  it('guarda la llave cifrada sin devolverla nunca y valida la tasa USDT', async () => {
+    const feeds = '/pearl/v1/admin/feeds';
+    expect((await request(created.app).post(feeds).set(bearer(admin)).send({ type: 'binance' })).status).toBe(400);
+    const ok = await request(created.app).post(feeds).set(bearer(admin)).send({ type: 'binance', apiKey: 'k'.repeat(64), apiSecret: 's'.repeat(64) });
+    expect(ok.status).toBe(201);
+    expect(ok.body.feed).toMatchObject({ type: 'binance', name: 'Binance USDT' });
+    expect(JSON.stringify(ok.body)).not.toContain('s'.repeat(64));
+    const list = await request(created.app).get(feeds).set(bearer(admin));
+    expect(list.body.items.every((f: Record<string, unknown>) => !('secretEnc' in f) && !('tokenHash' in f))).toBe(true);
+
+    const put = (usdtRate: unknown) => request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ usdtRate });
+    expect((await put('3950')).body.usdtRate).toBe('3950');
+    expect((await put('abc')).status).toBe(400);
+  });
+});
+
 describe('Cuentas de cobro por país', () => {
   it('publica los métodos por país y valida número y documento según el método', async () => {
     const m = await request(created.app).get('/pearl/v1/admin/account-methods').set(bearer(admin)).expect(200);

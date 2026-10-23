@@ -27,7 +27,7 @@ const extracted = z.object({
 const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_info', 'rejected', 'duplicate', 'error'] as const;
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
-export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger }): Router {
+export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger; sealSecret?: (v: unknown) => string }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
   const admin = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN')];
@@ -45,6 +45,7 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
     const b = parse(z.object({
       mode: z.enum(['auto', 'review_all']).optional(), currency: z.string().regex(/^[A-Z]{3,5}$/).optional(), autoMaxAmount: money.optional(), minAmount: money.optional(),
       maxAgeHours: z.number().int().min(1).max(720).optional(), waitBankMinutes: z.number().int().min(1).max(1440).optional(), utcOffsetMinutes: z.number().int().min(-720).max(840).optional(), autoRegisterLeads: z.boolean().optional(),
+      usdtRate: z.string().trim().regex(/^\d{1,9}(\.\d{1,6})?$/, 'Tasa USDT inválida: pesos por 1 USDT, p. ej. 3950').nullable().optional(),
     }), req.body);
     sendJson(res, await d.pearl.updateSettings(op(req), b));
   }));
@@ -84,17 +85,28 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
   }));
 
   r.get('/admin/feeds', ...admin, asyncHandler(async (req, res) => {
-    sendJson(res, { items: (await d.pearl.listFeeds(op(req))).map(({ tokenHash: _t, ...f }) => f) });
+    sendJson(res, { items: (await d.pearl.listFeeds(op(req))).map(({ tokenHash: _t, secretEnc: _s, ...f }) => f) });
   }));
   r.post('/admin/feeds', ...admin, asyncHandler(async (req, res) => {
-    const b = parse(z.object({ type: z.enum(['quikipay', 'hgcash', 'generic']), name: z.string().max(80).default('') }), req.body);
+    const b = parse(z.object({
+      type: z.enum(['quikipay', 'hgcash', 'generic', 'binance']), name: z.string().max(80).default(''),
+      apiKey: z.string().trim().min(20).max(200).optional(), apiSecret: z.string().trim().min(20).max(200).optional(),
+    }), req.body);
+    if (b.type === 'binance') {
+      // Binance no manda webhooks: Pearl consulta los depósitos con la llave de SOLO LECTURA, guardada cifrada.
+      if (!b.apiKey || !b.apiSecret) throw badRequest('Pega la API Key y la Secret Key de Binance (solo lectura)');
+      if (!d.sealSecret) throw new HttpError(503, 'NO_VAULT', 'El cifrado de llaves no está disponible');
+      const { feed } = await d.pearl.createFeed(op(req), 'binance', b.name || 'Binance USDT', d.sealSecret({ apiKey: b.apiKey, apiSecret: b.apiSecret }));
+      const { tokenHash: _t, secretEnc: _s, ...pub } = feed;
+      return sendJson(res, { feed: pub }, 201);
+    }
     const { feed, token } = await d.pearl.createFeed(op(req), b.type, b.name);
     const { tokenHash: _t, ...pub } = feed;
     sendJson(res, { feed: pub, token, webhookPath: `/pearl/v1/feeds/${feed.id}/${token}` }, 201);
   }));
   r.patch('/admin/feeds/:id', ...admin, asyncHandler(async (req, res) => {
     const { id } = parse(idParams, req.params);
-    const { tokenHash: _t, ...f } = await d.pearl.setFeedEnabled(op(req), id, parse(z.object({ enabled: z.boolean() }), req.body).enabled);
+    const { tokenHash: _t, secretEnc: _s, ...f } = await d.pearl.setFeedEnabled(op(req), id, parse(z.object({ enabled: z.boolean() }), req.body).enabled);
     sendJson(res, f);
   }));
   r.delete('/admin/feeds/:id', ...admin, asyncHandler(async (req, res) => {

@@ -35,6 +35,10 @@ describe('Binance USDT', () => {
     const put = (usdtRate: unknown) => request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ usdtRate });
     expect((await put('3950')).body.usdtRate).toBe('3950');
     expect((await put('abc')).status).toBe(400);
+    const fx = await request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ fxRates: { ARS: '4.2', MXN: '' } });
+    expect(fx.status).toBe(200);
+    expect(fx.body.fxRates).toEqual({ ARS: '4.2' });
+    expect((await request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ fxRates: { ARS: 'x' } })).status).toBe(400);
   });
 });
 
@@ -75,13 +79,14 @@ describe('Cuentas de cobro por país', () => {
     // Cuentas antiguas sin método siguen funcionando.
     expect((await add({ holderName: 'Cuenta vieja', accountNumber: '0170099220000067797370' })).status).toBe(201);
 
-    // El jugador ve las cuentas de su país (y las de todos los países), sin el documento del titular.
+    // El jugador ve todas las cuentas con su moneda, sin el documento del titular.
     await request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ currency: 'COP' }).expect(200);
     const player = await createTestPlayer(opId);
     const seen = await request(created.app).get('/pearl/v1/player/accounts').set(bearer(playerToken(player.id, opId))).expect(200);
     const methods = seen.body.items.map((i: { method: string }) => i.method);
     expect(methods).toEqual(expect.arrayContaining(['Nequi', 'Llave Bre-B', 'Otro banco', 'Binance Pay', 'Binance · USDT (TRC20)']));
-    expect(methods).not.toContain('Transferencia SPEI');
+    // Se muestran todas las monedas: cada cuenta con la suya.
+    expect(seen.body.items.find((i: { method: string }) => i.method === 'Transferencia SPEI').currency).toBe('MXN');
     expect(JSON.stringify(seen.body)).not.toContain('1020304050');
     const usdtSeen = seen.body.items.find((i: { method: string }) => i.method === 'Binance · USDT (TRC20)');
     expect(usdtSeen.network).toBe('USDT · TRON (TRC20)');

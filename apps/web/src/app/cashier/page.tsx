@@ -160,7 +160,7 @@ export default function CashierPage() {
             <DepositForm methods={methods} currency={currency} decimals={decimals} tryMinor={tryMinor} onDone={() => void reloadMe()} />
           )}
           {tab === "deposit" && methods && accounts.length > 0 && (depMode === "transfer" || methods.length === 0) && (
-            <TransferDeposit accounts={accounts} money={money} onCredited={() => void reloadMe()} />
+            <TransferDeposit accounts={accounts} money={money} onCredited={() => void reloadMe()} localCurrency={currency} />
           )}
           {tab === "withdraw" && methods && methods.length > 0 && (
             <WithdrawForm methods={methods} currency={currency} tryMinor={tryMinor} kyc={user?.kycStatus ?? "NONE"} />

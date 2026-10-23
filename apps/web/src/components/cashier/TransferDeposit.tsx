@@ -39,7 +39,7 @@ const POLL_FOR_MS = 5 * 60_000;
  * Recarga por transferencia: el jugador ve las cuentas del casino, transfiere y sube la foto del comprobante.
  * La foto entra por el chat de soporte, donde Pearl la lee, la cruza con los pagos reales y acredita.
  */
-export function TransferDeposit({ accounts, money, onCredited }: { accounts: TransferAccount[]; money: (v: bigint) => string; onCredited: () => void }) {
+export function TransferDeposit({ accounts, money, onCredited, localCurrency }: { accounts: TransferAccount[]; money: (v: bigint) => string; onCredited: () => void; localCurrency: string }) {
   const { t } = useT();
   const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,8 +48,9 @@ export function TransferDeposit({ accounts, money, onCredited }: { accounts: Tra
   const [receipt, setReceipt] = useState<ReceiptView | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const credited = useRef(false);
-  // Pestañas por moneda (la local primero; USDT al final).
-  const currencies = [...new Set(accounts.map((a) => a.currency ?? ""))].sort((a, b) => (a === "USDT" ? 1 : b === "USDT" ? -1 : 0));
+  // Pestañas por moneda: la del jugador primero, USDT al final.
+  const order = (c: string) => (c === localCurrency ? 0 : c === "USDT" ? 2 : 1);
+  const currencies = [...new Set(accounts.map((a) => a.currency ?? ""))].sort((a, b) => order(a) - order(b) || a.localeCompare(b));
   const [cur, setCur] = useState(currencies[0] ?? "");
   const shown = currencies.length > 1 ? accounts.filter((a) => (a.currency ?? "") === cur) : accounts;
 
@@ -136,7 +137,7 @@ export function TransferDeposit({ accounts, money, onCredited }: { accounts: Tra
           ))}
         </div>
       )}
-      {cur === "USDT" && currencies.length > 1 && <p className="text-xs text-gray-400">{t("Envía USDT y te acreditamos el equivalente en tu moneda a la tasa del día.")}</p>}
+      {cur && cur !== localCurrency && <p className="text-xs text-gray-400">{t("Paga en {cur} y te acreditamos el equivalente en {local} a la tasa del día.").replace("{cur}", cur).replace("{local}", localCurrency)}</p>}
 
       <ul className="flex flex-col gap-3">
         {shown.map((a) => (

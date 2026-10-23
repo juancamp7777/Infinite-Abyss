@@ -1491,6 +1491,8 @@ model PearlSettings {
   autoRegisterLeads Boolean @default(true)
   /// Pesos por 1 USDT (depósitos en USDT).
   usdtRate         String?
+  /// Tasas de otras monedas (moneda del casino por 1 unidad): { "ARS": "4.2" }.
+  fxRates          Json?
   updatedAt        DateTime
 
   @@map("pearl_settings")

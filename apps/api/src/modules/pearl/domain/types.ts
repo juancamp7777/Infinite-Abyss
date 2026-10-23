@@ -27,6 +27,8 @@ export interface PearlSettings {
   autoRegisterLeads: boolean;
   /** Pesos (moneda del casino) por 1 USDT para acreditar depósitos en USDT, p. ej. "3950". Sin tasa: a revisión. */
   usdtRate?: string | null;
+  /** Tasas de otras monedas: unidades de la moneda del casino por 1 unidad (p. ej. { ARS: "4.2", MXN: "215" }). */
+  fxRates?: Record<string, string> | null;
   updatedAt: Date;
 }
 
@@ -92,6 +94,8 @@ export interface ExtractedReceipt {
   senderName: string;
   senderTaxId?: string;
   receiverAccount?: string;
+  /** Moneda del pago si no es la del casino (p. ej. "ARS" al transferir a una cuenta argentina). La fija Pearl por la cuenta destino. */
+  currency?: string;
   /** "USDT" si el comprobante es de un envío de USDT (Binance u otra billetera). */
   asset?: 'USDT';
   /** Hash de la transacción (TxID) si el comprobante lo muestra. */

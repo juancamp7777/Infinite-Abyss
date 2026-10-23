@@ -224,6 +224,11 @@ function PlayerDetail({ playerId, onClose }: { playerId: string; onClose: () => 
           {tab === "resumen" && (
             <div className="space-y-3 text-sm">
               {session && CAN_ADJUST.has(session.role) && <AdjustBalance playerId={playerId} currency={d.data.profile.currency} onDone={d.reload} />}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 p-3">
+                <span className="mr-auto text-sm"><b>Identidad (KYC)</b><span className="block text-xs text-white/50">Necesaria para retirar y para recibir publicidad.</span></span>
+                <Button variant="ghost" onClick={() => void act(() => call(`/api/backoffice/players/${encodeURIComponent(playerId)}/kyc`, { method: "PUT", body: { status: "VERIFIED", reason: "Verificado desde Jugadores" } }))}>Verificar identidad</Button>
+                <Button variant="danger" onClick={() => void act(() => call(`/api/backoffice/players/${encodeURIComponent(playerId)}/kyc`, { method: "PUT", body: { status: "REJECTED", reason: "Rechazado desde Jugadores" } }))}>Rechazar</Button>
+              </div>
               <SendMessage playerId={playerId} />
               <dl className="grid grid-cols-2 gap-2">
                 {([

@@ -191,6 +191,9 @@ export function createMarketingRouter(rt: MarketingRuntime, deps: ModuleDeps): R
     const { operatorId, playerId } = requirePlayer(req);
     const b = parse(pushSchema, req.body);
     const sub = await rt.repos.pushSubs.put({ id: endpointId(b.endpoint), operatorId, playerId, endpoint: b.endpoint, keys: b.keys, createdAt: now() });
+    // El permiso del navegador queda registrado como consentimiento del canal push (con historial).
+    const cur = await rt.consent.get(operatorId, playerId, 'push');
+    if (!cur) await rt.consent.set(operatorId, playerId, 'push', true, 'push_permission');
     sendJson(res, { id: sub.id }, 201);
   }));
 

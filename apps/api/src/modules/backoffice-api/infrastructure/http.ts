@@ -19,6 +19,26 @@ export interface BackofficeRouterDeps {
 }
 
 const OP_ID = /^[A-Za-z0-9_.:-]{1,64}$/;
+
+/** Límites del casino en unidades mínimas de su moneda ("" = sin límite). */
+const LIMIT_KEYS = ['minBet', 'maxBet', 'minDeposit', 'maxDeposit', 'minWithdrawal', 'maxWithdrawal', 'maxDailyWithdrawal'] as const;
+const limitValue = z.union([z.string().regex(/^\d{1,15}$/, 'Monto inválido'), z.literal('')]);
+const limitsBody = z
+  .object(Object.fromEntries(LIMIT_KEYS.map((k) => [k, limitValue.optional()])) as Record<(typeof LIMIT_KEYS)[number], z.ZodOptional<typeof limitValue>>)
+  .strict()
+  .superRefine((b, ctx) => {
+    for (const [min, max] of [['minBet', 'maxBet'], ['minDeposit', 'maxDeposit'], ['minWithdrawal', 'maxWithdrawal']] as const) {
+      const lo = b[min];
+      const hi = b[max];
+      if (lo && hi && BigInt(lo) > BigInt(hi)) ctx.addIssue({ code: 'custom', path: [min], message: 'El mínimo no puede superar al máximo' });
+    }
+  });
+type OperatorDb = {
+  operator: {
+    findUnique(a: { where: { id: string }; select: { limits: true; defaultCurrency: true } }): Promise<{ limits: unknown; defaultCurrency: string } | null>;
+    update(a: { where: { id: string }; data: { limits: object } }): Promise<unknown>;
+  };
+};
 const opId = z.string().regex(OP_ID, 'operatorId inválido');
 const rangeQuery = z.object({ from: z.string().optional(), to: z.string().optional(), operatorId: opId.optional() });
 const loginBody = z.object({
@@ -99,6 +119,47 @@ export function createBackofficeRouter(d: BackofficeRouterDeps): Router {
         throw badRequest(e instanceof Error ? e.message : 'Skin inválida');
       }
       sendJson(res, await d.skins.update(op, skin));
+    }),
+  );
+
+  // --- Límites del casino: apuesta, depósito y retiro mínimos y máximos (Operator.limits) ---
+  const db = () => d.deps.prisma as OperatorDb | undefined;
+  const pickLimits = (raw: unknown) => {
+    const l = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    return Object.fromEntries(LIMIT_KEYS.map((k) => [k, typeof l[k] === 'string' || typeof l[k] === 'number' ? String(l[k]) : ''])) as Record<string, string>;
+  };
+  router.get(
+    '/admin/limits/:operatorId',
+    auth,
+    admins,
+    asyncHandler(async (req, res) => {
+      const op = scopeOperator(req, parse(opId, req.params.operatorId));
+      const row = await db()?.operator.findUnique({ where: { id: op }, select: { limits: true, defaultCurrency: true } });
+      if (!row) throw notFound('Operador no encontrado');
+      sendJson(res, { currency: row.defaultCurrency, limits: pickLimits(row.limits) });
+    }),
+  );
+  router.put(
+    '/admin/limits/:operatorId',
+    auth,
+    admins,
+    asyncHandler(async (req, res) => {
+      const op = scopeOperator(req, parse(opId, req.params.operatorId));
+      const b = parse(limitsBody, req.body ?? {});
+      const row = await db()?.operator.findUnique({ where: { id: op }, select: { limits: true, defaultCurrency: true } });
+      if (!row) throw notFound('Operador no encontrado');
+      // Se conservan las demás claves (p. ej. betPresets); "" borra el límite.
+      const next: Record<string, unknown> = { ...((row.limits && typeof row.limits === 'object' ? row.limits : {}) as Record<string, unknown>) };
+      for (const k of LIMIT_KEYS) {
+        if (b[k] === undefined) continue;
+        if (b[k] === '') delete next[k];
+        else next[k] = b[k];
+      }
+      await db()!.operator.update({ where: { id: op }, data: { limits: next } });
+      // Pearl (recargas por comprobante) usa el mismo depósito mínimo.
+      const pearl = d.deps.services['pearl.service'] as { updateSettings(op: string, p: { minAmount: bigint }): Promise<unknown> } | undefined;
+      if (b.minDeposit && pearl) await pearl.updateSettings(op, { minAmount: BigInt(b.minDeposit) }).catch(() => undefined);
+      sendJson(res, { currency: row.defaultCurrency, limits: pickLimits(next) });
     }),
   );
 

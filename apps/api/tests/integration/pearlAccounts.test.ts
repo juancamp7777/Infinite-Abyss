@@ -1,15 +1,16 @@
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CreatedApp } from '../../src/app';
-import { createBackofficeUser, createTestOperator } from '../setup/factories';
-import { bearer, buildIntegrationApp, jwt } from './helpers';
+import { createBackofficeUser, createTestOperator, createTestPlayer } from '../setup/factories';
+import { bearer, buildIntegrationApp, jwt, playerToken } from './helpers';
 
 let created: CreatedApp;
 let admin: string;
+let opId: string;
 
 beforeAll(async () => {
   created = await buildIntegrationApp();
-  const opId = (await createTestOperator()).id;
+  opId = (await createTestOperator()).id;
   const a = await createBackofficeUser('OPERATOR_ADMIN', opId);
   admin = jwt.signAccess({ sub: a.id, op: opId, typ: 'backoffice', role: 'OPERATOR_ADMIN' });
 });
@@ -73,5 +74,19 @@ describe('Cuentas de cobro por país', () => {
 
     // Cuentas antiguas sin método siguen funcionando.
     expect((await add({ holderName: 'Cuenta vieja', accountNumber: '0170099220000067797370' })).status).toBe(201);
+
+    // El jugador ve las cuentas de su país (y las de todos los países), sin el documento del titular.
+    await request(created.app).put('/pearl/v1/admin/settings').set(bearer(admin)).send({ currency: 'COP' }).expect(200);
+    const player = await createTestPlayer(opId);
+    const seen = await request(created.app).get('/pearl/v1/player/accounts').set(bearer(playerToken(player.id, opId))).expect(200);
+    const methods = seen.body.items.map((i: { method: string }) => i.method);
+    expect(methods).toEqual(expect.arrayContaining(['Nequi', 'Llave Bre-B', 'Otro banco', 'Binance Pay', 'Binance · USDT (TRC20)']));
+    expect(methods).not.toContain('Transferencia SPEI');
+    expect(JSON.stringify(seen.body)).not.toContain('1020304050');
+    const usdtSeen = seen.body.items.find((i: { method: string }) => i.method === 'Binance · USDT (TRC20)');
+    expect(usdtSeen.network).toBe('USDT · TRON (TRC20)');
+    expect(usdtSeen.holderName).toBeUndefined();
+    expect((await request(created.app).get('/pearl/v1/player/receipts/latest').set(bearer(playerToken(player.id, opId)))).body).toEqual({ receipt: null });
+    expect((await request(created.app).get('/pearl/v1/player/accounts').set(bearer(admin))).status).toBe(403);
   });
 });

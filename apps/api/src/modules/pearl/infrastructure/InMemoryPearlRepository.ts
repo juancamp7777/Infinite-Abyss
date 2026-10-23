@@ -105,6 +105,10 @@ export class InMemoryPearlRepository implements PearlRepository {
     const r = [...this.receipts.values()].filter((x) => x.operatorId === op && x.conversationId === conversationId).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
     return r ? clone(r) : null;
   }
+  async latestReceiptForPlayer(op: string, playerId: string) {
+    const r = [...this.receipts.values()].filter((x) => x.operatorId === op && x.playerId === playerId).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    return r ? clone(r) : null;
+  }
   async getAi(op: string) {
     const c = this.ai.get(op);
     return c ? clone(c) : null;

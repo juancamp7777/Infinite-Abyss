@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AuthPort } from '../../shared/ports/AuthPort';
-import { getPrincipal, requireAuth, requireRole, scopeOperator } from '../../shared/http/auth';
+import { getPrincipal, requireAuth, requirePlayer, requireRole, scopeOperator } from '../../shared/http/auth';
 import { HttpError, asyncHandler, badRequest, moduleErrorHandler, sendJson } from '../../shared/http/errors';
 import { ACCOUNT_COUNTRIES, ACCOUNT_METHODS, accountMethod, checkAccount, cleanAccountNumber } from '../domain/accountMethods';
 import { parse } from '../../shared/http/validate';
@@ -27,6 +27,8 @@ const extracted = z.object({
 const RECEIPT_STATUS = ['credited', 'pending_review', 'waiting_bank', 'needs_info', 'rejected', 'duplicate', 'error'] as const;
 
 /** Montado en /pearl/v1. Revisión de comprobantes: todo el backoffice; configuración: administradores. */
+const COUNTRY_BY_CURRENCY: Record<string, string> = { COP: 'CO', MXN: 'MX', ARS: 'AR' };
+
 export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: PearlAi; bot?: BotConfigService; attachment?: (operatorId: string, id: string) => Promise<Attachment>; logger?: ModuleLogger; sealSecret?: (v: unknown) => string }): Router {
   const r = Router();
   const staff = [requireAuth(d.auth), requireRole('PLATFORM_ADMIN', 'OPERATOR_ADMIN', 'OPERATOR_AGENT')];
@@ -37,6 +39,30 @@ export function buildPearlRouter(d: { auth: AuthPort; pearl: PearlService; ai?: 
   r.post('/feeds/:id/:token', asyncHandler(async (req, res) => {
     const p = parse(z.object({ id: z.string().uuid(), token: z.string().min(20).max(100) }), req.params);
     sendJson(res, { ok: true, ...(await d.pearl.ingest(p.id, p.token, req.body)) });
+  }));
+
+  /* ─── Jugador: recarga por transferencia desde la caja web ─── */
+  const player = requireAuth(d.auth);
+  /** Cuentas activas a las que puede transferir (las de su país y las que sirven en todos, como Binance). */
+  r.get('/player/accounts', player, asyncHandler(async (req, res) => {
+    const { operatorId } = requirePlayer(req);
+    const country = COUNTRY_BY_CURRENCY[(await d.pearl.settings(operatorId)).currency];
+    const items = (await d.pearl.listAccounts(operatorId))
+      .filter((a) => a.active && (!a.country || !country || a.country === country || accountMethod(a.bank)?.country === '*'))
+      .map((a) => {
+        const m = accountMethod(a.bank);
+        return {
+          id: a.id, method: m?.label ?? a.bank ?? 'Transferencia', numberLabel: m?.numberLabel ?? 'Cuenta', number: a.accountNumber, holderName: m?.walletOnly ? undefined : a.holderName,
+          alias: m?.keyLike ? undefined : a.alias, bankName: a.bankName, accountType: a.accountType, network: m?.walletOnly ? 'USDT · TRON (TRC20)' : undefined,
+        };
+      });
+    sendJson(res, { items });
+  }));
+  /** Estado del último comprobante del jugador (la caja web lo muestra en vivo). */
+  r.get('/player/receipts/latest', player, asyncHandler(async (req, res) => {
+    const { operatorId, playerId } = requirePlayer(req);
+    const x = await d.pearl.latestReceiptForPlayer(operatorId, playerId);
+    sendJson(res, { receipt: x ? { id: x.id, status: x.status, amount: x.amount?.toString() ?? null, currency: x.currency, createdAt: x.createdAt } : null });
   }));
 
   /* ─── Configuración ─── */

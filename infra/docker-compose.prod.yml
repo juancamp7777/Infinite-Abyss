@@ -4,7 +4,8 @@
 #   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
 #
 # Con IMAGE_TAG usa las imágenes de GHCR que publica el CI; `--build` las construye en la máquina.
-# Postgres vive en una red interna sin salida a internet y sin puertos publicados: solo la API y el backup lo ven.
+# Base de datos: con DATABASE_URL (p. ej. Supabase) se usa esa; sin ella, el Postgres local del perfil "localdb"
+# (`--profile localdb`), en una red interna sin salida a internet y sin puertos publicados.
 
 x-hardening: &hardening
   restart: unless-stopped
@@ -17,11 +18,12 @@ x-hardening: &hardening
 services:
   postgres:
     <<: *hardening
-    image: postgres:16.4-alpine
+    profiles: [localdb]
+    image: postgres:17.6-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-abyss}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-abyss}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks: [data]
@@ -40,7 +42,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "4000"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-abyss}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-abyss}?schema=public}
       PUBLIC_WEB_URL: https://${CASINO_DOMAIN}
       BACKOFFICE_URL: https://${BACKOFFICE_DOMAIN}
       PUBLIC_API_URL: https://${API_DOMAIN}
@@ -52,7 +54,7 @@ services:
       - apilogs:/app/logs
     networks: [data, edge]
     depends_on:
-      postgres: { condition: service_healthy }
+      postgres: { condition: service_healthy, required: false }
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health | grep -q '\"db\":\"up\"'"]
       interval: 10s
@@ -117,13 +119,15 @@ services:
 
   backup:
     <<: *hardening
-    image: postgres:16.4-alpine
+    # pg_dump debe ser de la misma versión mayor que el servidor (Supabase: Postgres 17).
+    image: postgres:17.6-alpine
     entrypoint: ["/bin/sh", "/opt/backup/backup.sh"]
     environment:
+      DATABASE_URL: ${DATABASE_URL:-}
       PGHOST: postgres
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER:-abyss}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
+      PGDATABASE: ${POSTGRES_DB:-abyss}
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
       # Copia externa cifrada (restic). Vacío = solo copias locales.
@@ -136,7 +140,7 @@ services:
       - backups:/backups
     networks: [data, backup_out]
     depends_on:
-      postgres: { condition: service_healthy }
+      postgres: { condition: service_healthy, required: false }
 
 networks:
   # Sin salida a internet: la base de datos no puede hablar con nadie más.

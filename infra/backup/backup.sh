@@ -16,7 +16,12 @@ fi
 run_once() {
   ts=$(date -u +%Y%m%d-%H%M%S)
   file="$DIR/abyss-$ts.dump"
-  pg_dump --format=custom --compress=6 --no-owner --file="$file.tmp"
+  # Con DATABASE_URL (Supabase u otro Postgres administrado) se copia esa base; si no, la local (PG*).
+  if [ -n "${DATABASE_URL:-}" ]; then
+    pg_dump --format=custom --compress=6 --no-owner --no-privileges --schema=public --dbname="$DATABASE_URL" --file="$file.tmp"
+  else
+    pg_dump --format=custom --compress=6 --no-owner --file="$file.tmp"
+  fi
   # Una copia que no se puede leer no es una copia: se verifica antes de darla por buena.
   pg_restore --list "$file.tmp" >/dev/null
   mv "$file.tmp" "$file"

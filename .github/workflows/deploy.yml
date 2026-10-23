@@ -53,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
     env:
       HOST: ${{ secrets.DEPLOY_HOST }}
     steps:
@@ -66,11 +69,15 @@ jobs:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           KNOWN: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           SHA: ${{ github.sha }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
           printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "cd /opt/infinite-abyss && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$SHA/' .env.production && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --pull always --no-build --remove-orphans && docker image prune -f"
+          # El token del job vence al terminar: el servidor nunca guarda una credencial de GitHub.
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "docker login ghcr.io -u $GHCR_USER --password-stdin >/dev/null"
+          ssh -i ~/.ssh/id_deploy "$USER_@$HOST" "cd /opt/infinite-abyss && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$SHA/' .env.production && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --pull always --no-build --remove-orphans; s=\$?; docker logout ghcr.io >/dev/null; docker image prune -f >/dev/null; exit \$s"
       - name: Sin servidor todavía
         if: steps.cfg.outputs.ready != 'true'
         run: echo "Imágenes publicadas; sin DEPLOY_HOST en el entorno staging no se despliega."

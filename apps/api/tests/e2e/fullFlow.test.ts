@@ -38,6 +38,7 @@ const fakeFetch: FetchLike = async (url) => {
 const MONEY_MOVING_ROUTES = new Set([
   'POST /api/webhooks/:provider', // acredita solo con firma verificada + confirmación del PSP
   'POST /api/backoffice/players/:id/adjustments', // ajuste manual con rol, motivo y AuditLog
+  'GET /api/backoffice/players/:id/wallet', // ficha de caja del jugador en el chat de Sonar
   'POST /api/backoffice/withdrawals/:id/approve', // mueve fondos de reserva; solo backoffice con AuditLog
   'POST /api/backoffice/withdrawals/:id/reject', // libera la reserva al jugador; backoffice con AuditLog
   'POST /api/backoffice/withdrawals/:id/mark-paid', // completa el retiro; backoffice con AuditLog

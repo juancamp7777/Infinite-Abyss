@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
-  BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower, Workflow, Banknote, Clock3, UsersRound,
+  Activity, BarChart3, ChevronDown, Crown, FileBarChart, Gamepad2, Gift, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, MessagesSquare, RadioTower, Workflow, Banknote, Clock3, UsersRound,
   Bot, LayoutTemplate, Palette, Plug, ShieldCheck, Trophy, Users, X, Zap, type LucideIcon,
 } from "lucide-react";
 import { authClient, BASE_PATH, canAccess, homeFor, NAV, NAV_SECTIONS, ROLE_LABEL, type NavSection } from "@/lib/auth";
@@ -16,7 +16,7 @@ const noop = () => () => {};
 const COLLAPSED_KEY = "abyss.bo.collapsedSections";
 
 const ICON: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard, "/reports": FileBarChart, "/integrations": Plug, "/nautilus": Bot, "/security": ShieldCheck, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tide": Workflow, "/pearl": Banknote, "/crew": Clock3, "/crew-admin": UsersRound, "/tickets": LifeBuoy, "/segments": Layers,
+  "/dashboard": LayoutDashboard, "/metrics": Activity, "/reports": FileBarChart, "/integrations": Plug, "/nautilus": Bot, "/security": ShieldCheck, "/players": Users, "/inbox": MessagesSquare, "/channels": RadioTower, "/tide": Workflow, "/pearl": Banknote, "/crew": Clock3, "/crew-admin": UsersRound, "/tickets": LifeBuoy, "/segments": Layers,
   "/campaigns": Megaphone, "/bonuses": Gift, "/tournaments": Trophy, "/jackpots": Zap, "/vip": Crown,
   "/catalog": Gamepad2, "/studios": BarChart3, "/reef": LayoutTemplate, "/skin": Palette,
 };

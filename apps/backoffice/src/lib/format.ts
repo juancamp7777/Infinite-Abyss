@@ -78,3 +78,12 @@ export function dateTime(v: string | number | null | undefined): string {
 
 export const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 export const daysAgo = (n: number) => isoDay(new Date(Date.now() - n * 86_400_000));
+
+/** Monto escrito por una persona ("50.000", "50.000,50" o "50000.5") → centavos (string), sin floats. null si no es válido o es 0. */
+export function toMinor(input: string): string | null {
+  const t = input.trim().replace(/\s/g, "");
+  const m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/.exec(t) ?? /^(\d+)(?:\.(\d{1,2}))?$/.exec(t);
+  if (!m) return null;
+  const v = (m[1].replace(/\./g, "") + (m[2] ?? "").padEnd(2, "0")).replace(/^0+(?=\d)/, "");
+  return /^0+$/.test(v) ? null : v;
+}

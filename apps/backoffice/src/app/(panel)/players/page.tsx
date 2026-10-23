@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useApi, useApiClient, useSession } from "@/lib/hooks";
-import { dateTime, int, money } from "@/lib/format";
+import { dateTime, int, money, toMinor } from "@/lib/format";
 import { Badge, Button, Card, DataTable, Empty, ErrorBox, Field, inputCls, NeedOperator, PageHeader, Spinner, Tabs, type Column } from "@/components/ui";
 
 interface PlayerRow {
@@ -41,15 +41,6 @@ interface Detail {
 
 /** Roles que pueden mover saldo a mano (lo mismo que exige el API). */
 const CAN_ADJUST = new Set(["PLATFORM_ADMIN", "OPERATOR_ADMIN", "OPERATOR_FINANCE"]);
-
-/** "50.000", "50.000,50" o "50000.5" → centavos (string), sin floats. */
-function toMinor(input: string): string | null {
-  const t = input.trim().replace(/\s/g, "");
-  const m = /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/.exec(t) ?? /^(\d+)(?:\.(\d{1,2}))?$/.exec(t);
-  if (!m) return null;
-  const v = (m[1].replace(/\./g, "") + (m[2] ?? "").padEnd(2, "0")).replace(/^0+(?=\d)/, "");
-  return /^0+$/.test(v) ? null : v;
-}
 
 /** Cargar o descontar saldo a mano: queda en el ledger con motivo y autor, y no se duplica si se reintenta. */
 function AdjustBalance({ playerId, currency, onDone }: { playerId: string; currency?: string; onDone(): void }) {

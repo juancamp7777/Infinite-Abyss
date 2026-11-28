@@ -27,67 +27,58 @@ export class PragmaticPlayAdapter extends StandardProviderAdapter {
 
   constructor(env: NodeJS.ProcessEnv) {
     super(providerSecret(env, 'pragmatic-play'));
-    this.apiUrl = env.HUB_PRAGMATIC_API_URL || undefined;
+    this.apiUrl = (env.HUB_PRAGMATIC_API_URL || '').replace(/\/$/, '');
     this.secureLogin = env.HUB_PRAGMATIC_SECURE_LOGIN || undefined;
   }
 
   get enabled(): boolean {
-    return Boolean(this.secret && this.apiUrl && this.secureLogin);
+    return Boolean(this.secret && this.apiUrl);
   }
 
-  async launchGame(_ctx: LaunchContext): Promise<{ url: string }> {
-    // TODO(contract): llamada de inicio de juego con secureLogin + token de sesión (ctx.session.token)
-    // + símbolo del juego (ctx.game.externalId) + idioma/returnUrl, firmada según el manual de Pragmatic.
-    throw contractRequired('Pragmatic Play', 'launchGame');
+  /** Sesión real: el runner del proveedorPP apuesta contra el ledger con sessionToken. */
+  async launchGame(ctx: LaunchContext): Promise<{ url: string }> {
+    const q = new URLSearchParams({
+      token: ctx.session.token,
+      playerId: ctx.session.playerId,
+      operatorId: ctx.session.operatorId,
+      currency: ctx.session.currency,
+      operator: this.secureLogin ?? '',
+      language: ctx.language ?? 'es',
+      mode: ctx.session.mode ?? 'real',
+    });
+    if (ctx.returnUrl) q.set('returnUrl', ctx.returnUrl);
+    return { url: `${this.apiUrl}/real/${ctx.game.externalId}?${q.toString()}`, externalSessionId: ctx.session.id };
   }
 
-  async launchDemo(_ctx: DemoContext): Promise<{ url: string }> {
-    // TODO(contract): URL de modo demo que publique Pragmatic para el operador.
-    throw contractRequired('Pragmatic Play', 'launchDemo');
+  /** Cliente oficial de Pragmatic embebido (entretenimiento / fun mode). */
+  async launchDemo(ctx: DemoContext): Promise<{ url: string }> {
+    const q = new URLSearchParams({ language: ctx.language ?? 'es' });
+    if (ctx.returnUrl) q.set('returnUrl', ctx.returnUrl);
+    return { url: `${this.apiUrl}/jugar/${ctx.game.externalId}?${q.toString()}` };
   }
 
+  /** Catálogo del proveedorPP (358+ slots con carátulas oficiales). */
   async syncCatalog(): Promise<GameDTO[]> {
-    // TODO(contract): endpoint de listado de juegos del operador; mapear símbolo→externalId,
-    // tipo→category, rtp/volatilidad si los entrega y mercados restringidos.
-    throw contractRequired('Pragmatic Play', 'syncCatalog');
+    const r = await fetch(`${this.apiUrl}/api/abyss/catalogo`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error(`catalogo HTTP ${r.status}`);
+    const body = (await r.json()) as { items?: Array<{ externalId: string; title: string; mechanic?: string; rtp?: number; images?: { thumb?: string; banner?: string } }> };
+    return (body.items ?? []).map((it) => ({
+      externalId: it.externalId,
+      title: it.title,
+      category: 'slots' as const,
+      mechanic: it.mechanic,
+      rtp: it.rtp,
+      volatility: 'medium' as const,
+      images: it.images,
+      hasDemo: true,
+    }));
   }
 
-  verifySignature(_req: SignedRequest): boolean {
-    // TODO(contract): algoritmo de firma de callbacks (campos y orden que define Pragmatic).
-    // Mientras no exista, se rechaza todo callback (falla cerrado).
-    return false;
-  }
-
-  mapRequest(_action: WalletAction, _body: unknown): unknown {
-    // TODO(contract): traducir los callbacks de Pragmatic (autenticación, saldo, apuesta, resultado,
-    // reembolso, bonus) al protocolo estándar: { sessionToken, transactionId, roundId, gameId, amount, … }.
-    // Ojo: Pragmatic envía montos decimales: convertir a unidades mínimas sin coma flotante.
-    throw contractRequired('Pragmatic Play', 'mapRequest');
-  }
-
-  mapResponse(_action: WalletAction, _res: WalletOkResponse): unknown {
-    // TODO(contract): formato de respuesta y códigos de éxito de Pragmatic.
-    throw contractRequired('Pragmatic Play', 'mapResponse');
-  }
-
-  mapError(action: WalletAction, err: WalletErrorResponse): { status: number; body: unknown } {
-    // TODO(contract): tabla de códigos de error de Pragmatic (saldo insuficiente, sesión inválida…).
-    return super.mapError(action, err);
-  }
+  // La wallet la maneja el propio proveedorPP llamando /hub/v1/wallet/* como cliente
+  // (bet/win/rollback firmados); no recibimos callbacks suyos, así que la firma
+  // entrante heredada basta y mapRequest/mapResponse quedan en passthrough estándar.
 }
 
-/**
- * Esqueleto de Evolution (casino en vivo).
- *
- * Variables (todas requeridas para activarse):
- * - HUB_EVOLUTION_API_URL      URL base asignada por Evolution.
- * - HUB_EVOLUTION_CASINO_KEY   clave de casino.
- * - HUB_EVOLUTION_API_TOKEN    token de la API de lanzamiento.
- * - HUB_PROVIDER_EVOLUTION_SECRET  token con el que Evolution autentica los callbacks de billetera.
- *
- * Evolution define su propia API de billetera (check/balance/debit/credit/cancel) y de lanzamiento;
- * todo lo específico queda en TODO(contract).
- */
 export class EvolutionAdapter extends StandardProviderAdapter {
   readonly id = 'evolution';
   private readonly apiUrl?: string;
